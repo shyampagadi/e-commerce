@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Image Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .image-test { margin: 20px 0; padding: 10px; border: 1px solid #ccc; }
+        img { max-width: 200px; height: 150px; object-fit: cover; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <h1>E-commerce Image Test</h1>
+    
+    <div class="image-test">
+        <h3>iPhone 15 Pro</h3>
+        <p>URL: http://localhost:8000/uploads/products/iphone15pro.jpg</p>
+        <img src="http://localhost:8000/uploads/products/iphone15pro.jpg" 
+             alt="iPhone 15 Pro"
+             onload="this.nextSibling.innerHTML='✅ Image loaded successfully'"
+             onerror="this.nextSibling.innerHTML='❌ Image failed to load'">
+        <div class="status"></div>
+    </div>
+    
+    <div class="image-test">
+        <h3>Samsung Galaxy S24</h3>
+        <p>URL: http://localhost:8000/uploads/products/galaxys24.jpg</p>
+        <img src="http://localhost:8000/uploads/products/galaxys24.jpg" 
+             alt="Samsung Galaxy S24"
+             onload="this.nextSibling.innerHTML='✅ Image loaded successfully'"
+             onerror="this.nextSibling.innerHTML='❌ Image failed to load'">
+        <div class="status"></div>
+    </div>
+    
+    <div class="image-test">
+        <h3>MacBook Air M3</h3>
+        <p>URL: http://localhost:8000/uploads/products/macbookair.jpg</p>
+        <img src="http://localhost:8000/uploads/products/macbookair.jpg" 
+             alt="MacBook Air M3"
+             onload="this.nextSibling.innerHTML='✅ Image loaded successfully'"
+             onerror="this.nextSibling.innerHTML='❌ Image failed to load'">
+        <div class="status"></div>
+    </div>
+    
+    <div class="image-test">
+        <h3>Sony WH-1000XM5</h3>
+        <p>URL: http://localhost:8000/uploads/products/sonywh1000xm5.jpg</p>
+        <img src="http://localhost:8000/uploads/products/sonywh1000xm5.jpg" 
+             alt="Sony WH-1000XM5"
+             onload="this.nextSibling.innerHTML='✅ Image loaded successfully'"
+             onerror="this.nextSibling.innerHTML='❌ Image failed to load'">
+        <div class="status"></div>
+    </div>
+    
+    <script>
+        // Test API endpoints
+        fetch('http://localhost:8000/api/v1/categories/slug/electronics')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('api-test').innerHTML = `✅ Category API working: ${data.name}`;
+            })
+            .catch(error => {
+                document.getElementById('api-test').innerHTML = `❌ Category API failed: ${error}`;
+            });
+            
+        fetch('http://localhost:8000/api/v1/products/?category_id=1')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('products-test').innerHTML = `✅ Products API working: ${data.products.length} products found`;
+            })
+            .catch(error => {
+                document.getElementById('products-test').innerHTML = `❌ Products API failed: ${error}`;
+            });
+    </script>
+    
+    <div class="image-test">
+        <h3>API Tests</h3>
+        <div id="api-test">Testing category API...</div>
+        <div id="products-test">Testing products API...</div>
+    </div>
+    
+    <div class="image-test">
+        <h3>Debug Links</h3>
+        <p><a href="http://localhost:3001/categories-debug/electronics">Debug Category Products Page</a></p>
+        <p><a href="http://localhost:3001/categories/electronics">Regular Category Products Page</a></p>
+        <p><a href="http://localhost:8000/api/v1/categories/slug/electronics">Category API Direct</a></p>
+        <p><a href="http://localhost:8000/api/v1/products/?category_id=1">Products API Direct</a></p>
+    </div>
+</body>
+</html>

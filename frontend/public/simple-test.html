@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Image Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        img { width: 200px; height: 150px; object-fit: cover; margin: 10px; }
+        .log { background: #f5f5f5; padding: 10px; margin: 10px 0; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <h1>🔬 Simple Image Test (No React)</h1>
+    
+    <div id="log" class="log">
+        <strong>Test Log:</strong><br>
+        <div id="logContent">Starting tests...</div>
+    </div>
+
+    <div class="test-section">
+        <h3>Test 1: Direct Image URLs</h3>
+        <img src="http://localhost:8000/uploads/products/iphone15pro.jpg" 
+             alt="iPhone" 
+             onload="addLog('✅ iPhone image loaded')"
+             onerror="addLog('❌ iPhone image failed')">
+        
+        <img src="http://localhost:8000/uploads/products/galaxys24.jpg" 
+             alt="Samsung" 
+             onload="addLog('✅ Samsung image loaded')"
+             onerror="addLog('❌ Samsung image failed')">
+    </div>
+
+    <div class="test-section">
+        <h3>Test 2: API + Dynamic Images</h3>
+        <div id="dynamicImages">Loading...</div>
+    </div>
+
+    <div class="test-section">
+        <h3>Test 3: Network Analysis</h3>
+        <div id="networkTest">Testing...</div>
+    </div>
+
+    <script>
+        function addLog(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logContent = document.getElementById('logContent');
+            logContent.innerHTML += `<br>${timestamp}: ${message}`;
+            console.log(message);
+        }
+
+        // Test API and create images dynamically
+        async function testAPI() {
+            try {
+                addLog('📡 Fetching products from API...');
+                const response = await fetch('http://localhost:8000/api/v1/products/?category_id=1');
+                const data = await response.json();
+                
+                addLog(`✅ API returned ${data.products.length} products`);
+                
+                const container = document.getElementById('dynamicImages');
+                container.innerHTML = '';
+                
+                data.products.forEach((product, index) => {
+                    if (product.images && product.images.length > 0) {
+                        const imagePath = product.images[0];
+                        const imageUrl = `http://localhost:8000/uploads/${imagePath}`;
+                        
+                        addLog(`🔗 Creating image for ${product.name}: ${imageUrl}`);
+                        
+                        const img = document.createElement('img');
+                        img.src = imageUrl;
+                        img.alt = product.name;
+                        img.style.width = '150px';
+                        img.style.height = '100px';
+                        img.style.objectFit = 'cover';
+                        img.style.margin = '5px';
+                        img.style.border = '1px solid #ddd';
+                        
+                        img.onload = () => addLog(`✅ Dynamic image loaded: ${product.name}`);
+                        img.onerror = () => addLog(`❌ Dynamic image failed: ${product.name}`);
+                        
+                        const div = document.createElement('div');
+                        div.style.display = 'inline-block';
+                        div.style.margin = '10px';
+                        div.style.textAlign = 'center';
+                        
+                        const label = document.createElement('div');
+                        label.textContent = product.name;
+                        label.style.fontSize = '12px';
+                        label.style.marginTop = '5px';
+                        
+                        div.appendChild(img);
+                        div.appendChild(label);
+                        container.appendChild(div);
+                    }
+                });
+                
+            } catch (error) {
+                addLog(`❌ API Error: ${error.message}`);
+            }
+        }
+
+        // Test network connectivity
+        async function testNetwork() {
+            const testUrls = [
+                'http://localhost:8000/api/v1/categories/',
+                'http://localhost:8000/uploads/products/iphone15pro.jpg',
+                'http://localhost:3001'
+            ];
+            
+            const networkContainer = document.getElementById('networkTest');
+            networkContainer.innerHTML = '';
+            
+            for (const url of testUrls) {
+                try {
+                    const response = await fetch(url, { method: 'HEAD' });
+                    const status = response.status === 200 ? '✅ OK' : `❌ ${response.status}`;
+                    networkContainer.innerHTML += `<div>${url}: ${status}</div>`;
+                    addLog(`Network test ${url}: ${status}`);
+                } catch (error) {
+                    networkContainer.innerHTML += `<div>${url}: ❌ ERROR</div>`;
+                    addLog(`Network test ${url}: ❌ ${error.message}`);
+                }
+            }
+        }
+
+        // Run tests
+        addLog('🚀 Starting all tests...');
+        testAPI();
+        testNetwork();
+        
+        // Test after page load
+        window.onload = () => {
+            addLog('📄 Page fully loaded');
+        };
+    </script>
+</body>
+</html>
