@@ -50,7 +50,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <CartProvider>
-          <Router>
+          <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <div className="App min-h-screen bg-gray-50">
               <Routes>
                 {/* Public Routes */}

@@ -268,6 +268,7 @@ async def remove_from_cart(
     
     return {"message": "Item removed from cart"}
 
+@router.delete("")
 @router.delete("/")
 async def clear_cart(
     db: Session = Depends(get_db),

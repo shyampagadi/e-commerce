@@ -7,7 +7,6 @@ psycopg2-binary>=2.9.0
 
 # SQLAlchemy and migrations - Updated for Python 3.13 compatibility
 sqlalchemy>=2.0.25
-alembic>=1.13.0
 
 # Authentication and Security
 python-jose[cryptography]==3.3.0

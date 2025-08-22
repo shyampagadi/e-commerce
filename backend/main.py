@@ -6,6 +6,8 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from contextlib import asynccontextmanager
 import os
 from dotenv import load_dotenv
+from starlette.requests import Request
+import logging
 
 from app.database import engine, Base
 from app.routers import auth, products, categories, orders, users, cart
@@ -33,6 +35,18 @@ app = FastAPI(
     lifespan=lifespan,
     redirect_slashes=False  # Prevent automatic redirects that lose CORS headers
 )
+
+# Lightweight request logging middleware to help debug client requests (method/path).
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    try:
+        # Print method and path; avoid reading body to not consume stream
+        headers_preview = {k: v for k, v in list(request.headers.items())[:5]}
+        print(f"[REQ] {request.method} {request.url.path} headers={headers_preview}")
+    except Exception:
+        print("[REQ] error while logging request")
+    response = await call_next(request)
+    return response
 
 # Configure CORS
 app.add_middleware(

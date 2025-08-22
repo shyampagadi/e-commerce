@@ -179,3 +179,21 @@ async def delete_user(
     db.commit()
     
     return {"message": "User deleted successfully"}
+
+
+@router.put('/profile', response_model=UserResponse)
+async def update_profile(
+    user_update: UserUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Update the current authenticated user's profile."""
+    # Update only provided fields
+    update_data = user_update.dict(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(current_user, field, value)
+
+    db.commit()
+    db.refresh(current_user)
+
+    return current_user

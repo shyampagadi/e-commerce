@@ -46,7 +46,17 @@ api.interceptors.response.use(
     } else if (response?.status >= 500) {
       toast.error('Server error. Please try again later.');
     } else if (response?.data?.detail) {
-      toast.error(response.data.detail);
+      // `detail` can be a string or an array/object (FastAPI validation errors).
+      const detail = response.data.detail;
+      let msg = '';
+      if (typeof detail === 'string') {
+        msg = detail;
+      } else if (Array.isArray(detail)) {
+        msg = detail.map(d => (d && d.msg) ? d.msg : JSON.stringify(d)).join('; ');
+      } else {
+        msg = JSON.stringify(detail);
+      }
+      toast.error(msg);
     } else if (error.message === 'Network Error') {
       toast.error('Network error. Please check your connection.');
     } else {

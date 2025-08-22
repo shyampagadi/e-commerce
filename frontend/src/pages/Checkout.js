@@ -49,10 +49,24 @@ const Checkout = () => {
     try {
       setLoading(true);
       
-      // Prepare order data
+      // Prepare order data matching backend OrderCreate schema
       const orderData = {
-        shipping_address: `${formData.address}, ${formData.city}, ${formData.state} ${formData.zip_code}, ${formData.country}`,
-        payment_method: formData.payment_method,
+        items: items.map((it) => ({
+          product_id: it.product?.id || it.product_id,
+          quantity: it.quantity,
+        })),
+        customer_email: formData.email,
+        customer_phone: formData.phone || undefined,
+        shipping_address: {
+          first_name: formData.first_name,
+          last_name: formData.last_name,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          zip_code: formData.zip_code,
+          country: formData.country,
+        },
+        // billing_address can be added here if you collect it separately
         notes: 'Order placed through checkout'
       };
 
@@ -66,8 +80,9 @@ const Checkout = () => {
       navigate(`/orders/${response.data.id}`);
       
     } catch (error) {
-      console.error('Error placing order:', error);
-      toast.error('Failed to place order. Please try again.');
+      console.error('Error placing order:', error, error?.response?.data);
+      const serverDetail = error?.response?.data?.detail || error?.response?.data || error?.message;
+      toast.error(typeof serverDetail === 'string' ? serverDetail : 'Failed to place order. Please try again.');
     } finally {
       setLoading(false);
     }
