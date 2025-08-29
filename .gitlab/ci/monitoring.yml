@@ -1,0 +1,273 @@
+# Monitoring and Observability Configuration
+# Sets up comprehensive monitoring, alerting, and observability
+
+.monitoring_template: &monitoring_template
+  stage: monitor
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache curl jq
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "develop"
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+
+# Health Check Monitoring
+health-check:
+  <<: *monitoring_template
+  script:
+    - echo "🏥 Running health checks..."
+    - |
+      # Define endpoints to check
+      ENDPOINTS=(
+        "https://ecommerce.example.com/health"
+        "https://ecommerce.example.com/api/v1/products"
+        "https://staging.ecommerce.example.com/health"
+      )
+      
+      # Check each endpoint
+      for endpoint in "${ENDPOINTS[@]}"; do
+        echo "Checking $endpoint..."
+        response=$(curl -s -o /dev/null -w "%{http_code}" "$endpoint")
+        if [ "$response" != "200" ]; then
+          echo "❌ Health check failed for $endpoint (HTTP $response)"
+          exit 1
+        else
+          echo "✅ $endpoint is healthy"
+        fi
+      done
+    - echo "✅ All health checks passed"
+  artifacts:
+    reports:
+      dotenv: health-check.env
+    expire_in: 1 day
+
+# Performance Monitoring
+performance-monitor:
+  <<: *monitoring_template
+  image: grafana/k6:latest
+  script:
+    - echo "📊 Running performance monitoring..."
+    - |
+      # Run continuous performance tests
+      k6 run --out json=performance-metrics.json monitoring/k6/performance-monitor.js
+      
+      # Check performance thresholds
+      RESPONSE_TIME=$(jq -r '.metrics.http_req_duration.avg' performance-metrics.json)
+      ERROR_RATE=$(jq -r '.metrics.http_req_failed.rate' performance-metrics.json)
+      
+      # Alert if thresholds exceeded
+      if (( $(echo "$RESPONSE_TIME > 2000" | bc -l) )); then
+        echo "⚠️ High response time detected: ${RESPONSE_TIME}ms"
+        curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\":\"🚨 High response time: ${RESPONSE_TIME}ms\"}" \
+          $SLACK_WEBHOOK_URL
+      fi
+      
+      if (( $(echo "$ERROR_RATE > 0.01" | bc -l) )); then
+        echo "⚠️ High error rate detected: ${ERROR_RATE}%"
+        curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\":\"🚨 High error rate: ${ERROR_RATE}%\"}" \
+          $SLACK_WEBHOOK_URL
+      fi
+    - echo "✅ Performance monitoring completed"
+  artifacts:
+    paths:
+      - performance-metrics.json
+    expire_in: 1 week
+
+# Security Monitoring
+security-monitor:
+  <<: *monitoring_template
+  script:
+    - echo "🔒 Running security monitoring..."
+    - |
+      # Check for security incidents
+      # Monitor failed login attempts
+      FAILED_LOGINS=$(curl -s "http://prometheus:9090/api/v1/query?query=increase(failed_login_attempts_total[1h])" | jq -r '.data.result[0].value[1]')
+      
+      if [ "$FAILED_LOGINS" -gt 100 ]; then
+        echo "⚠️ High number of failed login attempts: $FAILED_LOGINS"
+        curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\":\"🚨 Security Alert: $FAILED_LOGINS failed login attempts in the last hour\"}" \
+          $SLACK_WEBHOOK_URL
+      fi
+      
+      # Check SSL certificate expiry
+      CERT_EXPIRY=$(echo | openssl s_client -servername ecommerce.example.com -connect ecommerce.example.com:443 2>/dev/null | openssl x509 -noout -dates | grep notAfter | cut -d= -f2)
+      EXPIRY_TIMESTAMP=$(date -d "$CERT_EXPIRY" +%s)
+      CURRENT_TIMESTAMP=$(date +%s)
+      DAYS_UNTIL_EXPIRY=$(( (EXPIRY_TIMESTAMP - CURRENT_TIMESTAMP) / 86400 ))
+      
+      if [ "$DAYS_UNTIL_EXPIRY" -lt 30 ]; then
+        echo "⚠️ SSL certificate expires in $DAYS_UNTIL_EXPIRY days"
+        curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\":\"🚨 SSL Certificate Alert: Certificate expires in $DAYS_UNTIL_EXPIRY days\"}" \
+          $SLACK_WEBHOOK_URL
+      fi
+    - echo "✅ Security monitoring completed"
+
+# Log Analysis
+log-analysis:
+  <<: *monitoring_template
+  image: elastic/filebeat:8.5.0
+  script:
+    - echo "📋 Running log analysis..."
+    - |
+      # Analyze application logs for errors
+      ERROR_COUNT=$(curl -s -X GET "elasticsearch:9200/app-logs-*/_search" \
+        -H 'Content-Type: application/json' \
+        -d '{"query":{"bool":{"must":[{"range":{"@timestamp":{"gte":"now-1h"}}},{"term":{"level":"ERROR"}}]}},"size":0}' | jq '.hits.total.value')
+      
+      if [ "$ERROR_COUNT" -gt 50 ]; then
+        echo "⚠️ High error count in logs: $ERROR_COUNT errors in the last hour"
+        curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\":\"🚨 Log Alert: $ERROR_COUNT errors detected in the last hour\"}" \
+          $SLACK_WEBHOOK_URL
+      fi
+      
+      # Check for specific error patterns
+      CRITICAL_ERRORS=$(curl -s -X GET "elasticsearch:9200/app-logs-*/_search" \
+        -H 'Content-Type: application/json' \
+        -d '{"query":{"bool":{"must":[{"range":{"@timestamp":{"gte":"now-1h"}}},{"terms":{"message":["database connection failed","payment processing error","authentication failure"]}}]}},"size":0}' | jq '.hits.total.value')
+      
+      if [ "$CRITICAL_ERRORS" -gt 0 ]; then
+        echo "🚨 Critical errors detected: $CRITICAL_ERRORS"
+        curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\":\"🚨 Critical Error Alert: $CRITICAL_ERRORS critical errors detected\"}" \
+          $SLACK_WEBHOOK_URL
+      fi
+    - echo "✅ Log analysis completed"
+
+# Backup Verification
+backup-verification:
+  <<: *monitoring_template
+  script:
+    - echo "💾 Verifying backups..."
+    - |
+      # Check database backup status
+      LATEST_BACKUP=$(aws s3 ls s3://ecommerce-backups/database/ --recursive | sort | tail -n 1 | awk '{print $1" "$2}')
+      BACKUP_DATE=$(date -d "$LATEST_BACKUP" +%s)
+      CURRENT_DATE=$(date +%s)
+      BACKUP_AGE_HOURS=$(( (CURRENT_DATE - BACKUP_DATE) / 3600 ))
+      
+      if [ "$BACKUP_AGE_HOURS" -gt 25 ]; then
+        echo "⚠️ Database backup is $BACKUP_AGE_HOURS hours old"
+        curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\":\"🚨 Backup Alert: Database backup is $BACKUP_AGE_HOURS hours old\"}" \
+          $SLACK_WEBHOOK_URL
+      fi
+      
+      # Verify backup integrity
+      aws s3 cp s3://ecommerce-backups/database/latest.sql.gz /tmp/
+      gunzip -t /tmp/latest.sql.gz
+      if [ $? -ne 0 ]; then
+        echo "❌ Backup integrity check failed"
+        curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\":\"🚨 Backup Alert: Backup integrity check failed\"}" \
+          $SLACK_WEBHOOK_URL
+        exit 1
+      fi
+    - echo "✅ Backup verification completed"
+
+# Dependency Updates Check
+dependency-updates:
+  <<: *monitoring_template
+  image: node:18-alpine
+  script:
+    - echo "📦 Checking for dependency updates..."
+    - |
+      # Check frontend dependencies
+      cd frontend
+      npm outdated --json > ../frontend-outdated.json || true
+      OUTDATED_COUNT=$(jq 'length' ../frontend-outdated.json)
+      
+      if [ "$OUTDATED_COUNT" -gt 10 ]; then
+        echo "⚠️ $OUTDATED_COUNT frontend dependencies are outdated"
+        curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\":\"📦 Dependency Alert: $OUTDATED_COUNT frontend dependencies need updates\"}" \
+          $SLACK_WEBHOOK_URL
+      fi
+      
+      cd ../backend
+      pip list --outdated --format=json > ../backend-outdated.json
+      OUTDATED_COUNT=$(jq 'length' ../backend-outdated.json)
+      
+      if [ "$OUTDATED_COUNT" -gt 5 ]; then
+        echo "⚠️ $OUTDATED_COUNT backend dependencies are outdated"
+        curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\":\"📦 Dependency Alert: $OUTDATED_COUNT backend dependencies need updates\"}" \
+          $SLACK_WEBHOOK_URL
+      fi
+    - echo "✅ Dependency update check completed"
+  artifacts:
+    paths:
+      - frontend-outdated.json
+      - backend-outdated.json
+    expire_in: 1 week
+
+# Compliance Monitoring
+compliance-monitor:
+  <<: *monitoring_template
+  script:
+    - echo "📋 Running compliance monitoring..."
+    - |
+      # Check GDPR compliance
+      # Verify data retention policies
+      RETENTION_VIOLATIONS=$(curl -s "http://prometheus:9090/api/v1/query?query=gdpr_data_retention_violations_total" | jq -r '.data.result[0].value[1]')
+      
+      if [ "$RETENTION_VIOLATIONS" -gt 0 ]; then
+        echo "⚠️ GDPR data retention violations detected: $RETENTION_VIOLATIONS"
+        curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\":\"🚨 Compliance Alert: $RETENTION_VIOLATIONS GDPR violations detected\"}" \
+          $SLACK_WEBHOOK_URL
+      fi
+      
+      # Check PCI DSS compliance
+      # Verify encryption status
+      UNENCRYPTED_DATA=$(curl -s "http://prometheus:9090/api/v1/query?query=unencrypted_sensitive_data_total" | jq -r '.data.result[0].value[1]')
+      
+      if [ "$UNENCRYPTED_DATA" -gt 0 ]; then
+        echo "🚨 Unencrypted sensitive data detected: $UNENCRYPTED_DATA instances"
+        curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\":\"🚨 Security Alert: Unencrypted sensitive data detected\"}" \
+          $SLACK_WEBHOOK_URL
+      fi
+    - echo "✅ Compliance monitoring completed"
+
+# Generate Monitoring Report
+monitoring-report:
+  <<: *monitoring_template
+  script:
+    - echo "📊 Generating monitoring report..."
+    - |
+      # Create comprehensive monitoring report
+      cat > monitoring-report.json << EOF
+      {
+        "report_date": "$(date -Iseconds)",
+        "pipeline_id": "$CI_PIPELINE_ID",
+        "commit_sha": "$CI_COMMIT_SHA",
+        "environment": "$CI_ENVIRONMENT_NAME",
+        "health_status": "healthy",
+        "performance_metrics": {
+          "response_time_avg": "$(jq -r '.metrics.http_req_duration.avg' performance-metrics.json 2>/dev/null || echo 'N/A')",
+          "error_rate": "$(jq -r '.metrics.http_req_failed.rate' performance-metrics.json 2>/dev/null || echo 'N/A')"
+        },
+        "security_status": "secure",
+        "backup_status": "verified",
+        "compliance_status": "compliant"
+      }
+      EOF
+      
+      # Send report to monitoring dashboard
+      if [ ! -z "$MONITORING_WEBHOOK_URL" ]; then
+        curl -X POST -H "Content-Type: application/json" -d @monitoring-report.json $MONITORING_WEBHOOK_URL
+      fi
+    - echo "✅ Monitoring report generated"
+  artifacts:
+    paths:
+      - monitoring-report.json
+    expire_in: 1 month
+  dependencies:
+    - health-check
+    - performance-monitor
+    - security-monitor

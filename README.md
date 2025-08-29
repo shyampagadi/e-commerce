@@ -22,81 +22,56 @@ A modern, full-stack e-commerce application built with **React**, **FastAPI**, a
 - **Admin Dashboard**: Analytics and management tools
 - **API Documentation**: Auto-generated OpenAPI documentation
 
-## 🚀 Quick Setup
+## 🚀 Quick Setup (Manual PostgreSQL)
 
 ### Prerequisites
 
 - **Python** (3.11+ recommended)
 - **Node.js** (v16 or higher)
-- **PostgreSQL** (v12 or higher)
+- **PostgreSQL** (v12 or higher) - **Manually installed and configured**
 
-### Option 1: Easy Setup Script (Recommended)
+### Database Configuration (Manual Setup)
 
-Run the automated setup script that configures everything for you:
+This project uses a **manually configured PostgreSQL database** with the following settings:
 
-```bash
-# Run the easy setup script
-python easy_setup.py
+```
+Database: ecommerce_db
+User: postgres
+Password: admin
+Host: localhost
+Port: 5432
 ```
 
-This script will:
-1. Create a `.env` file with default configuration
-2. Set up the PostgreSQL database and user
-3. Set up the backend environment and dependencies
-4. Set up the frontend environment and dependencies
-5. Download product images
-6. Initialize the database with sample data
+> **Note**: Make sure you have created the `ecommerce_db` database in your PostgreSQL installation before proceeding.
 
-### Option 2: Manual Setup
+### Step-by-Step Setup
 
-#### 1. Clone the Repository
+#### 1. Clone and Navigate to Project
 
 ```bash
 git clone <repository-url>
 cd e-commerce
 ```
 
-#### 2. Database Setup
+#### 2. Install Dependencies
 
-Create a PostgreSQL database and user:
-
-```sql
--- Connect to PostgreSQL as superuser
-CREATE DATABASE ecommerce_db;
-CREATE USER ecommerce_user WITH PASSWORD 'your_password';
-GRANT ALL PRIVILEGES ON DATABASE ecommerce_db TO ecommerce_user;
+```bash
+# Install main dependencies
+pip install -r requirements.txt
 ```
 
-#### 3. Environment Configuration
+#### 3. Database Setup (Single Command)
 
-Create a `.env` file in the root directory:
+```bash
+# Full database setup (validate + initialize clean database)
+python database/setup.py --all
 
-```env
-# Database
-DATABASE_URL=postgresql://ecommerce_user:your_password@localhost:5432/ecommerce_db
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=ecommerce_db
-DB_USER=ecommerce_user
-DB_PASSWORD=your_password
-
-# JWT Security
-SECRET_KEY=your-super-secret-jwt-key-change-this-in-production
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-
-# API Configuration
-API_V1_STR=/api/v1
-PROJECT_NAME=E-Commerce API
-ENVIRONMENT=development
-DEBUG=true
-
-# CORS Settings
-BACKEND_CORS_ORIGINS=["http://localhost:3000", "http://localhost:3001"]
-
-# Frontend Configuration
-REACT_APP_API_URL=http://localhost:8000
-REACT_APP_API_BASE_URL=http://localhost:8000/api/v1
+# Or run individual commands:
+python database/setup.py --validate              # Validate connection
+python database/setup.py --init-clean           # Clean initialization
+python database/setup.py --init-sample          # With sample data
+python database/setup.py --download-images      # Download sample images
+python database/setup.py --reset                # Reset database
 ```
 
 #### 4. Backend Setup
@@ -105,7 +80,7 @@ REACT_APP_API_BASE_URL=http://localhost:8000/api/v1
 # Navigate to backend directory
 cd backend
 
-# Create virtual environment
+# Create and activate virtual environment
 python -m venv venv
 
 # Activate virtual environment
@@ -114,14 +89,8 @@ venv\Scripts\activate
 # On macOS/Linux:
 source venv/bin/activate
 
-# Install dependencies
+# Install backend dependencies
 pip install -r requirements.txt
-
-# Download product images
-python download_images.py
-
-# Initialize database with sample data
-python init_db.py
 
 # Start the backend server
 uvicorn main:app --reload
@@ -173,9 +142,10 @@ e-commerce/
 │   │   └── database.py     # Database configuration
 │   ├── uploads/            # File uploads directory
 │   ├── main.py            # FastAPI application entry point
-│   ├── init_db.py         # Database initialization script
-│   ├── download_images.py # Product images download script
+│   ├── delete_vpc_resources.py # AWS VPC cleanup utility
 │   └── requirements.txt   # Python dependencies
+├── database/               # Database setup and management
+│   └── setup.py           # Comprehensive database setup script
 ├── frontend/               # React frontend
 │   ├── public/            # Static files
 │   ├── src/
@@ -185,11 +155,36 @@ e-commerce/
 │   │   ├── services/      # API services
 │   │   └── utils/         # Utility functions
 │   └── package.json       # Node.js dependencies
-├── .env                   # Environment variables
+├── .env                   # Environment variables (configured for manual PostgreSQL)
 ├── .gitignore            # Git ignore rules
-├── easy_setup.py         # Automated setup script
-├── setup_database.py     # Database setup helper
+├── requirements.txt      # Main dependencies (psycopg2, boto3)
 └── README.md             # This file
+```
+
+## 🛠️ Database Configuration
+
+### Manual PostgreSQL Setup
+
+The application is configured to use a **manually created PostgreSQL database**:
+
+```env
+# Database Configuration (Manual Setup)
+DATABASE_URL=postgresql://postgres:admin@localhost:5432/ecommerce_db
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=ecommerce_db
+DB_USER=postgres
+DB_PASSWORD=admin
+```
+
+### Creating the Database Manually
+
+If you haven't created the database yet:
+
+```sql
+-- Connect to PostgreSQL as superuser
+CREATE DATABASE ecommerce_db;
+-- The postgres user should already exist with your chosen password
 ```
 
 ## 🛠️ API Endpoints
@@ -261,7 +256,7 @@ Visit http://localhost:8000/docs for interactive API documentation and testing.
 
 ### Backend Development
 - **Framework**: FastAPI with automatic OpenAPI documentation
-- **Database**: SQLAlchemy ORM with PostgreSQL
+- **Database**: SQLAlchemy ORM with PostgreSQL (manual setup)
 - **Authentication**: JWT tokens with bcrypt password hashing
 - **Validation**: Pydantic schemas for request/response validation
 - **File Uploads**: Handled with proper validation and storage
@@ -282,6 +277,27 @@ Visit http://localhost:8000/docs for interactive API documentation and testing.
 - **Orders**: Order processing and tracking
 - **Order Items**: Detailed order line items
 
+## 🔄 Alternative Setup Options
+
+### Option 1: With Sample Data
+If you want to start with sample products and data:
+
+```bash
+cd backend
+python init_db.py  # Creates sample products with images
+python download_images.py  # Downloads product images
+```
+
+### Option 2: Different Database Credentials
+If you want to use different database credentials, update the `.env` file:
+
+```env
+DATABASE_URL=postgresql://your_user:your_password@localhost:5432/your_database
+DB_USER=your_user
+DB_PASSWORD=your_password
+DB_NAME=your_database
+```
+
 ## 🚀 Production Deployment
 
 ### Environment Variables
@@ -289,7 +305,7 @@ Update the following for production:
 
 ```env
 # Security
-SECRET_KEY=your-production-secret-key
+SECRET_KEY=your-production-secret-key-here
 DEBUG=false
 ENVIRONMENT=production
 
@@ -320,22 +336,29 @@ REACT_APP_API_BASE_URL=https://api.yourdomain.com/api/v1
 
 **Database Connection Issues**
 - Ensure PostgreSQL is running
-- Check database credentials in `.env` file
-- Verify database and user exist
+- Verify database `ecommerce_db` exists
+- Check credentials: user `postgres`, password `admin`
+- Test connection: `python validate_database.py`
 
 **Backend Issues**
-- Check Python version (3.11+ recommended)
-- Ensure all dependencies are installed
-- Verify `.env` file exists and is properly configured
+- Check Python version: `python --version` (3.11+ recommended)
+- Ensure virtual environment is activated
+- Verify all dependencies are installed: `pip list`
+- Check `.env` file exists and is properly configured
 
 **Frontend Issues**
-- Check Node.js version (16+ required)
+- Check Node.js version: `node --version` (16+ required)
 - Clear npm cache: `npm cache clean --force`
 - Delete node_modules and reinstall: `rm -rf node_modules && npm install`
 
 **CORS Issues**
 - Verify CORS origins in backend configuration
 - Check that frontend URL matches CORS settings
+- Ensure `.env` file has correct BACKEND_CORS_ORIGINS format
+
+**Permission Issues**
+- On Windows/WSL: Check file permissions
+- On Linux/macOS: Use `chmod +x` for script files
 
 ## 📄 License
 

@@ -8,9 +8,10 @@ psycopg2-binary>=2.9.0
 # SQLAlchemy and migrations - Updated for Python 3.13 compatibility
 sqlalchemy>=2.0.25
 
-# Authentication and Security
+# Authentication and Security - Fixed bcrypt compatibility
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
+bcrypt==3.2.2
 
 # File handling and utilities
 python-multipart==0.0.6
@@ -33,5 +34,10 @@ httpx>=0.25.0
 
 # Data generation for sample data
 faker>=20.0.0
+
+# HTTP requests (for image downloads)
+requests>=2.31.0
+
+# AWS dependencies (for VPC cleanup script)
 boto3>=1.26.0
 botocore>=1.29.0

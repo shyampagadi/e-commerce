@@ -8,6 +8,7 @@ const Input = forwardRef(({
   className = '',
   fullWidth = true,
   required = false,
+  'data-testid': testId,
   ...props
 }, ref) => {
   const inputClasses = clsx(
@@ -33,6 +34,7 @@ const Input = forwardRef(({
       <input
         ref={ref}
         className={inputClasses}
+        data-testid={testId || props.name}
         {...props}
       />
       {error && (

@@ -3,13 +3,13 @@ from typing import List
 import os
 
 class Settings(BaseSettings):
-    # Database
-    DATABASE_URL: str = "postgresql://ecommerce_user:ecommerce_password@localhost:5432/ecommerce_db"
+    # Database (Manual PostgreSQL Setup)
+    DATABASE_URL: str = "postgresql://postgres:admin@localhost:5432/ecommerce_db"
     DB_HOST: str = "localhost"
     DB_PORT: int = 5432
     DB_NAME: str = "ecommerce_db"
-    DB_USER: str = "ecommerce_user"
-    DB_PASSWORD: str = "ecommerce_password"
+    DB_USER: str = "postgres"
+    DB_PASSWORD: str = "admin"
     
     # JWT
     SECRET_KEY: str = "your-super-secret-jwt-key-change-this-in-production"

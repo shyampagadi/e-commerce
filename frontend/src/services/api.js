@@ -167,7 +167,7 @@ export const uploadFile = async (file, endpoint) => {
 export const getImageUrl = (imagePath) => {
   if (!imagePath) return null;
   if (imagePath.startsWith('http')) return imagePath;
-  return `${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/uploads/${imagePath}`;
+  return `${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/uploads/products/${imagePath}`;
 };
 
 export default api;
