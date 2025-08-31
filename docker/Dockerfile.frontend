@@ -1,17 +1,12 @@
-# Multi-stage Dockerfile for Frontend (React)
-# Optimized for production with security best practices
+# Build Stage
+FROM node:18-alpine AS builder
 
-# Build stage
-FROM node:18-alpine as builder
-
-# Build arguments
 ARG BUILD_DATE
 ARG VCS_REF
 ARG VERSION
 ARG REACT_APP_API_URL=http://localhost:8000
 ARG REACT_APP_API_BASE_URL=http://localhost:8000/api/v1
 
-# Labels for metadata
 LABEL maintainer="ecommerce-team@example.com" \
       org.opencontainers.image.title="E-Commerce Frontend" \
       org.opencontainers.image.description="React frontend for e-commerce application" \
@@ -20,63 +15,35 @@ LABEL maintainer="ecommerce-team@example.com" \
       org.opencontainers.image.revision=$VCS_REF \
       org.opencontainers.image.source="https://gitlab.com/your-org/e-commerce"
 
-# Set working directory
 WORKDIR /app
-
-# Copy package files
 COPY frontend/package*.json ./
-
-# Install dependencies
-RUN npm ci --only=production --silent
-
-# Copy source code
+RUN npm ci --silent
 COPY frontend/ .
-
-# Set environment variables for build
 ENV REACT_APP_API_URL=$REACT_APP_API_URL \
     REACT_APP_API_BASE_URL=$REACT_APP_API_BASE_URL \
     NODE_ENV=production
-
-# Build application
 RUN npm run build
 
-# Production stage with Nginx
-FROM nginx:1.25-alpine as production
+# Production Stage with Nginx
+FROM nginx:1.25-alpine AS production
 
-# Install security updates
 RUN apk update && apk upgrade && apk add --no-cache curl
-
-# Remove default nginx configuration
 RUN rm /etc/nginx/conf.d/default.conf
 
-# Copy custom nginx configuration
+# Copy nginx configuration files
 COPY docker/nginx.conf /etc/nginx/conf.d/
-
-# Copy built application from builder stage
-COPY --from=builder /app/build /usr/share/nginx/html
-
-# Copy security headers configuration
 COPY docker/security-headers.conf /etc/nginx/conf.d/
 
-# Create non-root user for nginx
+COPY --from=builder /app/build /usr/share/nginx/html
+
 RUN addgroup -g 1001 -S nginx-user && \
-    adduser -S -D -H -u 1001 -h /var/cache/nginx -s /sbin/nologin -G nginx-user -g nginx-user nginx-user
+    adduser -S -D -H -u 1001 -h /var/cache/nginx -s /sbin/nologin -G nginx-user nginx-user && \
+    chown -R nginx-user:nginx-user /usr/share/nginx/html /var/cache/nginx /var/log/nginx /etc/nginx/conf.d
 
-# Set proper permissions
-RUN chown -R nginx-user:nginx-user /usr/share/nginx/html && \
-    chown -R nginx-user:nginx-user /var/cache/nginx && \
-    chown -R nginx-user:nginx-user /var/log/nginx && \
-    chown -R nginx-user:nginx-user /etc/nginx/conf.d
-
-# Switch to non-root user
 USER nginx-user
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:80/ || exit 1
+  CMD curl -f http://localhost/ || exit 1
 
-# Expose port
 EXPOSE 80
-
-# Start nginx
 CMD ["nginx", "-g", "daemon off;"]

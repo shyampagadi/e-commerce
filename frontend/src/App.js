@@ -11,6 +11,7 @@ import { CartProvider } from './context/CartContext';
 import Layout from './components/Layout/Layout';
 import ProtectedRoute from './components/Auth/ProtectedRoute';
 import AdminRoute from './components/Auth/AdminRoute';
+import DemoBanner from './components/UI/DemoBanner';
 
 // Pages
 import Home from './pages/Home';
