@@ -9,6 +9,115 @@
 **Prerequisites**: Basic understanding of virtualization concepts  
 **Learning Objectives**: Master container fundamentals essential for Kubernetes
 
+### **🛠️ Tools Covered**
+- **Docker**: Container runtime and image building
+- **Docker Compose**: Multi-container application orchestration
+- **Dockerfile**: Container image definition and optimization
+- **Container Registry**: Image storage and distribution
+- **Docker CLI**: Container management and debugging
+
+### **🏭 Industry Tools**
+- **Podman**: Docker alternative with rootless containers
+- **containerd**: Industry-standard container runtime
+- **Buildah**: Container image building without Docker daemon
+- **Skopeo**: Container image inspection and copying
+- **Docker Desktop**: GUI-based container management
+- **Portainer**: Web-based container management interface
+- **Rancher**: Container orchestration platform
+- **Harbor**: Enterprise container registry
+- **Quay**: Red Hat's container registry
+- **Amazon ECR**: AWS container registry
+- **Google Container Registry**: GCP container registry
+- **Azure Container Registry**: Microsoft's container registry
+
+### **🌍 Environment Strategy**
+This module prepares containers for deployment across three environments:
+- **DEV**: Development containers with debugging tools
+- **UAT**: User Acceptance Testing containers with production-like configuration
+- **PROD**: Production-optimized containers with security hardening
+
+### **💥 Chaos Engineering**
+- **Container restart policies**: Testing application resilience to container failures
+- **Resource constraint simulation**: Testing behavior under memory/CPU limits
+- **Network partition testing**: Simulating network connectivity issues
+- **Storage failure simulation**: Testing data persistence and recovery
+
+---
+
+## 🌍 **Environment-Specific Container Configurations**
+
+### **Development Environment (DEV)**
+```dockerfile
+# Development Dockerfile with debugging tools
+FROM python:3.11-slim as dev
+
+# Install development tools
+RUN apt-get update && apt-get install -y \
+    vim \
+    curl \
+    htop \
+    strace \
+    && rm -rf /var/lib/apt/lists/*
+
+# Enable debug mode
+ENV DEBUG=true
+ENV LOG_LEVEL=debug
+
+# Install development dependencies
+COPY backend/requirements-dev.txt /tmp/requirements-dev.txt
+RUN pip install -r /tmp/requirements-dev.txt
+
+# Expose debug port
+EXPOSE 5678
+```
+
+### **UAT Environment (User Acceptance Testing)**
+```dockerfile
+# UAT Dockerfile - production-like with testing tools
+FROM python:3.11-slim as uat
+
+# Install testing tools
+RUN apt-get update && apt-get install -y \
+    curl \
+    jq \
+    && rm -rf /var/lib/apt/lists/*
+
+# UAT-specific environment
+ENV DEBUG=false
+ENV LOG_LEVEL=info
+ENV ENVIRONMENT=uat
+
+# Install testing dependencies
+COPY backend/requirements-test.txt /tmp/requirements-test.txt
+RUN pip install -r /tmp/requirements-test.txt
+```
+
+### **Production Environment (PROD)**
+```dockerfile
+# Production Dockerfile - optimized and secure
+FROM python:3.11-slim as production
+
+# Minimal runtime dependencies only
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Production environment
+ENV DEBUG=false
+ENV LOG_LEVEL=warning
+ENV ENVIRONMENT=production
+
+# Security hardening
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+USER appuser
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+```
+
 ---
 
 ## 🎯 **Learning Objectives**
@@ -612,6 +721,80 @@ docker logs ecommerce-frontend
 
 **📋 Overview**: This lab demonstrates how to inspect and analyze running containers for debugging and monitoring purposes.
 
+### **Lab 4: Chaos Engineering Experiments**
+
+**📋 Overview**: This lab introduces chaos engineering concepts by testing container resilience through controlled failure scenarios.
+
+**🔍 Detailed Chaos Engineering Analysis**:
+
+```bash
+# Test 1: Container Restart Policy Testing
+docker run -d --name test-container --restart=always ecommerce-backend:latest
+```
+**Explanation**:
+- `--restart=always`: Container will restart automatically if it stops
+- **Chaos Test**: Kill the container process and observe automatic restart
+- **Learning**: Understanding how restart policies affect application availability
+
+```bash
+# Test 2: Resource Constraint Simulation
+docker run -d --name memory-test --memory=100m --cpus=0.5 ecommerce-backend:latest
+```
+**Explanation**:
+- `--memory=100m`: Limits container to 100MB RAM
+- `--cpus=0.5`: Limits container to 0.5 CPU cores
+- **Chaos Test**: Monitor container behavior under resource constraints
+- **Learning**: Understanding resource limits and their impact on applications
+
+```bash
+# Test 3: Network Partition Simulation
+docker network create --driver bridge test-network
+docker run -d --name backend-test --network test-network ecommerce-backend:latest
+docker run -d --name frontend-test --network test-network ecommerce-frontend:latest
+```
+**Explanation**:
+- `docker network create`: Creates isolated network for testing
+- **Chaos Test**: Disconnect network and observe application behavior
+- **Learning**: Understanding network dependencies and failure modes
+
+```bash
+# Test 4: Storage Failure Simulation
+docker run -d --name storage-test -v /tmp/test-data:/app/data ecommerce-backend:latest
+```
+**Explanation**:
+- `-v /tmp/test-data:/app/data`: Mounts host directory as volume
+- **Chaos Test**: Remove or corrupt the mounted directory
+- **Learning**: Understanding data persistence and storage failure scenarios
+
+**🔧 Chaos Engineering Commands**:
+
+```bash
+# Monitor container resource usage during chaos tests
+docker stats --no-stream
+
+# Check container logs for error patterns
+docker logs --tail 100 -f test-container
+
+# Simulate network connectivity issues
+docker network disconnect bridge test-container
+
+# Test container health checks
+docker inspect test-container | grep -A 10 Health
+```
+
+**📊 Chaos Engineering Results Analysis**:
+
+1. **Container Restart Behavior**: Document restart frequency and success rate
+2. **Resource Constraint Impact**: Measure performance degradation under limits
+3. **Network Failure Recovery**: Test application resilience to network issues
+4. **Storage Failure Handling**: Verify data persistence and recovery mechanisms
+
+**🎯 Chaos Engineering Learning Objectives**:
+- Understand failure modes in containerized applications
+- Learn to design resilient container architectures
+- Practice monitoring and observability during failures
+- Develop troubleshooting skills for production issues
+
 **🔍 Detailed Command Analysis**:
 
 ```bash
@@ -722,6 +905,63 @@ docker network inspect bridge
 - Docker Compose configuration
 - Network connectivity test results
 - Service discovery setup
+
+### **Problem 4: Chaos Engineering Scenarios**
+
+**Scenario**: Test your e-commerce application's resilience to various failure scenarios.
+
+**Requirements**:
+1. **Container Failure Testing**:
+   - Simulate container crashes and restarts
+   - Test different restart policies
+   - Measure recovery time and data loss
+
+2. **Resource Constraint Testing**:
+   - Test application behavior under memory limits
+   - Simulate CPU constraints
+   - Monitor performance degradation
+
+3. **Network Failure Testing**:
+   - Simulate network partitions
+   - Test service discovery failures
+   - Verify graceful degradation
+
+4. **Storage Failure Testing**:
+   - Test volume mount failures
+   - Simulate disk space issues
+   - Verify data persistence mechanisms
+
+**Expected Output**:
+- Chaos engineering test results
+- Failure mode analysis
+- Resilience improvement recommendations
+- Monitoring and alerting setup
+
+### **Problem 5: Multi-Environment Container Strategy**
+
+**Scenario**: Design container configurations for DEV, UAT, and PROD environments.
+
+**Requirements**:
+1. **Development Environment**:
+   - Enable debugging tools
+   - Configure hot reloading
+   - Set up development databases
+
+2. **UAT Environment**:
+   - Production-like configuration
+   - Testing tools integration
+   - Performance monitoring
+
+3. **Production Environment**:
+   - Security hardening
+   - Performance optimization
+   - Monitoring and logging
+
+**Expected Output**:
+- Environment-specific Dockerfiles
+- Docker Compose configurations
+- Deployment strategies
+- Environment promotion pipeline
 
 **📋 Detailed Solution with Line-by-Line Analysis**:
 
@@ -996,35 +1236,61 @@ docker-compose down
 
 ---
 
-## 🚀 **Mini-Project: Container Optimization**
+## 🚀 **Mini-Project: Production-Ready Container Strategy**
 
 ### **Project Requirements**
 
-Optimize your e-commerce application's containerization for production deployment:
+Design and implement a comprehensive container strategy for your e-commerce application across all environments:
 
-1. **Image Size Optimization**
+1. **Multi-Environment Containerization**
+   - Create DEV, UAT, and PROD specific Dockerfiles
+   - Implement environment-specific configurations
+   - Set up proper environment variable management
+   - Design environment promotion pipeline
+
+2. **Image Size Optimization**
    - Reduce backend image size by 40%
    - Reduce frontend image size by 50%
    - Implement proper layer caching
+   - Use multi-stage builds effectively
 
-2. **Security Hardening**
-   - Run all containers as non-root
+3. **Security Hardening**
+   - Run all containers as non-root users
    - Implement proper health checks
    - Use minimal base images
    - Scan for vulnerabilities
+   - Implement secrets management
 
-3. **Performance Optimization**
+4. **Chaos Engineering Implementation**
+   - Design failure scenarios for each environment
+   - Implement resilience testing
+   - Create monitoring and alerting
+   - Document failure modes and recovery procedures
+
+5. **Performance Optimization**
    - Optimize build times
    - Implement proper resource limits
    - Configure logging properly
+   - Set up performance monitoring
 
 ### **Deliverables**
 
-- Optimized Dockerfiles for both frontend and backend
-- Docker Compose configuration for local development
-- Security scan results and remediation
-- Performance benchmarks (before/after)
-- Documentation of optimization techniques used
+- **Environment-Specific Dockerfiles**: DEV, UAT, and PROD configurations
+- **Docker Compose Configurations**: For each environment
+- **Chaos Engineering Test Suite**: Automated failure testing
+- **Security Scan Results**: Vulnerability assessment and remediation
+- **Performance Benchmarks**: Before/after optimization metrics
+- **Monitoring Setup**: Health checks, logging, and alerting
+- **Documentation**: Complete container strategy and deployment guide
+- **CI/CD Pipeline**: Automated building, testing, and deployment
+
+### **Chaos Engineering Deliverables**
+
+- **Failure Scenario Documentation**: Detailed test cases for each failure mode
+- **Resilience Test Results**: Recovery time and data loss measurements
+- **Monitoring Dashboards**: Real-time visibility into system health
+- **Alerting Rules**: Automated notifications for failure scenarios
+- **Recovery Procedures**: Step-by-step guides for common failures
 
 ---
 
@@ -1191,6 +1457,92 @@ docker volume ls
 - **Resource limits**: Ensure sufficient memory/CPU
 - **Network issues**: Verify network configuration
 
+### **Q6: How would you implement chaos engineering for containerized applications?**
+
+**Answer**:
+Chaos engineering for containers involves systematic failure testing:
+
+1. **Container Failure Testing**:
+```bash
+# Test restart policies
+docker run -d --restart=always --name test-app my-app:latest
+docker kill test-app  # Simulate crash
+docker ps  # Verify restart
+```
+
+2. **Resource Constraint Testing**:
+```bash
+# Test memory limits
+docker run -d --memory=100m --name memory-test my-app:latest
+docker stats memory-test  # Monitor behavior
+```
+
+3. **Network Failure Testing**:
+```bash
+# Test network isolation
+docker network create test-net
+docker run -d --network test-net --name isolated-app my-app:latest
+docker network disconnect test-net isolated-app  # Simulate partition
+```
+
+4. **Storage Failure Testing**:
+```bash
+# Test volume failures
+docker run -d -v /tmp/test-data:/app/data --name storage-test my-app:latest
+rm -rf /tmp/test-data  # Simulate storage failure
+```
+
+**Benefits**:
+- **Resilience Validation**: Ensures applications handle failures gracefully
+- **Recovery Testing**: Validates restart and recovery mechanisms
+- **Performance Impact**: Measures degradation under stress
+- **Monitoring Validation**: Tests alerting and monitoring systems
+
+### **Q7: How would you design containers for different environments (DEV, UAT, PROD)?**
+
+**Answer**:
+Environment-specific container design requires different configurations:
+
+1. **Development Environment**:
+```dockerfile
+# DEV Dockerfile
+FROM python:3.11-slim as dev
+RUN apt-get install -y vim curl htop  # Debug tools
+ENV DEBUG=true LOG_LEVEL=debug
+EXPOSE 5678  # Debug port
+```
+
+2. **UAT Environment**:
+```dockerfile
+# UAT Dockerfile
+FROM python:3.11-slim as uat
+RUN apt-get install -y curl jq  # Testing tools
+ENV DEBUG=false LOG_LEVEL=info ENVIRONMENT=uat
+```
+
+3. **Production Environment**:
+```dockerfile
+# PROD Dockerfile
+FROM python:3.11-slim as production
+RUN apt-get install -y --no-install-recommends libpq5 curl
+ENV DEBUG=false LOG_LEVEL=warning ENVIRONMENT=production
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+USER appuser
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+```
+
+**Key Differences**:
+- **DEV**: Debug tools, verbose logging, hot reloading
+- **UAT**: Testing tools, production-like config, performance monitoring
+- **PROD**: Security hardening, minimal dependencies, health checks
+
+**Benefits**:
+- **Environment Isolation**: Each environment optimized for its purpose
+- **Security**: Production containers hardened and secure
+- **Debugging**: Development containers include necessary tools
+- **Testing**: UAT containers include testing and monitoring tools
+
 ---
 
 ## 📈 **Real-world Scenarios**
@@ -1233,16 +1585,47 @@ docker volume ls
 
 ## 🎯 **Module Completion Checklist**
 
+### **Core Container Fundamentals**
 - [ ] Understand container architecture and lifecycle
 - [ ] Analyze e-commerce application containerization
 - [ ] Build and run containers successfully
 - [ ] Implement container security best practices
 - [ ] Optimize container images for production
-- [ ] Complete practice problems
+
+### **Environment Strategy**
+- [ ] Create DEV environment container configuration
+- [ ] Create UAT environment container configuration
+- [ ] Create PROD environment container configuration
+- [ ] Implement environment-specific Dockerfiles
+- [ ] Set up environment promotion pipeline
+
+### **Chaos Engineering**
+- [ ] Implement container failure testing
+- [ ] Test resource constraint scenarios
+- [ ] Simulate network partition failures
+- [ ] Test storage failure scenarios
+- [ ] Document failure modes and recovery procedures
+
+### **Tools and Industry Knowledge**
+- [ ] Master Docker CLI commands
+- [ ] Understand Docker Compose orchestration
+- [ ] Learn about alternative container runtimes (Podman, containerd)
+- [ ] Explore container registries and management tools
+- [ ] Understand industry best practices
+
+### **Assessment and Practice**
+- [ ] Complete all practice problems
 - [ ] Pass assessment quiz
-- [ ] Complete mini-project
+- [ ] Complete mini-project with all deliverables
 - [ ] Answer interview questions correctly
 - [ ] Apply concepts to real-world scenarios
+
+### **Production Readiness**
+- [ ] Implement comprehensive monitoring
+- [ ] Set up health checks and alerting
+- [ ] Create security scanning pipeline
+- [ ] Document deployment procedures
+- [ ] Prepare for Kubernetes deployment
 
 ---
 
@@ -1252,16 +1635,35 @@ docker volume ls
 - [Docker Official Documentation](https://docs.docker.com/)
 - [Container Security Best Practices](https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html)
 - [Multi-stage Builds Guide](https://docs.docker.com/develop/dev-best-practices/dockerfile_best-practices/)
+- [Podman Documentation](https://docs.podman.io/)
+- [containerd Documentation](https://containerd.io/docs/)
+
+### **Chaos Engineering Resources**
+- [Chaos Engineering Principles](https://principlesofchaos.org/)
+- [Chaos Monkey](https://github.com/Netflix/chaosmonkey)
+- [Litmus Chaos Engineering](https://litmuschaos.io/)
+- [Chaos Mesh](https://chaos-mesh.org/)
+- [Gremlin Chaos Engineering](https://www.gremlin.com/)
+
+### **Environment Strategy Resources**
+- [12-Factor App Methodology](https://12factor.net/)
+- [Environment Configuration Best Practices](https://docs.docker.com/compose/environment-variables/)
+- [Secrets Management in Containers](https://docs.docker.com/engine/swarm/secrets/)
+- [Container Security Scanning](https://docs.docker.com/engine/scan/)
 
 ### **Tools**
 - [Docker Desktop](https://www.docker.com/products/docker-desktop)
 - [Docker Compose](https://docs.docker.com/compose/)
 - [Trivy Security Scanner](https://trivy.dev/)
 - [Dive Image Analyzer](https://github.com/wagoodman/dive)
+- [Portainer Container Management](https://www.portainer.io/)
+- [Rancher Container Platform](https://rancher.com/)
 
 ### **Practice Platforms**
 - [Play with Docker](https://labs.play-with-docker.com/)
 - [Katacoda Docker Scenarios](https://www.katacoda.com/courses/docker)
+- [Docker Labs](https://github.com/docker/labs)
+- [Container Training](https://container.training/)
 
 ---
 
