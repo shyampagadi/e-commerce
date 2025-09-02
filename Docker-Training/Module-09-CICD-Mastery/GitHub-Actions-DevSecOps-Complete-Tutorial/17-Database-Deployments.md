@@ -222,7 +222,6 @@ jobs:
 ## 🚀 Zero-Downtime Migration Patterns
 
 ### **Blue-Green Database Deployment**
-
 ```yaml
 name: Blue-Green Database Deployment
 
@@ -250,24 +249,19 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
-          # Create green database as copy of blue
           psql $DATABASE_URL -c "CREATE DATABASE $GREEN_DB WITH TEMPLATE $BLUE_DB;"
           
       - name: Run Migrations on Green
         env:
           GREEN_DATABASE_URL: ${{ secrets.GREEN_DATABASE_URL }}
         run: |
-          # Apply migrations to green database
           npm run migrate:up -- --database-url=$GREEN_DATABASE_URL
           
       - name: Validate Green Database
         env:
           GREEN_DATABASE_URL: ${{ secrets.GREEN_DATABASE_URL }}
         run: |
-          # Run validation tests
           npm run test:database -- --database-url=$GREEN_DATABASE_URL
-          
-          # Performance validation
           npm run test:performance -- --database-url=$GREEN_DATABASE_URL
 
   deploy-application:
@@ -278,6 +272,41 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Deploy Application to Green
+        env:
+          GREEN_DATABASE_URL: ${{ secrets.GREEN_DATABASE_URL }}
+        run: |
+          kubectl set env deployment/ecommerce-app DATABASE_URL=$GREEN_DATABASE_URL
+          kubectl rollout status deployment/ecommerce-app
+          
+      - name: Switch Traffic to Green
+        run: |
+          kubectl patch service ecommerce-service -p '{"spec":{"selector":{"version":"green"}}}'
+          echo "Green deployment successful, blue kept for rollback"
+```
+
+**Line-by-Line Analysis:**
+
+**`name: Blue-Green Database Deployment`** - Zero-downtime database deployment strategy for production systems
+**`on: push: branches: [main]`** - Triggers only on main branch for production database changes
+**`env: BLUE_DB: ecommerce_blue`** - Current production database identifier
+**`GREEN_DB: ecommerce_green`** - New database version for deployment testing
+**`prepare-green-database:`** - Job creating and validating new database version
+**`runs-on: ubuntu-latest`** - Ubuntu environment with PostgreSQL client support
+**`uses: actions/checkout@v4`** - Downloads migration scripts and database schema
+**`sudo apt-get install -y postgresql-client`** - Installs PostgreSQL command-line tools
+**`psql $DATABASE_URL -c "CREATE DATABASE $GREEN_DB WITH TEMPLATE $BLUE_DB;"`** - Creates green database as exact copy of blue
+**`DATABASE_URL: ${{ secrets.DATABASE_URL }}`** - Production database connection string from secrets
+**`npm run migrate:up -- --database-url=$GREEN_DATABASE_URL`** - Applies new migrations to green database
+**`GREEN_DATABASE_URL: ${{ secrets.GREEN_DATABASE_URL }}`** - Green database connection for testing
+**`npm run test:database`** - Validates database schema and data integrity
+**`npm run test:performance`** - Ensures migration doesn't degrade performance
+**`deploy-application:`** - Job deploying application to use green database
+**`needs: prepare-green-database`** - Waits for database preparation completion
+**`kubectl set env deployment/ecommerce-app DATABASE_URL=$GREEN_DATABASE_URL`** - Updates application to use green database
+**`kubectl rollout status deployment/ecommerce-app`** - Waits for application deployment completion
+**`kubectl patch service ecommerce-service`** - Switches traffic from blue to green database
+**`'{"spec":{"selector":{"version":"green"}}}'`** - Service selector targeting green deployment
+**`echo "Green deployment successful, blue kept for rollback"`** - Confirms successful deployment with rollback option
         env:
           GREEN_DATABASE_URL: ${{ secrets.GREEN_DATABASE_URL }}
         run: |

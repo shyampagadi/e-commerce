@@ -357,17 +357,14 @@ jobs:
       
       - name: Build Application
         run: |
-          # Build frontend
           cd frontend
           npm ci
           npm run build
           
-          # Build backend
           cd ../backend
           npm ci
           npm run build
           
-          # Create deployment package
           cd ..
           zip -r ecommerce-app.zip frontend/dist backend/dist package.json
       
@@ -375,6 +372,55 @@ jobs:
         uses: veracode/veracode-uploadandscan-action@0.2.6
         with:
           appname: 'E-Commerce Platform'
+          createprofile: false
+          filepath: 'ecommerce-app.zip'
+          vid: ${{ secrets.VERACODE_API_ID }}
+          vkey: ${{ secrets.VERACODE_API_KEY }}
+          criticality: 'VeryHigh'
+          scantimeout: 30
+          exclude: '*.min.js,node_modules/*'
+          include: '*.js,*.ts,*.jsx,*.tsx'
+          scanallnonfatalpolicyflaws: true
+          deleteincompletescan: true
+        
+      - name: Download Veracode Results
+        uses: veracode/veracode-flaws-to-sarif@v2.1.4
+        with:
+          vid: ${{ secrets.VERACODE_API_ID }}
+          vkey: ${{ secrets.VERACODE_API_KEY }}
+          appname: 'E-Commerce Platform'
+          scan-results-json: 'results.json'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+**Line-by-Line Analysis:**
+
+**`name: Veracode Security Scan`** - Commercial SAST workflow using Veracode platform for enterprise security
+**`release: types: [published]`** - Triggers comprehensive scan on production releases
+**`runs-on: ubuntu-latest`** - Ubuntu environment for Veracode CLI and build tools
+**`uses: actions/checkout@v4`** - Downloads source code for Veracode analysis
+**`uses: actions/setup-node@v4`** - Configures Node.js environment for application builds
+**`cache: 'npm'`** - Caches dependencies for faster build performance
+**`cd frontend`** - Changes to frontend directory for component build
+**`npm ci`** - Clean install ensuring reproducible dependency versions
+**`npm run build`** - Compiles frontend for production analysis
+**`cd ../backend`** - Switches to backend directory for API build
+**`zip -r ecommerce-app.zip`** - Creates deployment package for Veracode upload
+**`uses: veracode/veracode-uploadandscan-action@0.2.6`** - Official Veracode GitHub Action
+**`appname: 'E-Commerce Platform'`** - Veracode application identifier for scan organization
+**`createprofile: false`** - Uses existing Veracode application profile
+**`filepath: 'ecommerce-app.zip'`** - Specifies build artifact for security analysis
+**`vid: ${{ secrets.VERACODE_API_ID }}`** - Veracode API credentials from GitHub secrets
+**`vkey: ${{ secrets.VERACODE_API_KEY }}`** - Veracode API key for authentication
+**`criticality: 'VeryHigh'`** - Sets high priority for e-commerce security scanning
+**`scantimeout: 30`** - 30-minute timeout for comprehensive analysis
+**`exclude: '*.min.js,node_modules/*'`** - Excludes minified files and dependencies from scan
+**`include: '*.js,*.ts,*.jsx,*.tsx'`** - Focuses scan on application source code
+**`scanallnonfatalpolicyflaws: true`** - Includes all policy violations in results
+**`deleteincompletescan: true`** - Cleans up failed scans automatically
+**`uses: veracode/veracode-flaws-to-sarif@v2.1.4`** - Converts Veracode results to SARIF format
+**`scan-results-json: 'results.json'`** - Outputs structured results for processing
+**`github-token: ${{ secrets.GITHUB_TOKEN }}`** - GitHub token for Security tab integration
           createprofile: false
           filepath: 'ecommerce-app.zip'
           version: '${{ github.run_id }}'

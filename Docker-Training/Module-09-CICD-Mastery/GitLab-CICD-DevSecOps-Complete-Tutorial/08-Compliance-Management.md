@@ -1149,10 +1149,8 @@ soc2-controls:
   before_script:
     - apt-get update && apt-get install -y curl jq git
   script:
-    # CC6.1 - Logical and Physical Access Controls
     - |
       echo "Checking CC6.1 - Access Controls"
-      # Verify branch protection is enabled
       PROTECTION=$(curl -s -H "PRIVATE-TOKEN: $CI_JOB_TOKEN" \
         "$CI_API_V4_URL/projects/$CI_PROJECT_ID/protected_branches/$CI_DEFAULT_BRANCH" | jq -r '.push_access_levels[0].access_level')
       if [ "$PROTECTION" != "40" ]; then
@@ -1160,27 +1158,21 @@ soc2-controls:
         exit 1
       fi
       
-    # CC6.7 - Data Transmission and Disposal
     - |
       echo "Checking CC6.7 - Data Protection"
-      # Check for encryption in transit
       if ! grep -r "TLS\|SSL\|HTTPS" . --include="*.yml" --include="*.yaml"; then
         echo "WARNING: No encryption in transit configuration found"
       fi
       
-    # CC7.1 - System Monitoring
     - |
       echo "Checking CC7.1 - Monitoring"
-      # Verify monitoring configuration exists
       if [ ! -f "monitoring/prometheus.yml" ] && [ ! -f ".gitlab/monitoring.yml" ]; then
         echo "ERROR: No monitoring configuration found"
         exit 1
       fi
       
-    # CC8.1 - Change Management
     - |
       echo "Checking CC8.1 - Change Management"
-      # Verify all changes go through merge requests
       DIRECT_COMMITS=$(git log --oneline --since="30 days ago" --grep="Merge branch" --invert-grep | wc -l)
       if [ "$DIRECT_COMMITS" -gt 0 ]; then
         echo "WARNING: $DIRECT_COMMITS direct commits found, should use merge requests"
@@ -1193,6 +1185,33 @@ soc2-controls:
       - compliance-evidence/
     expire_in: 7 years
 ```
+
+**Line-by-Line Analysis:**
+
+**`soc2-controls:`** - Job implementing SOC 2 Type II compliance validation controls
+**`stage: compliance-check`** - Executes in dedicated compliance validation stage
+**`image: ubuntu:20.04`** - Ubuntu LTS for stable compliance tooling environment
+**`apt-get update && apt-get install -y curl jq git`** - Installs tools for API calls and Git operations
+**`echo "Checking CC6.1 - Access Controls"`** - SOC 2 Common Criteria 6.1 validation
+**`PROTECTION=$(curl -s -H "PRIVATE-TOKEN: $CI_JOB_TOKEN"`** - GitLab API call for branch protection status
+**`"$CI_API_V4_URL/projects/$CI_PROJECT_ID/protected_branches/$CI_DEFAULT_BRANCH"`** - GitLab API endpoint for branch protection
+**`jq -r '.push_access_levels[0].access_level')`** - Extracts access level from JSON response
+**`if [ "$PROTECTION" != "40" ]`** - Checks for maintainer-level protection (level 40)
+**`echo "ERROR: Branch protection not properly configured"`** - Compliance failure message
+**`exit 1`** - Fails job if branch protection insufficient
+**`echo "Checking CC6.7 - Data Protection"`** - SOC 2 data transmission security validation
+**`grep -r "TLS\|SSL\|HTTPS" . --include="*.yml"`** - Searches for encryption configuration
+**`echo "WARNING: No encryption in transit configuration found"`** - Data protection warning
+**`echo "Checking CC7.1 - Monitoring"`** - SOC 2 system monitoring requirement validation
+**`if [ ! -f "monitoring/prometheus.yml" ]`** - Checks for monitoring configuration files
+**`echo "ERROR: No monitoring configuration found"`** - Monitoring compliance failure
+**`echo "Checking CC8.1 - Change Management"`** - SOC 2 change management process validation
+**`DIRECT_COMMITS=$(git log --oneline --since="30 days ago"`** - Counts direct commits bypassing review
+**`--grep="Merge branch" --invert-grep | wc -l)`** - Excludes merge commits from count
+**`echo "WARNING: $DIRECT_COMMITS direct commits found"`** - Change management violation warning
+**`artifacts: reports: junit: soc2-compliance-report.xml`** - GitLab compliance report integration
+**`paths: - compliance-evidence/`** - Preserves compliance evidence for audits
+**`expire_in: 7 years`** - Long-term retention for SOC 2 audit requirements
 
 ### PCI DSS Compliance
 ```yaml

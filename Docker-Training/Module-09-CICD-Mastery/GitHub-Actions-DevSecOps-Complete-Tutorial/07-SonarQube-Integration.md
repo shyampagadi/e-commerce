@@ -516,7 +516,7 @@ env:
 jobs:
   sonarqube-analysis:
     name: SonarQube Enterprise Analysis
-    runs-on: self-hosted  # Use self-hosted runner for enterprise
+    runs-on: self-hosted
     
     steps:
       - name: Checkout Code
@@ -566,6 +566,31 @@ jobs:
             exit 1
           fi
 ```
+
+**Line-by-Line Analysis:**
+
+**`name: Enterprise SonarQube Analysis`** - Enterprise-grade SonarQube workflow for self-hosted instances
+**`branches: [main, develop, 'release/*']`** - Analyzes main branches and all release branches
+**`types: [opened, synchronize, reopened]`** - Comprehensive PR analysis on all update events
+**`env: SONAR_HOST_URL: https://sonarqube.company.com`** - Self-hosted SonarQube server URL
+**`SONAR_PROJECT_KEY: ecommerce-platform`** - Project identifier in SonarQube instance
+**`runs-on: self-hosted`** - Uses enterprise self-hosted runner for security and performance
+**`fetch-depth: 0`** - Full git history required for SonarQube blame and change analysis
+**`node-version: '18'`** - Node.js LTS version for consistent analysis environment
+**`cache: 'npm'`** - Caches dependencies for faster workflow execution
+**`npm ci`** - Clean install ensuring reproducible dependency versions
+**`npm run test:unit`** - Executes unit tests for code quality metrics
+**`npm run test:integration`** - Runs integration tests for comprehensive coverage
+**`npm run test:coverage`** - Generates code coverage reports for SonarQube analysis
+**`uses: sonarqube-quality-gate-action@master`** - Official SonarQube scanner action
+**`scanMetadataReportFile: target/sonar/report-task.txt`** - Scanner metadata for quality gate validation
+**`SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}`** - Authentication token for SonarQube API access
+**`SONAR_HOST_URL: ${{ env.SONAR_HOST_URL }}`** - Uses environment variable for server URL
+**`id: sonarqube-quality-gate-check`** - Step identifier for output reference
+**`timeout-minutes: 5`** - 5-minute timeout for quality gate validation
+**`echo "Quality Gate Status: ${{ steps.sonarqube-quality-gate-check.outputs.quality-gate-status }}"`** - Displays quality gate result
+**`if [ "${{ steps.sonarqube-quality-gate-check.outputs.quality-gate-status }}" != "PASSED" ]`** - Conditional check for quality gate failure
+**`exit 1`** - Fails workflow if quality gate conditions not met
 
 ---
 
@@ -751,7 +776,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
   schedule:
-    - cron: '0 2 * * 1'  # Weekly full analysis
+    - cron: '0 2 * * 1'
 
 env:
   NODE_VERSION: '18'
@@ -768,7 +793,6 @@ jobs:
         with:
           fetch-depth: 0
       
-      # Frontend Analysis
       - name: Setup Node.js for Frontend
         uses: actions/setup-node@v4
         with:
@@ -786,13 +810,84 @@ jobs:
           npm run test:coverage
           npm run lint
       
-      # Backend Analysis
       - name: Install Backend Dependencies
         working-directory: backend
         run: npm ci
       
       - name: Run Backend Tests
         working-directory: backend
+        run: |
+          npm run test:coverage
+          npm run lint
+      
+      - name: Setup Java for Mobile API
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+      
+      - name: Run Mobile API Tests
+        working-directory: mobile-api
+        run: |
+          ./mvnw clean test
+          ./mvnw jacoco:report
+      
+      - name: SonarCloud Multi-Module Analysis
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.projectKey=ecommerce-platform
+            -Dsonar.organization=your-org
+            -Dsonar.modules=frontend,backend,mobile-api,shared-utils
+      
+      - name: Quality Gate Summary
+        run: |
+          echo "## Quality Analysis Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Status | Coverage | Issues |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend | ✅ | 85% | 2 |" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend | ✅ | 78% | 1 |" >> $GITHUB_STEP_SUMMARY
+          echo "| Mobile API | ✅ | 82% | 0 |" >> $GITHUB_STEP_SUMMARY
+          echo "| Shared Utils | ✅ | 95% | 0 |" >> $GITHUB_STEP_SUMMARY
+```
+
+**Line-by-Line Analysis:**
+
+**`name: E-Commerce Platform Quality Analysis`** - Multi-component SonarCloud analysis for e-commerce platform
+**`branches: [main, develop, 'release/*', 'feature/*']`** - Comprehensive branch coverage including feature branches
+**`schedule: - cron: '0 2 * * 1'`** - Weekly Monday 2 AM full platform analysis
+**`env: NODE_VERSION: '18'`** - Standardized Node.js version across all components
+**`JAVA_VERSION: '17'`** - Java LTS version for mobile API component
+**`name: Multi-Component Quality Analysis`** - Descriptive job name for multi-module analysis
+**`fetch-depth: 0`** - Complete git history for accurate SonarCloud blame analysis
+**`cache-dependency-path: frontend/package-lock.json`** - Frontend-specific npm cache configuration
+**`working-directory: frontend`** - Sets context for frontend component operations
+**`npm ci`** - Clean install ensuring reproducible frontend dependencies
+**`npm run test:coverage`** - Generates frontend code coverage for SonarCloud
+**`npm run lint`** - Frontend code quality validation with ESLint
+**`working-directory: backend`** - Switches context to backend component
+**`npm run test:coverage`** - Backend test execution with coverage reporting
+**`uses: actions/setup-java@v3`** - Configures Java environment for mobile API
+**`java-version: ${{ env.JAVA_VERSION }}`** - Uses environment variable for Java version
+**`distribution: 'temurin'`** - Eclipse Temurin JDK for reliable Java runtime
+**`working-directory: mobile-api`** - Sets context for Java mobile API component
+**`./mvnw clean test`** - Maven wrapper for reproducible Java test execution
+**`./mvnw jacoco:report`** - Generates Java code coverage reports for SonarCloud
+**`uses: SonarSource/sonarcloud-github-action@master`** - Official SonarCloud multi-module action
+**`GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}`** - GitHub token for PR decoration and comments
+**`SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}`** - SonarCloud authentication for analysis upload
+**`-Dsonar.projectKey=ecommerce-platform`** - SonarCloud project identifier
+**`-Dsonar.organization=your-org`** - SonarCloud organization for project grouping
+**`-Dsonar.modules=frontend,backend,mobile-api,shared-utils`** - Defines all platform modules for analysis
+**`echo "## Quality Analysis Summary" >> $GITHUB_STEP_SUMMARY`** - Creates quality summary section
+**`echo "| Component | Status | Coverage | Issues |"`** - Formats results as markdown table
+**`echo "| Frontend | ✅ | 85% | 2 |"`** - Frontend analysis results with metrics
+**`echo "| Backend | ✅ | 78% | 1 |"`** - Backend quality metrics and issue count
+**`echo "| Mobile API | ✅ | 82% | 0 |"`** - Mobile API coverage and quality status
+**`echo "| Shared Utils | ✅ | 95% | 0 |"`** - Shared utilities quality assessment
         run: |
           npm run test:coverage
           npm run lint

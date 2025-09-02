@@ -189,28 +189,22 @@ build-secure-container:
     - |
       echo "=== Building Secure Container Image ==="
       
-      # Multi-stage secure Dockerfile creation
       cat > Dockerfile.secure << 'EOF'
-      # Build stage - Minimal attack surface
       FROM node:18-alpine AS builder
       
-      # Security: Create non-root user for build process
       RUN addgroup -g 1001 -S nodejs && \
           adduser -S nextjs -u 1001
       
       WORKDIR /app
       COPY package*.json ./
       
-      # Security: Install only production dependencies
       RUN npm ci --only=production && npm cache clean --force
       
       COPY . .
       RUN npm run build
       
-      # Production stage - Ultra-minimal runtime
       FROM node:18-alpine AS runtime
       
-      # Security hardening
       RUN addgroup -g 1001 -S nodejs && \
           adduser -S nextjs -u 1001 && \
           apk add --no-cache dumb-init
@@ -225,6 +219,51 @@ build-secure-container:
       ENTRYPOINT ["dumb-init", "--"]
       CMD ["node", "dist/server.js"]
       EOF
+      
+      docker build -f Dockerfile.secure -t $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA .
+      docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+  
+  artifacts:
+    reports:
+      container_scanning: gl-container-scanning-report.json
+    paths:
+      - Dockerfile.secure
+    expire_in: 1 week
+```
+
+**Line-by-Line Analysis:**
+
+**`build-secure-container:`** - Job name for secure container building with comprehensive scanning
+**`stage: build`** - Executes in build stage of GitLab CI/CD pipeline
+**`image: docker:24.0.5`** - Specific Docker version for reproducible container builds
+**`services: - docker:24.0.5-dind`** - Docker-in-Docker service for container building within GitLab CI
+**`echo $CI_REGISTRY_PASSWORD | docker login`** - Authenticates with GitLab Container Registry using CI variables
+**`-u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY`** - Secure login using GitLab CI built-in credentials
+**`apk add --no-cache curl jq`** - Installs utilities for API calls and JSON processing
+**`cat > Dockerfile.secure << 'EOF'`** - Creates secure multi-stage Dockerfile inline
+**`FROM node:18-alpine AS builder`** - Alpine Linux base for minimal attack surface (5MB vs 900MB)
+**`RUN addgroup -g 1001 -S nodejs`** - Creates non-root group with specific GID for security
+**`adduser -S nextjs -u 1001`** - Creates non-root user preventing container root execution
+**`WORKDIR /app`** - Sets working directory for consistent file operations
+**`COPY package*.json ./`** - Copies only package files for Docker layer caching optimization
+**`RUN npm ci --only=production`** - Clean install excluding dev dependencies for security
+**`npm cache clean --force`** - Removes npm cache to reduce attack surface
+**`COPY . .`** - Copies application source after dependency installation
+**`RUN npm run build`** - Builds application in builder stage
+**`FROM node:18-alpine AS runtime`** - Separate runtime stage for minimal production image
+**`apk add --no-cache dumb-init`** - Adds init system for proper signal handling
+**`USER nextjs`** - Switches to non-root user for runtime security
+**`COPY --from=builder --chown=nextjs:nodejs`** - Copies build artifacts with proper ownership
+**`EXPOSE 3000`** - Documents container port for networking
+**`ENTRYPOINT ["dumb-init", "--"]`** - Uses dumb-init for proper process management
+**`CMD ["node", "dist/server.js"]`** - Starts application with Node.js runtime
+**`docker build -f Dockerfile.secure`** - Builds container using secure Dockerfile
+**`-t $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA`** - Tags image with commit SHA for immutable versioning
+**`docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA`** - Pushes to GitLab Container Registry
+**`artifacts: reports: container_scanning:`** - GitLab security report integration
+**`gl-container-scanning-report.json`** - Standard GitLab container scan report format
+**`paths: - Dockerfile.secure`** - Preserves Dockerfile for audit and review
+**`expire_in: 1 week`** - Automatic artifact cleanup after 7 days
 ```
 
 **Dockerfile Security Analysis Line-by-Line:**

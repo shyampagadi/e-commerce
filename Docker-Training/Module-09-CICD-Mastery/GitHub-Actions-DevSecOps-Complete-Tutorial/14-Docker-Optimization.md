@@ -279,7 +279,6 @@ jobs:
 ```
 
 ### **Advanced Build with Multi-Platform Support**
-
 ```yaml
 name: Multi-Platform Docker Build
 
@@ -339,6 +338,37 @@ jobs:
           build-args: |
             BUILDKIT_INLINE_CACHE=1
 ```
+
+**Line-by-Line Analysis:**
+
+**`name: Multi-Platform Docker Build`** - Workflow for building containers supporting multiple CPU architectures
+**`tags: ['v*']`** - Triggers on version tags for release builds with semantic versioning
+**`env: REGISTRY: ghcr.io`** - GitHub Container Registry for multi-platform image storage
+**`IMAGE_NAME: ${{ github.repository }}`** - Dynamic image naming based on repository name
+**`runs-on: ubuntu-latest`** - Ubuntu runner with Docker and multi-platform build support
+**`uses: actions/checkout@v4`** - Downloads source code and Dockerfile for building
+**`uses: docker/setup-qemu-action@v3`** - Configures QEMU emulation for cross-platform builds
+**`uses: docker/setup-buildx-action@v3`** - Sets up Docker Buildx for advanced build features
+**`uses: docker/login-action@v3`** - Authenticates with GitHub Container Registry
+**`registry: ${{ env.REGISTRY }}`** - Uses environment variable for registry URL
+**`username: ${{ github.actor }}`** - GitHub username for registry authentication
+**`password: ${{ secrets.GITHUB_TOKEN }}`** - GitHub token for secure registry access
+**`uses: docker/metadata-action@v5`** - Generates image tags and labels automatically
+**`images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}`** - Full image name with registry prefix
+**`type=ref,event=branch`** - Creates tags based on branch names for development
+**`type=semver,pattern={{version}}`** - Semantic version tags from Git tags
+**`type=semver,pattern={{major}}.{{minor}}`** - Major.minor version tags for compatibility
+**`type=sha,prefix={{branch}}-`** - Commit SHA tags with branch prefix for traceability
+**`uses: docker/build-push-action@v5`** - Advanced Docker build and push action
+**`context: .`** - Uses current directory as build context
+**`file: ./Dockerfile.optimized`** - Specifies optimized Dockerfile for production builds
+**`platforms: linux/amd64,linux/arm64`** - Builds for both x86_64 and ARM64 architectures
+**`push: true`** - Pushes built images to container registry
+**`tags: ${{ steps.meta.outputs.tags }}`** - Uses generated tags from metadata action
+**`labels: ${{ steps.meta.outputs.labels }}`** - Applies generated labels for image metadata
+**`cache-from: type=gha`** - Uses GitHub Actions cache for layer reuse
+**`cache-to: type=gha,mode=max`** - Maximizes cache storage for build performance
+**`BUILDKIT_INLINE_CACHE=1`** - Enables inline cache for faster subsequent builds
 
 ---
 
