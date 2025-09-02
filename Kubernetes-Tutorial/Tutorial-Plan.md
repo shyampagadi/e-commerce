@@ -20,9 +20,9 @@ The final output will be a detailed, progressive Kubernetes tutorial that covers
 - Each module builds upon previous knowledge
 
 ### ✅ **Integrated Project-Based Learning**
-- Entire tutorial uses the provided e-commerce project
-- All examples, practice problems, and projects use the e-commerce application
-- Real-world application of every concept
+- **Learning Phase**: Entire tutorial uses the provided e-commerce project for concept learning
+- **Mini-Capstone Phase**: Complex open-source projects for milestone assessments
+- **Real-world application**: Every concept applied to familiar e-commerce project, then validated with diverse projects
 
 ### ✅ **In-depth Theoretical Explanations**
 - Each topic includes detailed theory section
@@ -35,10 +35,10 @@ The final output will be a detailed, progressive Kubernetes tutorial that covers
 - Every part of the code documented
 
 ### ✅ **Practical Application and Assessment**
-- **Practice Problems**: Clear requirements and expected outputs for each topic
-- **Mini-Projects**: Individual project for each topic with hands-on implementation
-- **Mini-Capstone Project**: Combines concepts from multiple modules (after intermediate topics)
-- **Full Capstone Project**: Covers every single topic taught with production deployment
+- **Practice Problems**: Clear requirements and expected outputs for each topic (using e-commerce project)
+- **Mini-Projects**: Individual project for each topic with hands-on implementation (extending e-commerce project)
+- **Mini-Capstone Projects**: Three major milestone projects using complex open-source applications
+- **Full Capstone Project**: Production-ready e-commerce deployment with all advanced concepts
 
 ### ✅ **Comprehensive Skill Development**
 - Covers all topics necessary for production-ready skills
@@ -116,13 +116,13 @@ The final output will be a detailed, progressive Kubernetes tutorial that covers
 - **Chaos Packages**: None (manual component failure testing with kubectl)
 
 #### 8. **Pods - The Basic Building Block**
-- **Concept**: Smallest deployable unit, container lifecycle, resource sharing
-- **Real-world Problem**: Applications need isolated runtime environments with shared resources
-- **E-commerce Application**: Deploying backend and frontend as separate pods
-- **Skills Gained**: Pod lifecycle, container communication, resource sharing, pod networking
+- **Concept**: Smallest deployable unit, container lifecycle, resource sharing, init containers, lifecycle hooks
+- **Real-world Problem**: Applications need isolated runtime environments with shared resources, initialization, and graceful shutdowns
+- **E-commerce Application**: Deploying backend and frontend as separate pods with database initialization and graceful shutdowns
+- **Skills Gained**: Pod lifecycle, container communication, resource sharing, pod networking, init containers, PreStop hooks, PostStart hooks
 - **Tools Covered**: kubectl, podman, crictl, kubelet, containerd, Docker
 - **Industry Tools**: Pod Security Standards, Falco, OPA Gatekeeper, Kyverno
-- **Chaos Engineering**: Pod termination testing, container restart policies, resource exhaustion scenarios
+- **Chaos Engineering**: Pod termination testing, container restart policies, resource exhaustion scenarios, graceful shutdown validation, init container failure testing
 - **Chaos Packages**: None (manual pod failure testing with kubectl)
 
 #### 9. **Labels and Selectors**
@@ -135,13 +135,13 @@ The final output will be a detailed, progressive Kubernetes tutorial that covers
 - **Chaos Engineering**: Label corruption testing, selector mismatch scenarios, resource isolation failures
 
 #### 10. **Services - Network Abstraction**
-- **Concept**: Stable network endpoints for pod communication
-- **Real-world Problem**: Pods have dynamic IPs; services provide stable access points
-- **E-commerce Application**: Frontend accessing backend APIs, backend accessing database
-- **Skills Gained**: Service types, service discovery, load balancing, network policies
-- **Tools Covered**: kube-proxy, CoreDNS, MetalLB, kube-vip
+- **Concept**: Stable network endpoints for pod communication, Endpoints API, service discovery mechanisms
+- **Real-world Problem**: Pods have dynamic IPs; services provide stable access points with underlying endpoint management
+- **E-commerce Application**: Frontend accessing backend APIs, backend accessing database, understanding endpoint health and connectivity
+- **Skills Gained**: Service types, service discovery, load balancing, network policies, Endpoints API, endpoint health monitoring, service debugging
+- **Tools Covered**: kube-proxy, CoreDNS, MetalLB, kube-vip, kubectl get endpoints
 - **Industry Tools**: AWS Load Balancer Controller, GCP Load Balancer, Azure Load Balancer
-- **Chaos Engineering**: Service endpoint failure testing, DNS resolution failures, load balancer disruption
+- **Chaos Engineering**: Service endpoint failure testing, DNS resolution failures, load balancer disruption, endpoint corruption testing
 
 #### 11. **ConfigMaps and Secrets**
 - **Concept**: Configuration and sensitive data management
@@ -153,13 +153,13 @@ The final output will be a detailed, progressive Kubernetes tutorial that covers
 - **Chaos Engineering**: Configuration corruption testing, secret rotation failures, environment variable injection
 
 #### 12. **Deployments - Managing Replicas**
-- **Concept**: Declarative updates, rolling deployments, rollbacks
-- **Real-world Problem**: Applications need high availability and zero-downtime updates
-- **E-commerce Application**: Scaling backend to handle traffic spikes
-- **Skills Gained**: Deployment strategies, rolling updates, rollback procedures, replica management
-- **Tools Covered**: kubectl, kubectl rollout, Argo Rollouts, Flagger
+- **Concept**: Declarative updates, rolling deployments, rollbacks, Pod Disruption Budgets (PDBs)
+- **Real-world Problem**: Applications need high availability, zero-downtime updates, and protection during cluster maintenance
+- **E-commerce Application**: Scaling backend to handle traffic spikes, protecting services during node maintenance
+- **Skills Gained**: Deployment strategies, rolling updates, rollback procedures, replica management, Pod Disruption Budgets, cluster maintenance protection
+- **Tools Covered**: kubectl, kubectl rollout, Argo Rollouts, Flagger, kubectl get pdb
 - **Industry Tools**: Spinnaker, Jenkins X, GitLab CI/CD, GitHub Actions
-- **Chaos Engineering**: Rolling update failure testing, replica pod termination during updates, rollback scenarios
+- **Chaos Engineering**: Rolling update failure testing, replica pod termination during updates, rollback scenarios, node drain simulation with PDB validation
 
 #### 13. **Namespaces - Resource Organization**
 - **Concept**: Virtual clusters within a physical cluster
@@ -202,14 +202,14 @@ The final output will be a detailed, progressive Kubernetes tutorial that covers
 - **Industry Tools**: AWS ALB, GCP Load Balancer, Azure Application Gateway, Istio Gateway
 - **Chaos Engineering**: Ingress controller failure testing, SSL certificate expiration, load balancer disruption
 
-#### 17. **Resource Management and Limits**
-- **Concept**: CPU/memory requests, limits, quality of service classes
-- **Real-world Problem**: Preventing resource starvation and ensuring fair resource allocation
-- **E-commerce Application**: Optimizing resource usage for cost and performance
-- **Skills Gained**: Resource requests/limits, QoS classes, resource monitoring, cost optimization
-- **Tools Covered**: kubectl, metrics-server, Vertical Pod Autoscaler, Goldilocks
-- **Industry Tools**: Kubernetes Resource Quotas, Cost management tools, Resource optimization platforms
-- **Chaos Engineering**: Resource exhaustion testing, memory pressure simulation, CPU throttling scenarios
+#### 17. **Resource Management and Cost Optimization**
+- **Concept**: CPU/memory requests, limits, quality of service classes, cost optimization, right-sizing
+- **Real-world Problem**: Preventing resource starvation, ensuring fair resource allocation, and optimizing costs
+- **E-commerce Application**: Optimizing resource usage for cost and performance, measuring ROI, right-sizing workloads
+- **Skills Gained**: Resource requests/limits, QoS classes, resource monitoring, cost optimization, Kubecost integration, right-sizing strategies, cost analysis
+- **Tools Covered**: kubectl, metrics-server, Vertical Pod Autoscaler, Goldilocks, Kubecost, cost analysis tools
+- **Industry Tools**: Kubernetes Resource Quotas, Cost management tools, Resource optimization platforms, Cloud cost management
+- **Chaos Engineering**: Resource exhaustion testing, memory pressure simulation, CPU throttling scenarios, cost impact analysis
 
 #### 18. **Health Checks and Probes**
 - **Concept**: Liveness, readiness, and startup probes
@@ -272,22 +272,22 @@ The final output will be a detailed, progressive Kubernetes tutorial that covers
 ### **Expert/Production-Level Skills** (Enterprise Deployment)
 
 #### 24. **Advanced Networking and CNI**
-- **Concept**: Container Network Interface, network policies, multi-cluster networking
-- **Real-world Problem**: Complex network topologies and security requirements
-- **E-commerce Application**: Secure communication between services, network segmentation
-- **Skills Gained**: CNI plugins, network policies, multi-cluster networking, network security
-- **Tools Covered**: Calico, Flannel, Weave, Cilium, Multus
+- **Concept**: Container Network Interface, network policies, multi-cluster networking, egress policies
+- **Real-world Problem**: Complex network topologies, security requirements, and outbound traffic control
+- **E-commerce Application**: Secure communication between services, network segmentation, API access restrictions
+- **Skills Gained**: CNI plugins, network policies, multi-cluster networking, network security, egress policy implementation, outbound traffic control
+- **Tools Covered**: Calico, Flannel, Weave, Cilium, Multus, kubectl network-policy
 - **Industry Tools**: AWS VPC CNI, GCP CNI, Azure CNI, NSX-T, Avi Networks
-- **Chaos Engineering**: CNI failure testing, network policy corruption, multi-cluster connectivity disruption
+- **Chaos Engineering**: CNI failure testing, network policy corruption, multi-cluster connectivity disruption, egress policy violation testing
 
 #### 25. **RBAC and Security Policies**
-- **Concept**: Role-based access control, security contexts, pod security standards
-- **Real-world Problem**: Enterprise security requirements and compliance
-- **E-commerce Application**: Admin access controls, secure service communication
-- **Skills Gained**: RBAC implementation, security contexts, pod security standards, compliance
-- **Tools Covered**: kubectl, OPA Gatekeeper, Kyverno, Pod Security Standards, Falco
+- **Concept**: Role-based access control, security contexts, Pod Security Admission (PSA), Service Account Token Volume Projection
+- **Real-world Problem**: Enterprise security requirements, compliance, and modern pod security standards
+- **E-commerce Application**: Admin access controls, secure service communication, PCI DSS compliance
+- **Skills Gained**: RBAC implementation, security contexts, Pod Security Admission, Service Account Token management, compliance, modern security standards
+- **Tools Covered**: kubectl, OPA Gatekeeper, Kyverno, Pod Security Admission, Falco, Service Account Token Volume Projection
 - **Industry Tools**: Aqua Security, Twistlock, Sysdig Secure, NeuVector
-- **Chaos Engineering**: RBAC policy corruption, security context failure testing, access control bypass scenarios
+- **Chaos Engineering**: RBAC policy corruption, security context failure testing, access control bypass scenarios, PSA policy violation testing
 
 #### 26. **Multi-Cluster Management**
 - **Concept**: Cluster federation, cross-cluster communication, disaster recovery
@@ -309,22 +309,22 @@ The final output will be a detailed, progressive Kubernetes tutorial that covers
 - **Chaos Packages**: Litmus (monitoring chaos experiments), custom observability chaos scripts
 
 #### 28. **GitOps and Continuous Deployment**
-- **Concept**: ArgoCD, Flux, declarative deployment workflows
-- **Real-world Problem**: Automated, auditable, and reliable deployments
-- **E-commerce Application**: Automated deployment pipeline for e-commerce app
-- **Skills Gained**: GitOps workflows, continuous deployment, deployment automation, audit trails
-- **Tools Covered**: ArgoCD, Flux, Jenkins X, Tekton, Skaffold
+- **Concept**: ArgoCD, Flux, declarative deployment workflows, automated certificate management
+- **Real-world Problem**: Automated, auditable, and reliable deployments with automated SSL/TLS management
+- **E-commerce Application**: Automated deployment pipeline for e-commerce app with automatic certificate provisioning
+- **Skills Gained**: GitOps workflows, continuous deployment, deployment automation, audit trails, Cert-Manager integration, automated certificate management
+- **Tools Covered**: ArgoCD, Flux, Jenkins X, Tekton, Skaffold, Cert-Manager, ClusterIssuer
 - **Industry Tools**: GitLab CI/CD, GitHub Actions, Azure DevOps, CircleCI
-- **Chaos Engineering**: GitOps failure testing, deployment pipeline corruption, rollback scenario testing
+- **Chaos Engineering**: GitOps failure testing, deployment pipeline corruption, rollback scenario testing, certificate expiration simulation
 
 #### 29. **Backup and Disaster Recovery**
-- **Concept**: Velero, etcd backups, cluster recovery procedures
-- **Real-world Problem**: Business continuity and data protection
-- **E-commerce Application**: Backup strategies for customer data and application state
-- **Skills Gained**: Backup strategies, disaster recovery, data protection, business continuity
-- **Tools Covered**: Velero, etcd-backup, Kasten K10, Stash
-- **Industry Tools**: Cloud backup services, Disaster recovery platforms
-- **Chaos Engineering**: Backup failure testing, disaster recovery scenario simulation, data corruption recovery
+- **Concept**: Velero, etcd backups, cluster recovery procedures, External Secrets Operator (ESO)
+- **Real-world Problem**: Business continuity, data protection, and secure secret management
+- **E-commerce Application**: Backup strategies for customer data, application state, and secure database credential management
+- **Skills Gained**: Backup strategies, disaster recovery, data protection, business continuity, External Secrets Operator, secret management integration
+- **Tools Covered**: Velero, etcd-backup, Kasten K10, Stash, External Secrets Operator, Vault integration
+- **Industry Tools**: Cloud backup services, Disaster recovery platforms, HashiCorp Vault, AWS Secrets Manager
+- **Chaos Engineering**: Backup failure testing, disaster recovery scenario simulation, data corruption recovery, secret management failure testing
 
 #### 30. **Performance Optimization and Tuning**
 - **Concept**: Cluster sizing, node optimization, application tuning
@@ -408,62 +408,466 @@ Each topic will include:
 
 ---
 
-## 🏆 **Capstone Projects**
+## 🏆 **Mini-Capstone Projects Strategy**
 
-### 🥉 **Mini-Capstone Project** (After Intermediate Topics)
-**Objective**: Deploy e-commerce application across DEV and UAT environments with comprehensive monitoring and chaos engineering
+### **📚 Learning Phase (Modules 1-33)**
+**Use E-commerce Project for ALL Learning:**
+- **All 33 modules** use the e-commerce project for concept learning
+- **Benefits**: Consistent context, faster learning, deeper understanding
+- **Focus**: Master concepts with familiar codebase
+- **Mini-Projects**: Simple extensions of e-commerce functionality
 
-**Requirements**:
-- **DEV Environment**: Local development with basic monitoring
-- **UAT Environment**: Staging environment with full monitoring stack
-- Deploy frontend, backend, and database on Kubernetes
-- Implement monitoring with Prometheus and Grafana
-- Configure ingress with SSL termination
-- Set up logging with ELK stack
-- Implement health checks and basic autoscaling
-- Configure persistent storage for database
-- Set up basic security policies
-- Environment-specific configurations using Helm
-- **Chaos Engineering**: Implement basic failure testing and recovery procedures
+### **🎯 Mini-Capstone Phase (Milestone Assessments)**
+
+#### 🥉 **Mini-Capstone 1: Spring Petclinic Microservices** (After Module 14)
+**Objective**: Apply core Kubernetes concepts to complex microservices architecture
+
+**Project Details**:
+- **GitHub Repository**: `https://github.com/spring-petclinic/spring-petclinic-microservices`
+- **Tech Stack**: Java Spring Boot, MySQL, Redis, RabbitMQ, Eureka
+- **Architecture**: 7 microservices with service discovery and message queuing
+- **Duration**: 1-2 weeks
+- **Modules Covered**: 1-14 (Container Fundamentals → Helm)
+
+**Setup Instructions**:
+```bash
+# Clone the repository
+git clone https://github.com/spring-petclinic/spring-petclinic-microservices.git
+cd spring-petclinic-microservices
+
+# Build Docker images
+docker-compose build
+
+# Run locally to understand the application
+docker-compose up -d
+
+# Access the application
+# Frontend: http://localhost:8080
+# API Gateway: http://localhost:8080
+# Admin Server: http://localhost:9090
+```
+
+**Kubernetes Deployment Requirements**:
+- Deploy all 7 microservices as separate deployments
+- Implement service discovery with Kubernetes services
+- Configure ConfigMaps for application properties
+- Set up Secrets for database credentials
+- Implement health checks for all services
+- Configure ingress for external access
+- Set up monitoring with Prometheus and Grafana
+- Implement basic autoscaling
+- Use Helm for deployment management
 
 **Deliverables**:
-- Complete Kubernetes manifests for both environments
+- Complete Kubernetes manifests for all microservices
 - Helm charts with environment-specific values
-- Monitoring dashboards for DEV and UAT
-- Documentation of deployment process
+- Service mesh implementation (optional)
+- Monitoring dashboards
+- Documentation of microservices architecture
 - Performance baseline metrics
-- **Chaos Engineering Report**: Failure scenarios tested and recovery procedures documented
+- **Chaos Engineering**: Service failure testing and recovery procedures
 
-### 🥇 **Full Capstone Project** (After Expert Topics)
-**Objective**: Production-ready e-commerce platform with multi-environment deployment and comprehensive chaos engineering
+---
+
+#### 🥈 **Mini-Capstone 2: Kubeflow ML Platform** (After Module 22)
+**Objective**: Apply intermediate Kubernetes concepts to machine learning platform
+
+**Project Details**:
+- **GitHub Repository**: `https://github.com/kubeflow/kubeflow`
+- **Tech Stack**: Python, TensorFlow, PyTorch, Jupyter, MLflow
+- **Architecture**: ML pipeline platform with GPU support
+- **Duration**: 2-3 weeks
+- **Modules Covered**: 15-22 (PV → Service Mesh)
+
+**Setup Instructions**:
+```bash
+# Install Kubeflow using kfctl
+wget https://github.com/kubeflow/kfctl/releases/download/v1.7.0/kfctl_v1.7.0-0-g030620c_linux.tar.gz
+tar -xvf kfctl_v1.7.0-0-g030620c_linux.tar.gz
+sudo mv kfctl /usr/local/bin/
+
+# Deploy Kubeflow
+kfctl apply -V -f https://raw.githubusercontent.com/kubeflow/manifests/v1.7.0/kfdef/kfctl_k8s_istio.v1.7.0.yaml
+
+# Access Kubeflow UI
+kubectl port-forward svc/istio-ingressgateway -n istio-system 8080:80
+# Access: http://localhost:8080
+```
+
+**Kubernetes Deployment Requirements**:
+- Deploy Kubeflow with StatefulSets for persistent components
+- Configure persistent volumes for ML model storage
+- Implement GPU resource management
+- Set up advanced networking with Istio service mesh
+- Configure RBAC for multi-user access
+- Implement monitoring and logging
+- Set up backup strategies for ML models
+- Configure resource quotas and limits
+- Implement security policies
+
+**Deliverables**:
+- Complete Kubeflow deployment with all components
+- GPU resource management configuration
+- Service mesh implementation with Istio
+- Advanced monitoring and observability
+- ML pipeline examples
+- Security and RBAC documentation
+- **Chaos Engineering**: ML workload failure testing and recovery
+
+---
+
+#### 🥇 **Mini-Capstone 3: Istio + Crossplane Multi-Cluster** (After Module 33)
+**Objective**: Apply expert Kubernetes concepts to multi-cluster deployment
+
+**Project Details**:
+- **Istio Repository**: `https://github.com/istio/istio`
+- **Crossplane Repository**: `https://github.com/crossplane/crossplane`
+- **Tech Stack**: Go, Envoy, Kubernetes, Cloud providers
+- **Architecture**: Multi-cluster service mesh with infrastructure management
+- **Duration**: 3-4 weeks
+- **Modules Covered**: 23-33 (Advanced → Production)
+
+**Setup Instructions**:
+```bash
+# Install Istio
+curl -L https://istio.io/downloadIstio | sh -
+cd istio-1.19.0
+export PATH=$PWD/bin:$PATH
+istioctl install --set values.defaultRevision=default
+
+# Install Crossplane
+helm repo add crossplane-stable https://charts.crossplane.io/stable
+helm repo update
+helm install crossplane crossplane-stable/crossplane --namespace crossplane-system --create-namespace
+
+# Deploy sample application
+kubectl apply -f samples/bookinfo/platform/kube/bookinfo.yaml
+kubectl apply -f samples/bookinfo/networking/bookinfo-gateway.yaml
+```
+
+**Kubernetes Deployment Requirements**:
+- Deploy Istio service mesh across multiple clusters
+- Implement Crossplane for infrastructure management
+- Configure multi-cluster networking
+- Set up advanced security policies
+- Implement GitOps with ArgoCD
+- Configure comprehensive monitoring
+- Set up disaster recovery procedures
+- Implement custom operators
+- Configure compliance and audit procedures
+- Set up performance optimization
+
+**Deliverables**:
+- Multi-cluster Istio deployment
+- Crossplane infrastructure management
+- Advanced security and compliance setup
+- GitOps implementation
+- Comprehensive monitoring and observability
+- Disaster recovery procedures
+- Custom operators and CRDs
+- **Chaos Engineering**: Multi-cluster failure testing and recovery
+
+---
+
+### 🏆 **Full Capstone Project: Production E-commerce Platform**
+**Objective**: Deploy production-ready e-commerce platform with all advanced concepts
 
 **Requirements**:
 - **DEV Environment**: Development with full tooling
 - **UAT Environment**: User acceptance testing with production-like setup
 - **PROD Environment**: Production deployment with enterprise features
 - Multi-cluster deployment across regions
-- Advanced monitoring and observability across all environments
-- Comprehensive security hardening and compliance
+- Advanced monitoring and observability
+- Comprehensive security hardening
 - Disaster recovery and backup strategies
-- GitOps deployment pipeline for all environments
+- GitOps deployment pipeline
 - Performance optimization and cost management
-- Compliance and audit procedures (PCI DSS)
+- Compliance procedures (PCI DSS)
 - Custom operators for application management
 - Advanced networking and service mesh
 - Production troubleshooting procedures
-- Environment promotion workflows
-- **Advanced Chaos Engineering**: Production-grade failure testing, disaster recovery simulation, resilience validation
 
 **Deliverables**:
-- Complete production-ready deployment across all environments
-- Comprehensive monitoring and alerting for all environments
+- Complete production-ready deployment
+- Comprehensive monitoring and alerting
 - Security and compliance documentation
 - Disaster recovery procedures
 - Performance optimization report
 - Cost analysis and recommendations
 - Production runbook and troubleshooting guide
-- **Comprehensive Chaos Engineering Framework**: Automated failure testing, resilience metrics, and recovery procedures
-- Environment management procedures
+- **Comprehensive Chaos Engineering Framework**: Automated failure testing and recovery procedures
+
+---
+
+## 📋 **Mini-Capstone Project Setup Guide**
+
+### **🛠️ Prerequisites for All Mini-Capstone Projects**
+
+#### **System Requirements**:
+- **Kubernetes Cluster**: 3-node cluster with minimum 8GB RAM per node
+- **Docker**: Latest version with Docker Compose support
+- **kubectl**: Configured to access your cluster
+- **Helm**: Version 3.x for package management
+- **Git**: For cloning repositories
+
+#### **Additional Tools**:
+```bash
+# Install required tools
+sudo apt update
+sudo apt install -y git curl wget jq yq
+
+# Install Helm
+curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+# Install kubectl
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+```
+
+### **📚 Mini-Capstone 1: Spring Petclinic Setup**
+
+#### **Project Overview**:
+- **Purpose**: Learn microservices architecture and service discovery
+- **Complexity**: Medium (7 microservices)
+- **Learning Focus**: Core Kubernetes concepts, service mesh basics
+
+#### **Detailed Setup Instructions**:
+
+**Step 1: Clone and Understand the Project**
+```bash
+# Clone the repository
+git clone https://github.com/spring-petclinic/spring-petclinic-microservices.git
+cd spring-petclinic-microservices
+
+# Explore the project structure
+tree -L 2
+# You'll see: api-gateway, config-server, customers-service, etc.
+```
+
+**Step 2: Local Docker Setup**
+```bash
+# Build all services
+docker-compose build
+
+# Start all services
+docker-compose up -d
+
+# Check service status
+docker-compose ps
+
+# View logs
+docker-compose logs -f api-gateway
+```
+
+**Step 3: Access and Test the Application**
+```bash
+# Access points
+# Frontend: http://localhost:8080
+# API Gateway: http://localhost:8080
+# Admin Server: http://localhost:9090
+# Config Server: http://localhost:8888
+
+# Test API endpoints
+curl http://localhost:8080/api/customers
+curl http://localhost:8080/api/vets
+```
+
+**Step 4: Kubernetes Deployment Preparation**
+```bash
+# Create namespace
+kubectl create namespace petclinic
+
+# Create ConfigMaps for each service
+kubectl create configmap api-gateway-config --from-file=api-gateway/src/main/resources/application.yml -n petclinic
+
+# Create Secrets for database
+kubectl create secret generic db-secret \
+  --from-literal=username=petclinic \
+  --from-literal=password=petclinic \
+  -n petclinic
+```
+
+#### **Kubernetes Deployment Checklist**:
+- [ ] Deploy Config Server
+- [ ] Deploy Eureka Server
+- [ ] Deploy API Gateway
+- [ ] Deploy all microservices (customers, vets, visits, etc.)
+- [ ] Deploy MySQL database
+- [ ] Configure service discovery
+- [ ] Set up ingress
+- [ ] Implement monitoring
+- [ ] Test chaos engineering scenarios
+
+---
+
+### **🤖 Mini-Capstone 2: Kubeflow Setup**
+
+#### **Project Overview**:
+- **Purpose**: Learn ML platform deployment and GPU management
+- **Complexity**: High (20+ components)
+- **Learning Focus**: StatefulSets, advanced networking, ML workloads
+
+#### **Detailed Setup Instructions**:
+
+**Step 1: Prerequisites Check**
+```bash
+# Check Kubernetes version (1.19+ required)
+kubectl version --client --short
+
+# Check available resources
+kubectl top nodes
+
+# Ensure you have at least 8GB RAM and 4 CPU cores available
+```
+
+**Step 2: Install kfctl**
+```bash
+# Download kfctl
+wget https://github.com/kubeflow/kfctl/releases/download/v1.7.0/kfctl_v1.7.0-0-g030620c_linux.tar.gz
+tar -xvf kfctl_v1.7.0-0-g030620c_linux.tar.gz
+sudo mv kfctl /usr/local/bin/
+
+# Verify installation
+kfctl version
+```
+
+**Step 3: Deploy Kubeflow**
+```bash
+# Create deployment directory
+mkdir kubeflow-deployment
+cd kubeflow-deployment
+
+# Deploy Kubeflow
+kfctl apply -V -f https://raw.githubusercontent.com/kubeflow/manifests/v1.7.0/kfdef/kfctl_k8s_istio.v1.7.0.yaml
+
+# Monitor deployment
+kubectl get pods -n kubeflow
+kubectl get pods -n istio-system
+```
+
+**Step 4: Access Kubeflow**
+```bash
+# Port forward to access UI
+kubectl port-forward svc/istio-ingressgateway -n istio-system 8080:80
+
+# Access Kubeflow UI
+# URL: http://localhost:8080
+# Default credentials: user@example.com / 12341234
+```
+
+#### **Kubernetes Deployment Checklist**:
+- [ ] Deploy Kubeflow core components
+- [ ] Configure Istio service mesh
+- [ ] Set up persistent storage
+- [ ] Configure GPU resources (if available)
+- [ ] Deploy ML pipeline examples
+- [ ] Set up monitoring and logging
+- [ ] Implement RBAC
+- [ ] Test ML workload scaling
+- [ ] Implement backup strategies
+
+---
+
+### **🌐 Mini-Capstone 3: Istio + Crossplane Setup**
+
+#### **Project Overview**:
+- **Purpose**: Learn multi-cluster management and advanced networking
+- **Complexity**: Very High (multi-cluster, service mesh)
+- **Learning Focus**: Advanced networking, multi-cluster, GitOps
+
+#### **Detailed Setup Instructions**:
+
+**Step 1: Install Istio**
+```bash
+# Download Istio
+curl -L https://istio.io/downloadIstio | sh -
+cd istio-1.19.0
+export PATH=$PWD/bin:$PATH
+
+# Install Istio
+istioctl install --set values.defaultRevision=default
+
+# Verify installation
+kubectl get pods -n istio-system
+```
+
+**Step 2: Install Crossplane**
+```bash
+# Add Crossplane Helm repository
+helm repo add crossplane-stable https://charts.crossplane.io/stable
+helm repo update
+
+# Install Crossplane
+helm install crossplane crossplane-stable/crossplane --namespace crossplane-system --create-namespace
+
+# Verify installation
+kubectl get pods -n crossplane-system
+```
+
+**Step 3: Deploy Sample Application**
+```bash
+# Deploy Bookinfo sample
+kubectl apply -f samples/bookinfo/platform/kube/bookinfo.yaml
+kubectl apply -f samples/bookinfo/networking/bookinfo-gateway.yaml
+
+# Verify deployment
+kubectl get pods
+kubectl get services
+```
+
+**Step 4: Access Application**
+```bash
+# Port forward to access
+kubectl port-forward svc/istio-ingressgateway -n istio-system 8080:80
+
+# Access Bookinfo application
+# URL: http://localhost:8080/productpage
+```
+
+#### **Kubernetes Deployment Checklist**:
+- [ ] Deploy Istio service mesh
+- [ ] Install Crossplane
+- [ ] Configure multi-cluster networking
+- [ ] Set up ArgoCD for GitOps
+- [ ] Implement advanced security policies
+- [ ] Configure comprehensive monitoring
+- [ ] Set up disaster recovery
+- [ ] Deploy custom operators
+- [ ] Implement compliance procedures
+- [ ] Test multi-cluster scenarios
+
+---
+
+### **📊 Project Comparison Matrix**
+
+| Project | Complexity | Duration | Focus Areas | Prerequisites |
+|---------|------------|----------|-------------|---------------|
+| **Spring Petclinic** | Medium | 1-2 weeks | Microservices, Service Discovery | Basic Kubernetes |
+| **Kubeflow** | High | 2-3 weeks | ML Platform, StatefulSets, GPU | Intermediate Kubernetes |
+| **Istio + Crossplane** | Very High | 3-4 weeks | Multi-cluster, Service Mesh | Advanced Kubernetes |
+
+### **🎯 Success Metrics for Each Project**
+
+#### **Mini-Capstone 1 Success Criteria**:
+- [ ] All 7 microservices deployed successfully
+- [ ] Service discovery working between services
+- [ ] Health checks implemented for all services
+- [ ] Monitoring dashboards created
+- [ ] Chaos engineering tests passed
+
+#### **Mini-Capstone 2 Success Criteria**:
+- [ ] Kubeflow platform fully deployed
+- [ ] ML pipelines running successfully
+- [ ] GPU resources managed (if available)
+- [ ] Advanced monitoring implemented
+- [ ] Security policies enforced
+
+#### **Mini-Capstone 3 Success Criteria**:
+- [ ] Multi-cluster deployment working
+- [ ] Service mesh traffic management functional
+- [ ] GitOps pipeline operational
+- [ ] Disaster recovery procedures tested
+- [ ] Compliance requirements met
 
 ---
 
@@ -569,14 +973,17 @@ Each topic includes:
 
 ## 📅 **Customized Learning Schedule** (2-3 hours/day)
 
-### **Your Learning Path** (18-22 weeks)
+### **Your Learning Path** (20-24 weeks)
 Based on your commitment of 2-3 hours daily and focus on production-grade systems:
 
 - **Week 1-2**: Prerequisites Review (5 topics) + Initial Monitoring Setup - 2-3 hours/day
 - **Week 3-6**: Beginner/Core Concepts (9 topics) - 2-3 hours/day  
-- **Week 7-11**: Intermediate/Advanced Topics (9 topics) - 2-3 hours/day
-- **Week 12-17**: Expert/Production-Level Skills (10 topics) - 2-3 hours/day
-- **Week 18-22**: Capstone Projects and Multi-Environment Deployment - 2-3 hours/day
+- **Week 7**: **Mini-Capstone 1**: Spring Petclinic Microservices - 2-3 hours/day
+- **Week 8-12**: Intermediate/Advanced Topics (9 topics) - 2-3 hours/day
+- **Week 13-14**: **Mini-Capstone 2**: Kubeflow ML Platform - 2-3 hours/day
+- **Week 15-19**: Expert/Production-Level Skills (10 topics) - 2-3 hours/day
+- **Week 20-22**: **Mini-Capstone 3**: Istio + Crossplane Multi-Cluster - 2-3 hours/day
+- **Week 23-24**: **Full Capstone**: Production E-commerce Platform - 2-3 hours/day
 
 ### **Environment Strategy**
 - **DEV Environment**: Local development and testing
@@ -675,6 +1082,90 @@ For your local practice environment, I recommend:
 
 ---
 
+## 🚀 **Expert-Recommended Enhancements Implemented**
+
+### **✅ Critical Enhancements Added**
+
+#### **Module 8 (Pods) - Enhanced with Init Containers and Lifecycle Hooks**
+- **Added**: Init containers for database initialization and dependency checks
+- **Added**: PreStop hooks for graceful shutdowns and connection draining
+- **Added**: PostStart hooks for application startup tasks
+- **Chaos Engineering**: Pod termination testing with graceful shutdown validation
+- **E-commerce Use Case**: Database schema migration before backend starts, graceful connection draining
+
+#### **Module 10 (Services) - Enhanced with Endpoints API Deep Dive**
+- **Added**: Comprehensive Endpoints API understanding and debugging
+- **Added**: Endpoint health monitoring and connectivity troubleshooting
+- **Added**: Service discovery mechanism deep dive
+- **Chaos Engineering**: Endpoint corruption testing and service connectivity failure simulation
+- **E-commerce Use Case**: Troubleshooting frontend-backend connectivity issues
+
+#### **Module 12 (Deployments) - Enhanced with Pod Disruption Budgets**
+- **Added**: Pod Disruption Budgets (PDBs) for cluster maintenance protection
+- **Added**: Node drain simulation and PDB validation
+- **Added**: Cluster maintenance without service disruption
+- **Chaos Engineering**: Node drain simulation with PDB respect validation
+- **E-commerce Use Case**: Protecting services during node maintenance and updates
+
+#### **Module 17 (Resource Management) - Enhanced with Cost Optimization**
+- **Added**: Comprehensive cost optimization with Kubecost integration
+- **Added**: Right-sizing strategies and resource optimization
+- **Added**: Cost analysis and ROI measurement
+- **Chaos Engineering**: Cost impact analysis during resource exhaustion scenarios
+- **E-commerce Use Case**: E-commerce application cost breakdown and optimization
+
+#### **Module 24 (Advanced Networking) - Enhanced with Egress NetworkPolicies**
+- **Added**: Egress NetworkPolicies for outbound traffic control
+- **Added**: API access restrictions and data exfiltration prevention
+- **Added**: Comprehensive network security policies
+- **Chaos Engineering**: Egress policy violation testing and network security validation
+- **E-commerce Use Case**: Restricting e-commerce API access to external services
+
+#### **Module 25 (RBAC and Security) - Enhanced with Modern Security Standards**
+- **Added**: Pod Security Admission (PSA) replacing deprecated Pod Security Policies
+- **Added**: Service Account Token Volume Projection for enhanced security
+- **Added**: Modern security standards and compliance procedures
+- **Chaos Engineering**: PSA policy violation testing and security bypass scenarios
+- **E-commerce Use Case**: PCI DSS compliance with modern security standards
+
+#### **Module 28 (GitOps) - Enhanced with Automated Certificate Management**
+- **Added**: Cert-Manager integration for automated SSL/TLS certificate provisioning
+- **Added**: ClusterIssuer configuration for Let's Encrypt integration
+- **Added**: Automated certificate renewal and management
+- **Chaos Engineering**: Certificate expiration simulation and renewal testing
+- **E-commerce Use Case**: Automated SSL certificate management for e-commerce ingress
+
+#### **Module 29 (Backup and Disaster Recovery) - Enhanced with External Secrets Operator**
+- **Added**: External Secrets Operator (ESO) for enterprise secret management
+- **Added**: Vault integration and secure credential management
+- **Added**: Secret management failure testing and recovery procedures
+- **Chaos Engineering**: Secret management failure testing and recovery validation
+- **E-commerce Use Case**: Secure database credential management with external secret stores
+
+### **🎯 Impact of Enhancements**
+
+#### **Production Readiness Improvements**:
+- **Graceful Shutdowns**: Init containers and PreStop hooks for production reliability
+- **Cost Optimization**: Kubecost integration for production cost management
+- **Security Hardening**: Modern PSA standards and egress policies
+- **Certificate Management**: Automated SSL/TLS for production security
+- **Secret Management**: Enterprise-grade secret management with ESO
+
+#### **Learning Value Enhancements**:
+- **Deeper Understanding**: Endpoints API and service discovery mechanisms
+- **Modern Standards**: PSA instead of deprecated PSP
+- **Practical Skills**: Real-world production scenarios and tools
+- **Industry Relevance**: Current tools and best practices
+
+#### **Chaos Engineering Expansion**:
+- **Graceful Shutdown Testing**: Pod termination with PreStop hook validation
+- **Network Security Testing**: Egress policy violation scenarios
+- **Cost Impact Analysis**: Resource exhaustion cost implications
+- **Certificate Management Testing**: SSL/TLS expiration and renewal scenarios
+- **Secret Management Testing**: External secret store failure scenarios
+
+---
+
 ## 🔍 **Comprehensive Review and Missing Elements Analysis**
 
 ### ✅ **Successfully Added Based on Your Requirements:**
@@ -769,12 +1260,28 @@ For your local practice environment, I recommend:
 
 ---
 
-**This comprehensive roadmap will take you from a Kubernetes beginner to a production-ready expert, with every concept applied to your real e-commerce application. Each module builds upon the previous ones, ensuring a solid foundation while progressively adding complexity.**
+**This comprehensive roadmap will take you from a Kubernetes beginner to a production-ready expert, with every concept learned using your familiar e-commerce project and validated through complex open-source projects. Each module builds upon the previous ones, ensuring a solid foundation while progressively adding complexity.**
 
-**Total Modules**: 33 (expandable to 38)
-**Duration**: 18-22 weeks
+**Learning Strategy**: 
+- **Modules 1-33**: Learn with e-commerce project (consistent context, faster learning)
+- **Mini-Capstones**: Apply concepts to complex projects (diverse experience, portfolio building)
+
+**Expert-Enhanced Features**:
+- **Init Containers & Lifecycle Hooks**: Production-ready pod management
+- **Endpoints API Deep Dive**: Advanced service understanding
+- **Pod Disruption Budgets**: Cluster maintenance protection
+- **Cost Optimization with Kubecost**: Production cost management
+- **Egress NetworkPolicies**: Advanced network security
+- **Pod Security Admission (PSA)**: Modern security standards
+- **Cert-Manager Integration**: Automated SSL/TLS management
+- **External Secrets Operator**: Enterprise secret management
+
+**Total Modules**: 33 (enhanced with expert recommendations)
+**Duration**: 20-24 weeks (including mini-capstone projects)
 **Focus**: Production-ready skills with multi-environment deployment
 **Tools**: 100+ tools covered (open-source + industry)
 **Environments**: DEV, UAT, PROD with promotion workflows
+**Mini-Capstone Projects**: 3 major projects (Spring Petclinic, Kubeflow, Istio+Crossplane)
+**Expert Enhancements**: 8 critical production-ready improvements
 
-**Ready to begin your Kubernetes mastery journey? 🚀**
+**Ready to begin your enhanced Kubernetes mastery journey? 🚀**
