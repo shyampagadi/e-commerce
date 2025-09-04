@@ -2252,6 +2252,77 @@ For your local practice environment, I recommend:
 - **Security assessments**: Identify and fix security issues
 - **Troubleshooting exams**: Debug real system problems
 
+### **🚨 MANDATORY CREATION PROCESS - CRITICAL REQUIREMENT**
+
+#### **📋 Pre-Creation Checklist (MUST COMPLETE BEFORE STARTING)**
+- [ ] **YAML Template Ready**: Every YAML file MUST have line-by-line explanation template
+- [ ] **Command Template Ready**: Every command MUST follow Tier 1/2/3 documentation format
+- [ ] **Code Template Ready**: Every code block MUST have context and explanation
+- [ ] **Validation Script Ready**: Automated check for missing documentation
+
+#### **📝 MANDATORY YAML DOCUMENTATION PROCESS**
+**EVERY YAML FILE MUST INCLUDE:**
+1. **YAML Code Block** - The actual configuration
+2. **Line-by-Line Explanation** - Every single line explained
+3. **Expected Output** - What happens when applied
+4. **Key Learning Points** - What the student learns
+5. **Troubleshooting** - Common issues and solutions
+
+**TEMPLATE FORMAT:**
+```yaml
+# YAML Configuration here
+```
+
+#### **Line-by-Line Explanation:**
+```yaml
+# **Line-by-Line Explanation:**
+# ```yaml
+# line1: value1                    # Explanation of line1
+# line2: value2                    # Explanation of line2
+# # ... every line explained
+# ```
+```
+
+#### **Expected Output:**
+```bash
+# Command and expected output here
+```
+
+#### **Key Learning Points:**
+- Point 1
+- Point 2
+- Point 3
+
+#### **Troubleshooting:**
+- Common issue 1: Solution 1
+- Common issue 2: Solution 2
+
+#### **📝 MANDATORY COMMAND DOCUMENTATION PROCESS**
+**EVERY COMMAND MUST INCLUDE:**
+1. **Command Overview** - Purpose and context
+2. **Command Purpose** - What it does
+3. **Usage Context** - When to use
+4. **Complete Flag Reference** - All flags documented
+5. **Real-time Examples** - Live execution with output
+6. **Troubleshooting** - Common issues
+7. **Performance Considerations** - Optimization tips
+
+#### **📝 MANDATORY CODE DOCUMENTATION PROCESS**
+**EVERY CODE BLOCK MUST INCLUDE:**
+1. **Code Context** - What it does and why
+2. **Line-by-Line Explanation** - Every line explained
+3. **Variable Explanations** - All variables documented
+4. **Error Handling** - Edge cases covered
+5. **Expected Output** - What happens when run
+
+#### **🔍 MANDATORY VALIDATION PROCESS**
+**BEFORE DECLARING MODULE COMPLETE:**
+1. **YAML Check**: Every YAML file has line-by-line explanation
+2. **Command Check**: Every command follows appropriate tier format
+3. **Code Check**: Every code block has context and explanation
+4. **Quality Check**: 35-point checklist 100% complete
+5. **Final Review**: Manual review of all sections
+
 ### **📊 Standard Module Structure (Based on Module 7 Golden Standard)**
 
 #### **1. Module Overview & Prerequisites**
