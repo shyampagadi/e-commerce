@@ -2345,7 +2345,18 @@ Before starting any module creation, verify these requirements are met:
 - **Detailed Prerequisites** - Technical, Knowledge, Environment, Validation
 - **Learning Objectives** - Core Competencies, Practical Skills, Production Readiness
 - **Module Structure** - Clear roadmap of what's covered (4 progressive levels)
-- **Golden Standard Compliance** - Explicit statement of Module 7 standards adherence
+> **🚨 CRITICAL REQUIREMENT - E-COMMERCE PROJECT INTEGRATION**
+> 
+> **ALL modules MUST use the e-commerce project (React frontend, FastAPI backend, PostgreSQL database) for examples, practice problems, and real-world scenarios. This is NON-NEGOTIABLE.**
+> 
+> **Required Integration:**
+> - Replace generic examples (nginx, apache, hello-world) with e-commerce components
+> - Use actual project YAML files and configurations from the main e-commerce directory
+> - Demonstrate concepts using backend services, frontend deployments, database connections
+> - Include real-world scenarios: product catalog, shopping cart, order processing, user authentication
+> - Reference existing docker-compose.yml, k8s-manifests.yml, and .env configurations
+> 
+> **This ensures learners gain portfolio-worthy, production-ready experience rather than toy examples.**- **Golden Standard Compliance** - Explicit statement of Module 7 standards adherence
 
 #### **2. Complete Theory Section**
 - **Concept Philosophy** - Historical context and evolution

@@ -26,7 +26,8 @@ This module follows the **Module 7 Golden Standard** with:
 - ✅ **Detailed Step-by-Step Solutions**
 - ✅ **Chaos Engineering Integration** (4 experiments)
 - ✅ **Expert-Level Content** (Enterprise integration)
-- ✅ **Assessment Framework** (Complete evaluation system)
+- ✅ **E-Commerce Project Integration** (Backend, Frontend, Database pods)
+> **🛒 E-COMMERCE INTEGRATION**: This module uses real e-commerce pods (FastAPI backend, React frontend, PostgreSQL database) throughout all examples, ensuring portfolio-worthy learning experience.- ✅ **Assessment Framework** (Complete evaluation system)
 
 ---
 
@@ -488,7 +489,7 @@ kubectl create pod <pod-name> [flags]
 
 **Example 1: Create a simple nginx pod**
 ```bash
-kubectl create pod nginx-pod --image=nginx:1.21 --port=80
+kubectl create pod ecommerce-frontend --image=ecommerce-frontend:latest --port=80
 ```
 
 **Expected Output:**
@@ -579,7 +580,7 @@ kubectl run <pod-name> --image=<image> [flags]
 
 **Example 1: Run a simple nginx pod**
 ```bash
-kubectl run nginx-pod --image=nginx:1.21 --port=80
+kubectl run ecommerce-frontend --image=ecommerce-frontend:latest --port=80
 ```
 
 **Expected Output:**
@@ -896,7 +897,7 @@ kubectl run ecommerce-frontend --image=nginx:1.21 --port=80 -n ecommerce
 #   - kubectl: Kubernetes command-line tool
 #   - run: Create and run a pod (imperative command)
 #   - ecommerce-frontend: Name of the pod to create
-#   - --image=nginx:1.21: Container image to use (nginx version 1.21)
+#   - --image=ecommerce-frontend:latest: E-commerce React frontend container image
 #   - --port=80: Port to expose from the container
 #   - -n ecommerce: Target namespace (short form of --namespace)
 ```
@@ -983,7 +984,7 @@ IPs:
 Containers:
   ecommerce-frontend:
     Container ID:   docker://abc123...
-    Image:          nginx:1.21
+    Image:          ecommerce-frontend:latest
     Image ID:       docker-pullable://nginx@sha256:...
     Port:           80/TCP
     Host Port:      0/TCP
@@ -1218,7 +1219,237 @@ spec:
 ```
 
 #### **Line-by-Line Explanation:**
+---
 
+## 🛒 **E-Commerce Project Integration**
+
+> **🚨 CRITICAL REQUIREMENT - E-COMMERCE PROJECT INTEGRATION**
+> 
+> **ALL examples in this module use the e-commerce project (React frontend, FastAPI backend, PostgreSQL database) for real-world learning. This ensures portfolio-worthy, production-ready experience.**
+
+### **🎯 E-Commerce Pod Architecture**
+
+Our e-commerce application consists of these core pods:
+
+| Pod Type | Purpose | Image | Port | Resources |
+|----------|---------|-------|------|-----------|
+| **ecommerce-backend** | FastAPI REST API | `ecommerce-backend:latest` | 8000 | 512Mi/500m |
+| **ecommerce-frontend** | React SPA + Nginx | `ecommerce-frontend:latest` | 80 | 256Mi/250m |
+| **ecommerce-database** | PostgreSQL DB | `postgres:15-alpine` | 5432 | 1Gi/1000m |
+| **ecommerce-redis** | Session Cache | `redis:7-alpine` | 6379 | 128Mi/100m |
+
+### **🔧 E-Commerce Backend Pod**
+
+#### **Complete Backend Pod Configuration**
+
+```yaml
+apiVersion: v1                    # Line 1: Kubernetes API version for Pod resource
+kind: Pod                        # Line 2: Resource type - Pod for running containers
+metadata:                        # Line 3: Metadata section containing resource identification
+  name: ecommerce-backend        # Line 4: Unique name for this Pod within namespace
+  namespace: ecommerce           # Line 5: Kubernetes namespace where Pod will be created
+  labels:                        # Line 6: Labels for resource identification and selection
+    app: ecommerce-backend       # Line 7: Application label for identification
+    tier: backend                # Line 8: Tier classification (frontend/backend/database)
+    version: v1.0.0              # Line 9: Version label for deployment tracking
+spec:                            # Line 10: Specification section containing pod configuration
+  containers:                    # Line 11: Array of containers to run in this pod (required field)
+  - name: backend                # Line 12: Container name within the pod (required, unique)
+    image: ecommerce-backend:latest # Line 13: Container image to run (required)
+    ports:                       # Line 14: Ports to expose from container (optional array)
+    - containerPort: 8000        # Line 15: Port number inside container (required)
+      name: http                 # Line 16: Name for the port (optional, useful for services)
+      protocol: TCP              # Line 17: Protocol for the port (TCP/UDP, default TCP)
+    env:                         # Line 18: Environment variables for the container (optional array)
+    - name: DATABASE_URL         # Line 19: Environment variable name (required, string)
+      value: "postgresql://postgres:admin@ecommerce-database:5432/ecommerce_db" # Line 20: Database connection string
+    - name: REDIS_URL            # Line 21: Environment variable name for Redis cache
+      value: "redis://ecommerce-redis:6379/0" # Line 22: Redis connection string
+    - name: JWT_SECRET_KEY       # Line 23: Environment variable for JWT authentication
+      value: "your-super-secret-jwt-key-here" # Line 24: JWT secret (use secrets in production)
+    resources:                   # Line 25: Resource requirements and limits section
+      requests:                  # Line 26: Minimum resources guaranteed to container
+        memory: "256Mi"          # Line 27: Minimum memory required (256 MiB)
+        cpu: "250m"              # Line 28: Minimum CPU required (250 millicores)
+      limits:                    # Line 29: Maximum resources allowed for container
+        memory: "512Mi"          # Line 30: Maximum memory allowed (512 MiB)
+        cpu: "500m"              # Line 31: Maximum CPU allowed (500 millicores)
+    livenessProbe:               # Line 32: Health check to determine if container is alive
+      httpGet:                   # Line 33: HTTP GET request for health check
+        path: /health            # Line 34: Health check endpoint path
+        port: 8000               # Line 35: Port for health check
+      initialDelaySeconds: 30    # Line 36: Wait 30s before first health check
+      periodSeconds: 10          # Line 37: Check every 10 seconds
+    readinessProbe:              # Line 38: Health check to determine if container is ready
+      httpGet:                   # Line 39: HTTP GET request for readiness check
+        path: /api/v1/health     # Line 40: Readiness check endpoint path
+        port: 8000               # Line 41: Port for readiness check
+      initialDelaySeconds: 5     # Line 42: Wait 5s before first readiness check
+      periodSeconds: 5           # Line 43: Check every 5 seconds
+  restartPolicy: Always          # Line 44: Restart policy (Always/OnFailure/Never)
+```
+
+### **🌐 E-Commerce Frontend Pod**
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ecommerce-frontend
+  namespace: ecommerce
+  labels:
+    app: ecommerce-frontend
+    tier: frontend
+spec:
+  containers:
+  - name: frontend
+    image: ecommerce-frontend:latest
+    ports:
+    - containerPort: 80
+    env:
+    - name: REACT_APP_API_URL
+      value: "http://ecommerce-backend:8000"
+    - name: REACT_APP_API_BASE_URL
+      value: "http://ecommerce-backend:8000/api/v1"
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "250m"
+    livenessProbe:
+      httpGet:
+        path: /
+        port: 80
+      initialDelaySeconds: 10
+      periodSeconds: 10
+  restartPolicy: Always
+```
+
+### **🗄️ E-Commerce Database Pod**
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ecommerce-database
+  namespace: ecommerce
+  labels:
+    app: ecommerce-database
+    tier: database
+spec:
+  containers:
+  - name: postgres
+    image: postgres:15-alpine
+    ports:
+    - containerPort: 5432
+    env:
+    - name: POSTGRES_DB
+      value: "ecommerce_db"
+    - name: POSTGRES_USER
+      value: "postgres"
+    - name: POSTGRES_PASSWORD
+      value: "admin"
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "500m"
+      limits:
+        memory: "1Gi"
+        cpu: "1000m"
+    volumeMounts:
+    - name: postgres-storage
+      mountPath: /var/lib/postgresql/data
+  volumes:
+  - name: postgres-storage
+    emptyDir: {}
+  restartPolicy: Always
+```
+
+### **🚀 E-Commerce Hands-On Practice**
+
+#### **Practice Problem 1: Deploy E-Commerce Backend**
+
+**Objective**: Deploy the FastAPI backend pod with proper configuration.
+
+```bash
+# Step 1: Create the backend pod
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ecommerce-backend
+  namespace: ecommerce
+  labels:
+    app: ecommerce-backend
+    tier: backend
+spec:
+  containers:
+  - name: backend
+    image: ecommerce-backend:latest
+    ports:
+    - containerPort: 8000
+    env:
+    - name: DATABASE_URL
+      value: "postgresql://postgres:admin@ecommerce-database:5432/ecommerce_db"
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "250m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+  restartPolicy: Always
+EOF
+
+# Step 2: Verify pod is running
+kubectl get pod ecommerce-backend -n ecommerce
+
+# Step 3: Check pod logs
+kubectl logs ecommerce-backend -n ecommerce
+
+# Step 4: Test API endpoint
+kubectl exec ecommerce-backend -n ecommerce -- curl http://localhost:8000/health
+```
+
+#### **Practice Problem 2: Multi-Container E-Commerce Pod**
+
+**Objective**: Create a pod with backend and Redis sidecar.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ecommerce-backend-redis
+  namespace: ecommerce
+spec:
+  containers:
+  # Main backend container
+  - name: backend
+    image: ecommerce-backend:latest
+    ports:
+    - containerPort: 8000
+    env:
+    - name: REDIS_URL
+      value: "redis://localhost:6379/0"
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "250m"
+  # Redis sidecar container
+  - name: redis
+    image: redis:7-alpine
+    ports:
+    - containerPort: 6379
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "50m"
+  restartPolicy: Always
+```
+
+---
 ```yaml
 # **Line-by-Line Explanation:**
 # ```yaml
@@ -1892,7 +2123,7 @@ spec:
 # spec:                            # Pod specification - desired state
 #   containers:                    # Array of containers in this pod
 #   - name: frontend               # Container name within the pod
-#     image: nginx:1.21            # Container image to run
+#     image: ecommerce-frontend:latest # E-commerce React frontend container image
 #     ports:                       # Ports to expose from container
 #     - containerPort: 80          # Port number inside container
 #       protocol: TCP              # Network protocol (TCP/UDP)
@@ -2262,7 +2493,7 @@ spec:
 # spec:                                  # Pod specification section
 #   containers:                          # Array of containers in the pod
 #   - name: app                          # Container name
-#     image: nginx:1.21                  # Container image with specific version (GOOD)
+#     image: ecommerce-frontend:v1.0.0   # E-commerce frontend with specific version (GOOD)
 # ```
 ```
 
@@ -3020,7 +3251,7 @@ chaos-test-pod-2    1/1     Running   0          2m
 
 ```bash
 # Create deployment for automatic restart
-kubectl create deployment chaos-test-deployment --image=nginx:1.21 --replicas=2 -n ecommerce
+kubectl create deployment ecommerce-test-deployment --image=ecommerce-frontend:latest --replicas=2 -n ecommerce
 ```
 
 **Expected Output:**
@@ -3816,8 +4047,8 @@ spec:
 **Objective**: Create a pod with a main application container and a logging sidecar.
 
 **Requirements**:
-- Main container: nginx:1.21 on port 80
-- Sidecar container: busybox for log processing
+- Main container: ecommerce-frontend:latest on port 80
+- Sidecar container: ecommerce-logger for log processing
 - Shared volume for logs
 - Resource limits for both containers
 - Health checks for main container
@@ -3877,6 +4108,163 @@ spec:
 - Network policy setup (2 points)
 
 ---
+
+---
+
+## 🛒 **Complete E-Commerce Pod Deployment Lab**
+
+### **🎯 Final Integration Exercise**
+
+Deploy the complete e-commerce application using pods with proper configuration.
+
+#### **Step 1: Deploy Database Pod**
+
+```bash
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ecommerce-database
+  namespace: ecommerce
+  labels:
+    app: ecommerce-database
+    tier: database
+spec:
+  containers:
+  - name: postgres
+    image: postgres:15-alpine
+    ports:
+    - containerPort: 5432
+    env:
+    - name: POSTGRES_DB
+      value: "ecommerce_db"
+    - name: POSTGRES_USER
+      value: "postgres"
+    - name: POSTGRES_PASSWORD
+      value: "admin"
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "500m"
+      limits:
+        memory: "1Gi"
+        cpu: "1000m"
+  restartPolicy: Always
+EOF
+```
+
+#### **Step 2: Deploy Backend Pod**
+
+```bash
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ecommerce-backend
+  namespace: ecommerce
+  labels:
+    app: ecommerce-backend
+    tier: backend
+spec:
+  containers:
+  - name: backend
+    image: ecommerce-backend:latest
+    ports:
+    - containerPort: 8000
+    env:
+    - name: DATABASE_URL
+      value: "postgresql://postgres:admin@ecommerce-database:5432/ecommerce_db"
+    - name: JWT_SECRET_KEY
+      value: "your-super-secret-jwt-key"
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "250m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+    livenessProbe:
+      httpGet:
+        path: /health
+        port: 8000
+      initialDelaySeconds: 30
+      periodSeconds: 10
+    readinessProbe:
+      httpGet:
+        path: /api/v1/health
+        port: 8000
+      initialDelaySeconds: 5
+      periodSeconds: 5
+  restartPolicy: Always
+EOF
+```
+
+#### **Step 3: Deploy Frontend Pod**
+
+```bash
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ecommerce-frontend
+  namespace: ecommerce
+  labels:
+    app: ecommerce-frontend
+    tier: frontend
+spec:
+  containers:
+  - name: frontend
+    image: ecommerce-frontend:latest
+    ports:
+    - containerPort: 80
+    env:
+    - name: REACT_APP_API_URL
+      value: "http://ecommerce-backend:8000"
+    - name: REACT_APP_API_BASE_URL
+      value: "http://ecommerce-backend:8000/api/v1"
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "250m"
+    livenessProbe:
+      httpGet:
+        path: /
+        port: 80
+      initialDelaySeconds: 10
+      periodSeconds: 10
+  restartPolicy: Always
+EOF
+```
+
+#### **Step 4: Verify E-Commerce Application**
+
+```bash
+# Check all pods are running
+kubectl get pods -n ecommerce -l 'tier in (database,backend,frontend)'
+
+# Check pod logs
+kubectl logs ecommerce-database -n ecommerce
+kubectl logs ecommerce-backend -n ecommerce  
+kubectl logs ecommerce-frontend -n ecommerce
+
+# Test connectivity
+kubectl exec ecommerce-backend -n ecommerce -- curl http://localhost:8000/health
+kubectl exec ecommerce-frontend -n ecommerce -- curl http://localhost:80
+```
+
+#### **Expected Results**
+
+```
+NAME                 READY   STATUS    RESTARTS   AGE
+ecommerce-database   1/1     Running   0          2m
+ecommerce-backend    1/1     Running   0          1m
+ecommerce-frontend   1/1     Running   0          30s
+```
+
+**🎉 Congratulations!** You've successfully deployed a complete e-commerce application using Kubernetes pods with production-ready configurations, health checks, and proper resource management.
 
 ## 🎯 **Module Conclusion**
 
