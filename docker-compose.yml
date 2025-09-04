@@ -1,0 +1,304 @@
+# 🐳 E-Commerce 3-Tier Application Docker Compose
+# This file defines the complete multi-container setup for local development
+
+version: '3.8'
+
+# ===========================================
+# SERVICES DEFINITION (3-Tier Architecture)
+# ===========================================
+
+services:
+  # =======================================
+  # TIER 3: DATABASE LAYER (PostgreSQL)
+  # =======================================
+  database:
+    image: postgres:15-alpine
+    container_name: ecommerce-db
+    restart: unless-stopped
+    
+    # Environment variables for PostgreSQL
+    environment:
+      POSTGRES_DB: ecommerce_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    
+    # Port mapping: host:container
+    ports:
+      - "5432:5432"
+    
+    # Persistent data storage
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./database/backup:/backup
+    
+    # Network configuration
+    networks:
+      - ecommerce-network
+    
+    # Health check to ensure database is ready
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ecommerce_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    
+    # Resource limits for development
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+
+  # =======================================
+  # TIER 2: BACKEND LAYER (FastAPI)
+  # =======================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        - BUILD_DATE=${BUILD_DATE:-now}
+        - VCS_REF=${VCS_REF:-dev}
+    
+    container_name: ecommerce-backend
+    restart: unless-stopped
+    
+    # Environment variables for backend
+    environment:
+      # Database connection
+      DATABASE_URL: postgresql://postgres:admin@database:5432/ecommerce_db
+      
+      # Application settings
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
+      DEBUG: ${DEBUG:-true}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      
+      # CORS settings
+      BACKEND_CORS_ORIGINS: '["http://localhost:3000","http://localhost:3001","http://127.0.0.1:3000"]'
+      
+      # Optional: External services
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+    
+    # Port mapping
+    ports:
+      - "8000:8000"
+    
+    # Volume mounts for development
+    volumes:
+      - ./backend:/app:ro
+      - backend_uploads:/app/uploads
+      - backend_logs:/app/logs
+    
+    # Service dependencies
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    
+    # Network configuration
+    networks:
+      - ecommerce-network
+    
+    # Health check for backend API
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+
+  # =======================================
+  # TIER 1: FRONTEND LAYER (React + Nginx)
+  # =======================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - REACT_APP_API_URL=http://localhost:8000
+        - REACT_APP_API_BASE_URL=http://localhost:8000/api/v1
+    
+    container_name: ecommerce-frontend
+    restart: unless-stopped
+    
+    # Port mapping
+    ports:
+      - "3000:80"
+    
+    # Volume mounts
+    volumes:
+      - ./frontend/nginx.conf:/etc/nginx/nginx.conf:ro
+    
+    # Service dependencies
+    depends_on:
+      backend:
+        condition: service_healthy
+    
+    # Network configuration
+    networks:
+      - ecommerce-network
+    
+    # Health check for frontend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+        reservations:
+          memory: 128M
+          cpus: '0.25'
+
+  # =======================================
+  # ADDITIONAL SERVICES
+  # =======================================
+  
+  # Redis for caching and sessions
+  redis:
+    image: redis:7-alpine
+    container_name: ecommerce-redis
+    restart: unless-stopped
+    
+    # Port mapping
+    ports:
+      - "6379:6379"
+    
+    # Persistent storage
+    volumes:
+      - redis_data:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    
+    # Custom command with configuration
+    command: redis-server /usr/local/etc/redis/redis.conf
+    
+    # Network configuration
+    networks:
+      - ecommerce-network
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+
+  # Nginx Load Balancer (for production-like setup)
+  nginx:
+    image: nginx:alpine
+    container_name: ecommerce-nginx
+    restart: unless-stopped
+    
+    # Port mapping
+    ports:
+      - "80:80"
+      - "443:443"
+    
+    # Configuration and SSL certificates
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+    
+    # Dependencies
+    depends_on:
+      - frontend
+      - backend
+    
+    # Network configuration
+    networks:
+      - ecommerce-network
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+# ===========================================
+# VOLUMES DEFINITION (Persistent Storage)
+# ===========================================
+volumes:
+  # Database persistent storage
+  postgres_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/postgres
+  
+  # Redis persistent storage
+  redis_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/redis
+  
+  # Backend file uploads
+  backend_uploads:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/uploads
+  
+  # Application logs
+  backend_logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./logs/backend
+  
+  # Nginx logs
+  nginx_logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./logs/nginx
+
+# ===========================================
+# NETWORKS DEFINITION
+# ===========================================
+networks:
+  ecommerce-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1
+    driver_opts:
+      com.docker.network.bridge.name: ecommerce-br0

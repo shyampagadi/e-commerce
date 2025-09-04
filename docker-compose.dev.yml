@@ -1,0 +1,72 @@
+# 🔧 Development Docker Compose Configuration
+# Optimized for local development with hot reloading and debugging
+
+version: '3.8'
+
+services:
+  # Database for development
+  database:
+    image: postgres:15-alpine
+    container_name: ecommerce-db-dev
+    environment:
+      POSTGRES_DB: ecommerce_dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - ecommerce-dev
+
+  # Backend with hot reloading
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: ecommerce-backend-dev
+    environment:
+      DATABASE_URL: postgresql://postgres:admin@database:5432/ecommerce_dev
+      SECRET_KEY: dev-secret-key
+      DEBUG: "true"
+      RELOAD: "true"
+    ports:
+      - "8000:8000"
+      - "5678:5678"  # Debugger port
+    volumes:
+      - ./backend:/app
+      - /app/__pycache__
+    depends_on:
+      - database
+    networks:
+      - ecommerce-dev
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Frontend with hot reloading
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: ecommerce-frontend-dev
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000
+      - CHOKIDAR_USEPOLLING=true
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - ecommerce-dev
+    stdin_open: true
+    tty: true
+
+volumes:
+  postgres_dev_data:
+
+networks:
+  ecommerce-dev:
+    driver: bridge

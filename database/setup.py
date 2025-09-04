@@ -1,114 +1,213 @@
 #!/usr/bin/env python3
 """
-Comprehensive Database Setup Script for E-Commerce Application
+🗄️ Complete E-Commerce Database Setup Script
+============================================
 
-Usage:
-    python database/setup.py --all                  # Full setup (validate + sample data + images)
-    python database/setup.py --validate             # Validate database connection
-    python database/setup.py --init-clean          # Initialize clean database
-    python database/setup.py --init-sample         # Initialize with sample data
-    python database/setup.py --download-images     # Download sample images
-    python database/setup.py --reset               # Reset database
+This consolidated script handles ALL database operations for the e-commerce application.
+It includes setup, sample data creation, image downloading, backup/restore, and maintenance.
+
+📋 PREREQUISITES:
+- PostgreSQL installed and running
+- Database 'ecommerce_db' created manually
+- User 'postgres' with password set
+- Backend dependencies installed: pip install -r backend/requirements.txt
+
+🚀 USAGE:
+    python database/setup.py --help                    # Show all options
+    python database/setup.py --validate               # Test database connection
+    python database/setup.py --init-clean            # Clean database setup
+    python database/setup.py --init-sample           # Setup with sample data
+    python database/setup.py --download-images       # Download product images
+    python database/setup.py --reset                 # Reset database
+    python database/setup.py --all                   # Complete setup
+    python database/setup.py --backup                # Create backup
+    python database/setup.py --restore backup.sql    # Restore from backup
+
+🔧 CONFIGURATION:
+Update these variables in the script or use .env file:
+    DB_HOST=localhost
+    DB_PORT=5432
+    DB_NAME=ecommerce_db
+    DB_USER=postgres
+    DB_PASSWORD=your_password
+
+Author: E-Commerce Development Team
+Version: 3.0 Consolidated
 """
 
 import os
 import sys
 import argparse
 import requests
+import subprocess
+import json
+import time
 from pathlib import Path
+from datetime import datetime
+from typing import Dict, List, Optional, Tuple, Any
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
-env_path = Path(__file__).parent.parent / ".env"
-load_dotenv(env_path)
+# ============================================================================
+# CONFIGURATION AND SETUP
+# ============================================================================
 
-# Add backend to path for imports
-backend_path = Path(__file__).parent.parent / "backend"
-sys.path.insert(0, str(backend_path))
+# Project paths
+PROJECT_ROOT = Path(__file__).parent.parent
+ENV_PATH = PROJECT_ROOT / ".env"
+BACKEND_PATH = PROJECT_ROOT / "backend"
+UPLOADS_PATH = BACKEND_PATH / "uploads" / "products"
+BACKUP_PATH = PROJECT_ROOT / "database" / "backups"
 
-import psycopg2
-from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+# Load environment variables
+load_dotenv(ENV_PATH)
 
-# Database configuration from environment variables
+# Add backend to Python path for imports
+sys.path.insert(0, str(BACKEND_PATH))
+
+# Database configuration - UPDATE THESE OR USE .env FILE
 DB_CONFIG = {
     'host': os.getenv('DB_HOST', 'localhost'),
     'port': int(os.getenv('DB_PORT', 5432)),
     'database': os.getenv('DB_NAME', 'ecommerce_db'),
     'user': os.getenv('DB_USER', 'postgres'),
-    'password': os.getenv('DB_PASSWORD', 'admin')
+    'password': os.getenv('DB_PASSWORD', 'admin')  # Password set to 'admin'
 }
 
 DATABASE_URL = os.getenv('DATABASE_URL') or f"postgresql://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}"
 
-def print_header(title):
-    """Print formatted header"""
-    print(f"\n{'='*60}")
-    print(f"🚀 {title}")
-    print(f"{'='*60}")
+# Import required modules with error handling
+try:
+    import psycopg2
+    from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+    from sqlalchemy import create_engine, text
+    from sqlalchemy.orm import sessionmaker
+    DEPENDENCIES_AVAILABLE = True
+except ImportError as e:
+    print(f"❌ Missing dependencies: {e}")
+    print("📋 Please install: pip install -r backend/requirements.txt")
+    DEPENDENCIES_AVAILABLE = False
 
-def print_success(message):
-    """Print success message"""
-    print(f"✅ {message}")
+# ============================================================================
+# UTILITY FUNCTIONS FOR BEAUTIFUL OUTPUT
+# ============================================================================
 
-def print_error(message):
-    """Print error message"""
-    print(f"❌ {message}")
+class Colors:
+    """ANSI color codes for terminal output."""
+    RED = '\033[0;31m'
+    GREEN = '\033[0;32m'
+    YELLOW = '\033[1;33m'
+    BLUE = '\033[0;34m'
+    PURPLE = '\033[0;35m'
+    CYAN = '\033[0;36m'
+    BOLD = '\033[1m'
+    NC = '\033[0m'
 
-def print_info(message):
-    """Print info message"""
-    print(f"📋 {message}")
+def print_header(title: str) -> None:
+    """Print formatted header with title."""
+    print(f"\n{Colors.PURPLE}{'='*70}{Colors.NC}")
+    print(f"{Colors.PURPLE}{Colors.BOLD}🚀 {title}{Colors.NC}")
+    print(f"{Colors.PURPLE}{'='*70}{Colors.NC}")
 
-def validate_env_config():
-    """Validate that all required environment variables are set"""
-    required_vars = ['DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASSWORD', 'DATABASE_URL']
-    missing_vars = []
-    
-    for var in required_vars:
-        if not os.getenv(var):
-            missing_vars.append(var)
-    
-    if missing_vars:
-        print_error("Missing required environment variables:")
-        for var in missing_vars:
-            print_error(f"  - {var}")
-        print_info("Please check your .env file in the project root directory")
+def print_success(message: str) -> None:
+    """Print success message in green."""
+    print(f"{Colors.GREEN}✅ {message}{Colors.NC}")
+
+def print_error(message: str) -> None:
+    """Print error message in red."""
+    print(f"{Colors.RED}❌ {message}{Colors.NC}")
+
+def print_warning(message: str) -> None:
+    """Print warning message in yellow."""
+    print(f"{Colors.YELLOW}⚠️  {message}{Colors.NC}")
+
+def print_info(message: str) -> None:
+    """Print info message in blue."""
+    print(f"{Colors.BLUE}📋 {message}{Colors.NC}")
+
+def print_step(message: str) -> None:
+    """Print step message in cyan."""
+    print(f"{Colors.CYAN}🔄 {message}{Colors.NC}")
+
+def print_config_info() -> None:
+    """Print current database configuration."""
+    print_info(f"Database: {DB_CONFIG['database']}")
+    print_info(f"User: {DB_CONFIG['user']}")
+    print_info(f"Host: {DB_CONFIG['host']}:{DB_CONFIG['port']}")
+    print_info(f"Backend path: {BACKEND_PATH}")
+
+# ============================================================================
+# CORE DATABASE VALIDATION AND CONNECTION
+# ============================================================================
+
+def validate_dependencies() -> bool:
+    """Validate that all required dependencies are available."""
+    if not DEPENDENCIES_AVAILABLE:
+        print_error("Required Python dependencies are not installed")
+        print_info("Please run: pip install -r backend/requirements.txt")
         return False
-    
     return True
 
-def validate_database():
-    """Validate PostgreSQL database connection"""
+def validate_environment() -> bool:
+    """Validate environment configuration and file structure."""
+    print_step("Validating environment configuration...")
+    
+    # Check if backend directory exists
+    if not BACKEND_PATH.exists():
+        print_error(f"Backend directory not found at {BACKEND_PATH}")
+        return False
+    
+    # Create necessary directories
+    UPLOADS_PATH.mkdir(parents=True, exist_ok=True)
+    BACKUP_PATH.mkdir(parents=True, exist_ok=True)
+    
+    print_success("Environment configuration is valid")
+    return True
+
+def validate_database() -> bool:
+    """
+    Validate PostgreSQL database connection and permissions.
+    
+    This function tests:
+    - Database server connectivity
+    - Database existence
+    - User permissions
+    - Basic SQL operations
+    """
     print_header("Database Validation")
     
-    if not validate_env_config():
+    if not validate_dependencies() or not validate_environment():
         return False
     
     try:
+        # Test connection to database
         conn = psycopg2.connect(**DB_CONFIG)
         conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cursor = conn.cursor()
         
+        # Get PostgreSQL version
         cursor.execute("SELECT version();")
         version = cursor.fetchone()[0]
-        print_success(f"PostgreSQL connection successful")
+        print_success("PostgreSQL connection successful")
         print_info(f"Version: {version.split(',')[0]}")
         
+        # Verify database exists
         cursor.execute("SELECT datname FROM pg_database WHERE datname = %s;", (DB_CONFIG['database'],))
         if cursor.fetchone():
             print_success(f"Database '{DB_CONFIG['database']}' exists")
         else:
             print_error(f"Database '{DB_CONFIG['database']}' not found")
+            print_info("Please create the database manually:")
+            print_info(f"  CREATE DATABASE {DB_CONFIG['database']};")
             return False
         
+        # Test basic permissions by creating and dropping a test table
         cursor.execute("""
-            CREATE TABLE IF NOT EXISTS test_connection (
+            CREATE TABLE IF NOT EXISTS test_connection_temp (
                 id SERIAL PRIMARY KEY,
                 test_field VARCHAR(50)
             );
         """)
-        cursor.execute("DROP TABLE IF EXISTS test_connection;")
+        cursor.execute("DROP TABLE IF EXISTS test_connection_temp;")
         print_success("Database permissions verified")
         
         cursor.close()
@@ -119,360 +218,389 @@ def validate_database():
         
     except psycopg2.Error as e:
         print_error(f"Database connection failed: {e}")
-        print_info("Please ensure:")
-        print_info(f"  1. PostgreSQL is running")
-        print_info(f"  2. Database '{DB_CONFIG['database']}' exists")
-        print_info(f"  3. User '{DB_CONFIG['user']}' has access with password")
+        print_info("Troubleshooting steps:")
+        print_info(f"  1. Ensure PostgreSQL is running")
+        print_info(f"  2. Verify database '{DB_CONFIG['database']}' exists")
+        print_info(f"  3. Check user '{DB_CONFIG['user']}' has correct password")
+        print_info(f"  4. Update DB_CONFIG in this script with correct password")
         return False
 
-def init_database_clean():
-    """Initialize database with clean setup (no sample data)"""
-    print_header("Clean Database Initialization")
+# ============================================================================
+# DATABASE SCHEMA INITIALIZATION
+# ============================================================================
+
+def initialize_database_schema() -> bool:
+    """
+    Initialize database schema by creating all tables.
     
-    if not validate_env_config():
-        return False
+    This function:
+    1. Drops all existing tables (clean slate)
+    2. Creates all tables defined in SQLAlchemy models
+    3. Verifies table creation was successful
+    """
+    print_step("Initializing database schema...")
     
     try:
+        # Import SQLAlchemy models and engine
         from app.database import Base, engine
-        from app.models import User, Category
-        from app.utils.auth import get_password_hash
-        from app.utils.slug import create_slug
         
+        # Drop existing tables if they exist
         print_info("Dropping existing tables...")
         Base.metadata.drop_all(bind=engine)
-        print_success("Tables dropped")
+        print_success("Existing tables dropped")
         
+        # Create all tables from models
         print_info("Creating database tables...")
         Base.metadata.create_all(bind=engine)
-        print_success("Tables created")
+        print_success("Database tables created successfully")
         
-        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-        db = SessionLocal()
+        # Verify tables were created by querying information_schema
+        with engine.connect() as conn:
+            result = conn.execute(text("""
+                SELECT table_name 
+                FROM information_schema.tables 
+                WHERE table_schema = 'public'
+                ORDER BY table_name;
+            """))
+            tables = [row[0] for row in result]
+            
+        print_success(f"Created {len(tables)} tables:")
+        for table in tables:
+            print_info(f"  - {table}")
         
-        try:
-            print_info("Creating essential data...")
-            
-            admin_user = User(
-                email="admin@ecommerce.com",
-                username="admin",
-                first_name="Admin",
-                last_name="User",
-                hashed_password=get_password_hash("admin123"),
-                is_active=True,
-                is_admin=True,
-                phone="+1-555-0123",
-                address="123 Admin Street",
-                city="New York",
-                state="NY",
-                zip_code="10001",
-                country="USA"
-            )
-            db.add(admin_user)
-            
-            regular_user = User(
-                email="user@ecommerce.com",
-                username="user",
-                first_name="John",
-                last_name="Doe",
-                hashed_password=get_password_hash("user123"),
-                is_active=True,
-                is_admin=False,
-                phone="+1-555-0456",
-                address="456 User Avenue",
-                city="Los Angeles",
-                state="CA",
-                zip_code="90210",
-                country="USA"
-            )
-            db.add(regular_user)
-            
-            db.commit()
-            print_success("Users created")
-            
-            categories_data = [
-                ("Electronics", "Latest gadgets and electronic devices"),
-                ("Clothing", "Fashion and apparel for all occasions"),
-                ("Home & Garden", "Everything for your home and garden"),
-                ("Sports & Outdoors", "Sports equipment and outdoor gear"),
-                ("Books", "Books, magazines, and educational materials"),
-                ("Health & Beauty", "Health, beauty, and personal care products")
-            ]
-            
-            for i, (name, description) in enumerate(categories_data, 1):
-                category = Category(
-                    name=name,
-                    slug=create_slug(name),
-                    description=description,
-                    sort_order=i
-                )
-                db.add(category)
-            
-            db.commit()
-            print_success("Categories created")
-            
-            print_success("Clean database initialization completed!")
-            print_info("Created:")
-            print_info("  - 2 Users (admin and regular user)")
-            print_info("  - 6 Product categories")
-            print_info("  - 0 Products (clean slate)")
-            print_info("\n🔐 Login Credentials:")
-            print_info("  Admin: admin@ecommerce.com / admin123")
-            print_info("  User:  user@ecommerce.com / user123")
-            
-        except Exception as e:
-            db.rollback()
-            raise
-        finally:
-            db.close()
-            
         return True
         
     except Exception as e:
-        print_error(f"Database initialization failed: {e}")
+        print_error(f"Schema initialization failed: {e}")
         return False
 
-def init_database_sample():
-    """Initialize database with sample data"""
-    print_header("Sample Database Initialization")
+# ============================================================================
+# USER CREATION FUNCTIONS
+# ============================================================================
+
+def create_admin_user(db_session) -> bool:
+    """
+    Create the default admin user.
     
-    if not validate_env_config():
-        return False
-    
+    Creates admin user with:
+    - Email: admin@ecommerce.com
+    - Password: admin123 (securely hashed)
+    - Full admin privileges
+    - Complete profile information
+    """
     try:
-        from app.database import Base, engine
-        from app.models import User, Category, Product
+        from app.models import User
         from app.utils.auth import get_password_hash
-        from app.utils.slug import create_slug
+        
+        # Check if admin user already exists
+        existing_admin = db_session.query(User).filter(User.email == "admin@ecommerce.com").first()
+        if existing_admin:
+            print_info("Admin user already exists, skipping creation")
+            return True
+        
+        # Create admin user with comprehensive profile
+        admin_user = User(
+            email="admin@ecommerce.com",
+            username="admin",
+            first_name="Admin",
+            last_name="User",
+            hashed_password=get_password_hash("admin123"),
+            is_active=True,
+            is_admin=True,
+            phone="+1-555-0123",
+            address="123 Admin Street",
+            city="New York",
+            state="NY",
+            zip_code="10001",
+            country="USA"
+        )
+        
+        db_session.add(admin_user)
+        db_session.commit()
+        
+        print_success("Admin user created successfully")
+        print_info("  Email: admin@ecommerce.com")
+        print_info("  Password: admin123")
+        
+        return True
+        
+    except Exception as e:
+        print_error(f"Failed to create admin user: {e}")
+        db_session.rollback()
+        return False
+
+def create_default_user(db_session) -> bool:
+    """
+    Create a default regular user for testing.
+    
+    Creates regular user with:
+    - Email: user@ecommerce.com
+    - Password: user123 (securely hashed)
+    - Regular user privileges (no admin access)
+    - Complete profile information
+    """
+    try:
+        from app.models import User
+        from app.utils.auth import get_password_hash
+        
+        # Check if user already exists
+        existing_user = db_session.query(User).filter(User.email == "user@ecommerce.com").first()
+        if existing_user:
+            print_info("Default user already exists, skipping creation")
+            return True
+        
+        # Create regular user with complete profile
+        regular_user = User(
+            email="user@ecommerce.com",
+            username="user",
+            first_name="John",
+            last_name="Doe",
+            hashed_password=get_password_hash("user123"),
+            is_active=True,
+            is_admin=False,
+            phone="+1-555-0456",
+            address="456 User Avenue",
+            city="Los Angeles",
+            state="CA",
+            zip_code="90210",
+            country="USA"
+        )
+        
+        db_session.add(regular_user)
+        db_session.commit()
+        
+        print_success("Default user created successfully")
+        print_info("  Email: user@ecommerce.com")
+        print_info("  Password: user123")
+        
+        return True
+        
+    except Exception as e:
+        print_error(f"Failed to create default user: {e}")
+        db_session.rollback()
+        return False
+def create_sample_users(db_session, count: int = 10) -> bool:
+    """Create multiple sample users with realistic data using Faker."""
+    try:
+        from app.models import User
+        from app.utils.auth import get_password_hash
         from faker import Faker
         
         fake = Faker()
+        print_step(f"Creating {count} sample users...")
         
-        print_info("Dropping existing tables...")
-        Base.metadata.drop_all(bind=engine)
-        print_success("Tables dropped")
-        
-        print_info("Creating database tables...")
-        Base.metadata.create_all(bind=engine)
-        print_success("Tables created")
-        
-        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-        db = SessionLocal()
-        
-        try:
-            print_info("Creating users...")
+        created_users = []
+        for i in range(count):
+            username = f"user{i+1}"
+            email = f"user{i+1}@example.com"
             
-            admin_user = User(
-                email="admin@ecommerce.com",
-                username="admin",
-                first_name="Admin",
-                last_name="User",
-                hashed_password=get_password_hash("admin123"),
-                is_active=True,
-                is_admin=True,
-                phone="+1-555-0123",
-                address="123 Admin Street",
-                city="New York",
-                state="NY",
-                zip_code="10001",
-                country="USA"
-            )
-            db.add(admin_user)
+            # Check if user already exists
+            existing_user = db_session.query(User).filter(User.email == email).first()
+            if existing_user:
+                continue
             
-            regular_user = User(
-                email="user@ecommerce.com",
-                username="user",
-                first_name="John",
-                last_name="Doe",
-                hashed_password=get_password_hash("user123"),
+            user = User(
+                email=email,
+                username=username,
+                first_name=fake.first_name(),
+                last_name=fake.last_name(),
+                hashed_password=get_password_hash("password123"),
                 is_active=True,
                 is_admin=False,
-                phone="+1-555-0456",
-                address="456 User Avenue",
-                city="Los Angeles",
-                state="CA",
-                zip_code="90210",
+                phone=fake.phone_number(),
+                address=fake.street_address(),
+                city=fake.city(),
+                state=fake.state_abbr(),
+                zip_code=fake.zipcode(),
                 country="USA"
             )
-            db.add(regular_user)
             
-            for i in range(10):
-                user = User(
-                    email=fake.email(),
-                    username=fake.user_name() + str(i),
-                    first_name=fake.first_name(),
-                    last_name=fake.last_name(),
-                    hashed_password=get_password_hash("password123"),
-                    is_active=True,
-                    is_admin=False,
-                    phone=fake.phone_number(),
-                    address=fake.street_address(),
-                    city=fake.city(),
-                    state=fake.state_abbr(),
-                    zip_code=fake.zipcode(),
-                    country="USA"
-                )
-                db.add(user)
-            
-            db.commit()
-            print_success("Users created")
-            
-            categories_data = [
-                ("Electronics", "Latest gadgets and electronic devices"),
-                ("Clothing", "Fashion and apparel for all occasions"),
-                ("Home & Garden", "Everything for your home and garden"),
-                ("Sports & Outdoors", "Sports equipment and outdoor gear"),
-                ("Books", "Books, magazines, and educational materials"),
-                ("Health & Beauty", "Health, beauty, and personal care products")
-            ]
-            
-            categories = []
-            for i, (name, description) in enumerate(categories_data, 1):
-                category = Category(
-                    name=name,
-                    slug=create_slug(name),
-                    description=description,
-                    sort_order=i
-                )
-                categories.append(category)
-                db.add(category)
-            
-            db.commit()
-            print_success("Categories created")
-            
-            print_info("Creating sample products...")
-            sample_products = [
-                # Electronics
-                {"name": "iPhone 15 Pro", "description": "Latest iPhone with advanced features", "price": 999.99, "category": categories[0], "quantity": 50, "sku": "IPH15PRO001"},
-                {"name": "MacBook Air", "description": "Lightweight laptop for professionals", "price": 1299.99, "category": categories[0], "quantity": 25, "sku": "MBA001"},
-                {"name": "Samsung Galaxy S24", "description": "Premium Android smartphone", "price": 899.99, "category": categories[0], "quantity": 40, "sku": "SGS24001"},
-                {"name": "iPad Pro", "description": "Professional tablet for creativity", "price": 799.99, "category": categories[0], "quantity": 30, "sku": "IPADPRO001"},
-                {"name": "AirPods Pro", "description": "Wireless earbuds with noise cancellation", "price": 249.99, "category": categories[0], "quantity": 100, "sku": "APP001"},
-                
-                # Clothing
-                {"name": "Cotton T-Shirt", "description": "Comfortable cotton t-shirt", "price": 29.99, "category": categories[1], "quantity": 100, "sku": "CTS001"},
-                {"name": "Denim Jacket", "description": "Classic denim jacket", "price": 79.99, "category": categories[1], "quantity": 30, "sku": "DJ001"},
-                {"name": "Running Shoes", "description": "Comfortable athletic shoes", "price": 129.99, "category": categories[1], "quantity": 60, "sku": "RS001"},
-                {"name": "Hoodie", "description": "Warm and cozy hoodie", "price": 59.99, "category": categories[1], "quantity": 45, "sku": "HD001"},
-                {"name": "Jeans", "description": "Classic blue jeans", "price": 89.99, "category": categories[1], "quantity": 70, "sku": "JN001"},
-                
-                # Home & Garden
-                {"name": "Plant Pots Set", "description": "Set of decorative plant pots", "price": 49.99, "category": categories[2], "quantity": 40, "sku": "PPS001"},
-                {"name": "Coffee Maker", "description": "Automatic drip coffee maker", "price": 159.99, "category": categories[2], "quantity": 20, "sku": "CM001"},
-                {"name": "Throw Pillow", "description": "Decorative throw pillow", "price": 24.99, "category": categories[2], "quantity": 80, "sku": "TP001"},
-                {"name": "Table Lamp", "description": "Modern LED table lamp", "price": 89.99, "category": categories[2], "quantity": 35, "sku": "TL001"},
-                {"name": "Garden Tools Set", "description": "Complete gardening tool kit", "price": 119.99, "category": categories[2], "quantity": 25, "sku": "GTS001"},
-                
-                # Sports & Outdoors
-                {"name": "Yoga Mat", "description": "Non-slip exercise yoga mat", "price": 39.99, "category": categories[3], "quantity": 60, "sku": "YM001"},
-                {"name": "Water Bottle", "description": "Insulated stainless steel bottle", "price": 34.99, "category": categories[3], "quantity": 90, "sku": "WB001"},
-                {"name": "Backpack", "description": "Hiking and travel backpack", "price": 149.99, "category": categories[3], "quantity": 40, "sku": "BP001"},
-                
-                # Books
-                {"name": "Programming Book", "description": "Learn Python programming", "price": 49.99, "category": categories[4], "quantity": 50, "sku": "PB001"},
-                
-                # Health & Beauty
-                {"name": "Face Cream", "description": "Moisturizing face cream", "price": 39.99, "category": categories[5], "quantity": 75, "sku": "FC001"}
-            ]
-            
-            for i, product_data in enumerate(sample_products):
-                product = Product(
-                    name=product_data["name"],
-                    slug=create_slug(product_data["name"]),
-                    description=product_data["description"],
-                    price=product_data["price"],
-                    category_id=product_data["category"].id,
-                    quantity=product_data["quantity"],
-                    sku=product_data["sku"],
-                    images=[f"product_{i+1}_1.jpg", f"product_{i+1}_2.jpg"]
-                )
-                db.add(product)
-            
-            db.commit()
-            print_success("Sample products created")
-            
-            print_success("Sample database initialization completed!")
-            print_info("Created:")
-            print_info("  - 12 Users (admin, regular user, 10 sample users)")
-            print_info("  - 6 Product categories")
-            print_info("  - 5 Sample products")
-            
-        except Exception as e:
-            db.rollback()
-            raise
-        finally:
-            db.close()
-            
+            created_users.append(user)
+            db_session.add(user)
+        
+        db_session.commit()
+        
+        print_success(f"Created {len(created_users)} sample users")
+        print_info("  Password for all sample users: password123")
+        
         return True
         
     except Exception as e:
-        print_error(f"Sample database initialization failed: {e}")
+        print_error(f"Failed to create sample users: {e}")
+        db_session.rollback()
         return False
 
-def download_images():
-    """Download sample product images"""
+# ============================================================================
+# CATEGORY AND PRODUCT CREATION
+# ============================================================================
+
+def create_product_categories(db_session) -> List:
+    """Create default product categories for the e-commerce store."""
+    try:
+        from app.models import Category
+        from app.utils.slug import create_slug
+        
+        print_step("Creating product categories...")
+        
+        categories_data = [
+            {"name": "Electronics", "description": "Latest gadgets, smartphones, laptops, tablets, and electronic devices", "sort_order": 1},
+            {"name": "Clothing & Fashion", "description": "Fashion and apparel for men, women, and children", "sort_order": 2},
+            {"name": "Home & Garden", "description": "Everything for your home, garden, and living spaces", "sort_order": 3},
+            {"name": "Sports & Outdoors", "description": "Sports equipment, outdoor gear, fitness accessories", "sort_order": 4},
+            {"name": "Books & Media", "description": "Books, magazines, movies, music, and educational materials", "sort_order": 5},
+            {"name": "Health & Beauty", "description": "Health, beauty, wellness, and personal care products", "sort_order": 6}
+        ]
+        
+        categories = []
+        for cat_data in categories_data:
+            existing_cat = db_session.query(Category).filter(Category.name == cat_data["name"]).first()
+            if existing_cat:
+                categories.append(existing_cat)
+                continue
+            
+            category = Category(
+                name=cat_data["name"],
+                slug=create_slug(cat_data["name"]),
+                description=cat_data["description"],
+                sort_order=cat_data["sort_order"]
+            )
+            categories.append(category)
+            db_session.add(category)
+        
+        db_session.commit()
+        
+        print_success(f"Created/verified {len(categories)} product categories")
+        for cat in categories:
+            print_info(f"  - {cat.name} ({cat.slug})")
+        
+        return categories
+        
+    except Exception as e:
+        print_error(f"Failed to create categories: {e}")
+        db_session.rollback()
+        return []
+
+def create_sample_products(db_session, categories: List) -> bool:
+    """Create comprehensive sample products with realistic data."""
+    try:
+        from app.models import Product
+        from app.utils.slug import create_slug
+        
+        print_step("Creating sample products...")
+        
+        sample_products = [
+            # Electronics
+            {"name": "iPhone 15 Pro Max", "description": "Latest iPhone with A17 Pro chip, titanium design, and advanced camera system", "price": 1199.99, "category_idx": 0, "quantity": 50, "sku": "IPH15PROMAX001", "images": ["iphone_15_pro_1.jpg", "iphone_15_pro_2.jpg"]},
+            {"name": "MacBook Air M3", "description": "Supercharged by the M3 chip, portable powerhouse with 13.6-inch Liquid Retina display", "price": 1299.99, "category_idx": 0, "quantity": 25, "sku": "MBAM3001", "images": ["macbook_air_m3_1.jpg", "macbook_air_m3_2.jpg"]},
+            {"name": "Samsung Galaxy S24 Ultra", "description": "Premium Android smartphone with S Pen, 200MP camera, and AI-powered features", "price": 1299.99, "category_idx": 0, "quantity": 40, "sku": "SGS24ULTRA001", "images": ["galaxy_s24_ultra_1.jpg", "galaxy_s24_ultra_2.jpg"]},
+            
+            # Clothing & Fashion
+            {"name": "Premium Cotton T-Shirt", "description": "Ultra-soft 100% organic cotton t-shirt with perfect fit. Sustainably sourced", "price": 29.99, "category_idx": 1, "quantity": 100, "sku": "PCOTTS001", "images": ["cotton_tshirt_1.jpg", "cotton_tshirt_2.jpg"]},
+            {"name": "Classic Denim Jacket", "description": "Timeless denim jacket crafted from premium denim with vintage wash finish", "price": 89.99, "category_idx": 1, "quantity": 30, "sku": "CDENJKT001", "images": ["denim_jacket_1.jpg", "denim_jacket_2.jpg"]},
+            
+            # Home & Garden
+            {"name": "Smart Coffee Maker", "description": "WiFi-enabled coffee maker with app control, programmable brewing, and built-in grinder", "price": 299.99, "category_idx": 2, "quantity": 20, "sku": "SMARTCM001", "images": ["smart_coffee_maker_1.jpg", "smart_coffee_maker_2.jpg"]},
+            {"name": "Ceramic Plant Pot Set", "description": "Set of 3 beautiful ceramic plant pots with drainage holes and saucers", "price": 49.99, "category_idx": 2, "quantity": 40, "sku": "CPLANTPOT001", "images": ["plant_pot_set_1.jpg", "plant_pot_set_2.jpg"]},
+            
+            # Sports & Outdoors
+            {"name": "Professional Yoga Mat", "description": "Premium non-slip yoga mat made from eco-friendly TPE material. Extra thick for comfort", "price": 49.99, "category_idx": 3, "quantity": 60, "sku": "PROYOGMAT001", "images": ["yoga_mat_1.jpg", "yoga_mat_2.jpg"]},
+            {"name": "Stainless Steel Water Bottle", "description": "Insulated water bottle keeps drinks cold for 24 hours or hot for 12 hours", "price": 34.99, "category_idx": 3, "quantity": 90, "sku": "SSWB001", "images": ["water_bottle_1.jpg", "water_bottle_2.jpg"]},
+            
+            # Books & Media
+            {"name": "Python Programming Masterclass", "description": "Comprehensive guide to Python programming from beginner to advanced", "price": 59.99, "category_idx": 4, "quantity": 50, "sku": "PYPROGMC001", "images": ["python_book_1.jpg", "python_book_2.jpg"]},
+            
+            # Health & Beauty
+            {"name": "Vitamin C Face Serum", "description": "Powerful anti-aging serum with 20% Vitamin C, hyaluronic acid, and vitamin E", "price": 39.99, "category_idx": 5, "quantity": 75, "sku": "VITCSER001", "images": ["vitamin_c_serum_1.jpg", "vitamin_c_serum_2.jpg"]}
+        ]
+        
+        created_products = []
+        for product_data in sample_products:
+            existing_product = db_session.query(Product).filter(Product.sku == product_data["sku"]).first()
+            if existing_product:
+                created_products.append(existing_product)
+                continue
+            
+            category = categories[product_data["category_idx"]]
+            
+            product = Product(
+                name=product_data["name"],
+                slug=create_slug(product_data["name"]),
+                description=product_data["description"],
+                price=product_data["price"],
+                category_id=category.id,
+                quantity=product_data["quantity"],
+                sku=product_data["sku"],
+                images=product_data.get("images", [])
+            )
+            
+            created_products.append(product)
+            db_session.add(product)
+        
+        db_session.commit()
+        
+        print_success(f"Created {len(created_products)} sample products")
+        for product in created_products:
+            print_info(f"  - {product.name} (${product.price}) - Stock: {product.quantity}")
+        
+        return True
+        
+    except Exception as e:
+        print_error(f"Failed to create sample products: {e}")
+        db_session.rollback()
+        return False
+
+# ============================================================================
+# IMAGE DOWNLOAD FUNCTIONS
+# ============================================================================
+
+def download_images() -> bool:
+    """Download sample product images from Unsplash."""
     print_header("Downloading Product Images")
     
-    uploads_dir = Path(__file__).parent.parent / "backend" / "uploads" / "products"
-    uploads_dir.mkdir(parents=True, exist_ok=True)
+    # Create uploads directory
+    UPLOADS_PATH.mkdir(parents=True, exist_ok=True)
     
+    # High-quality product images from Unsplash
     images = {
         # Electronics
-        "product_1_1.jpg": "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=400&h=400&fit=crop",  # iPhone
-        "product_1_2.jpg": "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400&h=400&fit=crop",
-        "product_2_1.jpg": "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400&h=400&fit=crop",  # MacBook
-        "product_2_2.jpg": "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=400&h=400&fit=crop",
-        "product_3_1.jpg": "https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?w=400&h=400&fit=crop",  # Samsung
-        "product_3_2.jpg": "https://images.unsplash.com/photo-1574944985070-8f3ebc6b79d2?w=400&h=400&fit=crop",
-        "product_4_1.jpg": "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=400&h=400&fit=crop",  # iPad
-        "product_4_2.jpg": "https://images.unsplash.com/photo-1561154464-82e9adf32764?w=400&h=400&fit=crop",
-        "product_5_1.jpg": "https://images.unsplash.com/photo-1606220945770-b5b6c2c55bf1?w=400&h=400&fit=crop",  # AirPods
-        "product_5_2.jpg": "https://images.unsplash.com/photo-1572569511254-d8f925fe2cbb?w=400&h=400&fit=crop",
+        "iphone_15_pro_1.jpg": "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=400&h=400&fit=crop",
+        "iphone_15_pro_2.jpg": "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400&h=400&fit=crop",
+        "macbook_air_m3_1.jpg": "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400&h=400&fit=crop",
+        "macbook_air_m3_2.jpg": "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=400&h=400&fit=crop",
+        "galaxy_s24_ultra_1.jpg": "https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?w=400&h=400&fit=crop",
+        "galaxy_s24_ultra_2.jpg": "https://images.unsplash.com/photo-1574944985070-8f3ebc6b79d2?w=400&h=400&fit=crop",
         
         # Clothing
-        "product_6_1.jpg": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&h=400&fit=crop",  # T-Shirt
-        "product_6_2.jpg": "https://images.unsplash.com/photo-1583743814966-8936f37f4678?w=400&h=400&fit=crop",
-        "product_7_1.jpg": "https://images.unsplash.com/photo-1544966503-7cc5ac882d5f?w=400&h=400&fit=crop",  # Denim Jacket
-        "product_7_2.jpg": "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&h=400&fit=crop",
-        "product_8_1.jpg": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&h=400&fit=crop",  # Shoes
-        "product_8_2.jpg": "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400&h=400&fit=crop",
-        "product_9_1.jpg": "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=400&h=400&fit=crop",  # Hoodie
-        "product_9_2.jpg": "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=400&fit=crop",
-        "product_10_1.jpg": "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=400&h=400&fit=crop", # Jeans
-        "product_10_2.jpg": "https://images.unsplash.com/photo-1582552938357-32b906df40cb?w=400&h=400&fit=crop",
+        "cotton_tshirt_1.jpg": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&h=400&fit=crop",
+        "cotton_tshirt_2.jpg": "https://images.unsplash.com/photo-1583743814966-8936f37f4678?w=400&h=400&fit=crop",
+        "denim_jacket_1.jpg": "https://images.unsplash.com/photo-1544966503-7cc5ac882d5f?w=400&h=400&fit=crop",
+        "denim_jacket_2.jpg": "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&h=400&fit=crop",
         
         # Home & Garden
-        "product_11_1.jpg": "https://images.unsplash.com/photo-1485955900006-10f4d324d411?w=400&h=400&fit=crop", # Plant Pots
-        "product_11_2.jpg": "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&h=400&fit=crop",
-        "product_12_1.jpg": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&h=400&fit=crop", # Coffee Maker
-        "product_12_2.jpg": "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=400&h=400&fit=crop",
-        "product_13_1.jpg": "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400&h=400&fit=crop", # Pillow
-        "product_13_2.jpg": "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=400&h=400&fit=crop",
-        "product_14_1.jpg": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop", # Lamp
-        "product_14_2.jpg": "https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?w=400&h=400&fit=crop",
-        "product_15_1.jpg": "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&h=400&fit=crop", # Garden Tools
-        "product_15_2.jpg": "https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?w=400&h=400&fit=crop",
+        "smart_coffee_maker_1.jpg": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&h=400&fit=crop",
+        "smart_coffee_maker_2.jpg": "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=400&h=400&fit=crop",
+        "plant_pot_set_1.jpg": "https://images.unsplash.com/photo-1485955900006-10f4d324d411?w=400&h=400&fit=crop",
+        "plant_pot_set_2.jpg": "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&h=400&fit=crop",
         
         # Sports & Outdoors
-        "product_16_1.jpg": "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&h=400&fit=crop", # Yoga Mat
-        "product_16_2.jpg": "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=400&fit=crop",
-        "product_17_1.jpg": "https://images.unsplash.com/photo-1523362628745-0c100150b504?w=400&h=400&fit=crop", # Water Bottle
-        "product_17_2.jpg": "https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=400&h=400&fit=crop",
-        "product_18_1.jpg": "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&h=400&fit=crop", # Backpack
-        "product_18_2.jpg": "https://images.unsplash.com/photo-1581605405669-fcdf81165afa?w=400&h=400&fit=crop",
+        "yoga_mat_1.jpg": "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&h=400&fit=crop",
+        "yoga_mat_2.jpg": "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=400&fit=crop",
+        "water_bottle_1.jpg": "https://images.unsplash.com/photo-1523362628745-0c100150b504?w=400&h=400&fit=crop",
+        "water_bottle_2.jpg": "https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=400&h=400&fit=crop",
         
-        # Books
-        "product_19_1.jpg": "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&h=400&fit=crop", # Books
-        "product_19_2.jpg": "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400&h=400&fit=crop",
+        # Books & Media
+        "python_book_1.jpg": "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&h=400&fit=crop",
+        "python_book_2.jpg": "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400&h=400&fit=crop",
         
         # Health & Beauty
-        "product_20_1.jpg": "https://images.unsplash.com/photo-1556228578-8c89e6adf883?w=400&h=400&fit=crop", # Face Cream
-        "product_20_2.jpg": "https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=400&h=400&fit=crop"
+        "vitamin_c_serum_1.jpg": "https://images.unsplash.com/photo-1556228578-8c89e6adf883?w=400&h=400&fit=crop",
+        "vitamin_c_serum_2.jpg": "https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=400&h=400&fit=crop"
     }
     
     downloaded = 0
     for filename, url in images.items():
         try:
-            file_path = uploads_dir / filename
+            file_path = UPLOADS_PATH / filename
             if file_path.exists():
                 print_info(f"Skipping {filename} (already exists)")
                 continue
@@ -489,20 +617,219 @@ def download_images():
         except Exception as e:
             print_error(f"Failed to download {filename}: {e}")
     
-    print_success(f"Downloaded {downloaded} images to {uploads_dir}")
+    print_success(f"Downloaded {downloaded} images to {UPLOADS_PATH}")
     return True
 
-def reset_database():
-    """Reset database (drop all tables)"""
+# ============================================================================
+# DATABASE BACKUP AND RESTORE
+# ============================================================================
+
+def backup_database() -> bool:
+    """Create database backup with timestamp."""
+    print_header("Database Backup")
+    
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup_file = BACKUP_PATH / f"backup_{timestamp}.sql"
+    
+    try:
+        print_step("Creating database backup...")
+        
+        # Use pg_dump to create backup
+        cmd = [
+            "pg_dump",
+            "-h", DB_CONFIG['host'],
+            "-p", str(DB_CONFIG['port']),
+            "-U", DB_CONFIG['user'],
+            "-d", DB_CONFIG['database'],
+            "-f", str(backup_file)
+        ]
+        
+        # Set password via environment variable
+        env = os.environ.copy()
+        env['PGPASSWORD'] = DB_CONFIG['password']
+        
+        result = subprocess.run(cmd, env=env, capture_output=True, text=True)
+        
+        if result.returncode == 0:
+            print_success(f"Database backup created: {backup_file}")
+            print_info(f"Backup size: {backup_file.stat().st_size / 1024:.1f} KB")
+            return True
+        else:
+            print_error(f"Backup failed: {result.stderr}")
+            return False
+            
+    except Exception as e:
+        print_error(f"Backup failed: {e}")
+        return False
+
+def restore_database(backup_file: str) -> bool:
+    """Restore database from backup file."""
+    print_header("Database Restore")
+    
+    backup_path = Path(backup_file)
+    if not backup_path.exists():
+        print_error(f"Backup file not found: {backup_file}")
+        return False
+    
+    try:
+        print_step(f"Restoring database from {backup_file}...")
+        print_warning("This will overwrite the current database!")
+        
+        # Use psql to restore backup
+        cmd = [
+            "psql",
+            "-h", DB_CONFIG['host'],
+            "-p", str(DB_CONFIG['port']),
+            "-U", DB_CONFIG['user'],
+            "-d", DB_CONFIG['database'],
+            "-f", str(backup_path)
+        ]
+        
+        # Set password via environment variable
+        env = os.environ.copy()
+        env['PGPASSWORD'] = DB_CONFIG['password']
+        
+        result = subprocess.run(cmd, env=env, capture_output=True, text=True)
+        
+        if result.returncode == 0:
+            print_success("Database restored successfully")
+            return True
+        else:
+            print_error(f"Restore failed: {result.stderr}")
+            return False
+            
+    except Exception as e:
+        print_error(f"Restore failed: {e}")
+        return False
+
+# ============================================================================
+# MAIN DATABASE OPERATIONS
+# ============================================================================
+
+def init_database_clean() -> bool:
+    """Initialize database with clean setup (no sample data)."""
+    print_header("Clean Database Initialization")
+    
+    if not validate_dependencies() or not validate_environment():
+        return False
+    
+    try:
+        # Initialize schema
+        if not initialize_database_schema():
+            return False
+        
+        # Create database session
+        from app.database import engine
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        db = SessionLocal()
+        
+        try:
+            print_step("Creating essential users...")
+            
+            # Create admin and default users
+            if not create_admin_user(db):
+                return False
+            if not create_default_user(db):
+                return False
+            
+            print_step("Creating product categories...")
+            categories = create_product_categories(db)
+            if not categories:
+                return False
+            
+            print_success("Clean database initialization completed!")
+            print_info("Created:")
+            print_info("  - 2 Users (admin and regular user)")
+            print_info("  - 6 Product categories")
+            print_info("  - 0 Products (clean slate)")
+            print_info("\n🔐 Login Credentials:")
+            print_info("  Admin: admin@ecommerce.com / admin123")
+            print_info("  User:  user@ecommerce.com / user123")
+            
+            return True
+            
+        except Exception as e:
+            db.rollback()
+            raise
+        finally:
+            db.close()
+            
+    except Exception as e:
+        print_error(f"Database initialization failed: {e}")
+        return False
+
+def init_database_sample() -> bool:
+    """Initialize database with sample data."""
+    print_header("Sample Database Initialization")
+    
+    if not validate_dependencies() or not validate_environment():
+        return False
+    
+    try:
+        # Initialize schema
+        if not initialize_database_schema():
+            return False
+        
+        # Create database session
+        from app.database import engine
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        db = SessionLocal()
+        
+        try:
+            print_step("Creating users...")
+            
+            # Create admin and default users
+            if not create_admin_user(db):
+                return False
+            if not create_default_user(db):
+                return False
+            
+            # Create sample users
+            if not create_sample_users(db, 10):
+                return False
+            
+            print_step("Creating product categories...")
+            categories = create_product_categories(db)
+            if not categories:
+                return False
+            
+            print_step("Creating sample products...")
+            if not create_sample_products(db, categories):
+                return False
+            
+            print_success("Sample database initialization completed!")
+            print_info("Created:")
+            print_info("  - 12 Users (admin, regular user, 10 sample users)")
+            print_info("  - 6 Product categories")
+            print_info("  - 11 Sample products with realistic data")
+            print_info("\n🔐 Login Credentials:")
+            print_info("  Admin: admin@ecommerce.com / admin123")
+            print_info("  User:  user@ecommerce.com / user123")
+            print_info("  Sample Users: user1@example.com / password123")
+            
+            return True
+            
+        except Exception as e:
+            db.rollback()
+            raise
+        finally:
+            db.close()
+            
+    except Exception as e:
+        print_error(f"Sample database initialization failed: {e}")
+        return False
+
+def reset_database() -> bool:
+    """Reset database (drop all tables)."""
     print_header("Database Reset")
     
-    if not validate_env_config():
+    if not validate_dependencies():
         return False
     
     try:
         from app.database import Base, engine
         
-        print_info("Dropping all tables...")
+        print_step("Dropping all tables...")
         Base.metadata.drop_all(bind=engine)
         print_success("All tables dropped")
         print_info("Database reset completed. Run --init-clean or --init-sample to reinitialize.")
@@ -512,19 +839,39 @@ def reset_database():
         print_error(f"Database reset failed: {e}")
         return False
 
+# ============================================================================
+# MAIN FUNCTION AND ARGUMENT PARSING
+# ============================================================================
+
 def main():
-    """Main function"""
+    """Main function with comprehensive argument parsing."""
     parser = argparse.ArgumentParser(
-        description="E-Commerce Database Setup Script",
+        description="Complete E-Commerce Database Setup Script",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Examples:
-  python database/setup.py --validate              # Validate database connection
-  python database/setup.py --init-clean           # Initialize clean database
-  python database/setup.py --init-sample          # Initialize with sample data
-  python database/setup.py --download-images      # Download sample images
+🚀 EXAMPLES:
+  python database/setup.py --validate              # Test database connection
+  python database/setup.py --init-clean           # Clean database setup
+  python database/setup.py --init-sample          # Setup with sample data
+  python database/setup.py --download-images      # Download product images
   python database/setup.py --reset                # Reset database
-  python database/setup.py --all                  # Full setup (validate + sample data + images)
+  python database/setup.py --all                  # Complete setup
+  python database/setup.py --backup               # Create backup
+  python database/setup.py --restore backup.sql   # Restore from backup
+
+🔧 CONFIGURATION:
+Update DB_CONFIG in this script or create .env file with:
+  DB_HOST=localhost
+  DB_PORT=5432
+  DB_NAME=ecommerce_db
+  DB_USER=postgres
+  DB_PASSWORD=your_password
+
+📋 PREREQUISITES:
+  - PostgreSQL installed and running
+  - Database 'ecommerce_db' created manually
+  - User 'postgres' with password set
+  - Backend dependencies: pip install -r backend/requirements.txt
         """
     )
     
@@ -533,7 +880,9 @@ Examples:
     parser.add_argument('--init-sample', action='store_true', help='Initialize with sample data')
     parser.add_argument('--download-images', action='store_true', help='Download sample images')
     parser.add_argument('--reset', action='store_true', help='Reset database')
-    parser.add_argument('--all', action='store_true', help='Full setup (validate + sample data + images)')
+    parser.add_argument('--all', action='store_true', help='Complete setup (validate + sample data + images)')
+    parser.add_argument('--backup', action='store_true', help='Create database backup')
+    parser.add_argument('--restore', metavar='FILE', help='Restore database from backup file')
     
     args = parser.parse_args()
     
@@ -542,14 +891,12 @@ Examples:
         return
     
     print_header("E-Commerce Database Setup")
-    print_info(f"Environment file: {env_path}")
-    print_info(f"Database: {DB_CONFIG['database']}")
-    print_info(f"User: {DB_CONFIG['user']}")
-    print_info(f"Host: {DB_CONFIG['host']}:{DB_CONFIG['port']}")
+    print_config_info()
     
     success = True
     
     if args.all:
+        # Complete setup: validate + sample data + images
         success &= validate_database()
         if success:
             success &= init_database_sample()
@@ -570,10 +917,20 @@ Examples:
         
         if args.download_images:
             success &= download_images()
+        
+        if args.backup:
+            success &= backup_database()
+        
+        if args.restore:
+            success &= restore_database(args.restore)
     
     if success:
         print_header("Setup Completed Successfully!")
         print_success("Your e-commerce database is ready!")
+        print_info("Next steps:")
+        print_info("  1. Start the backend: cd backend && uvicorn main:app --reload")
+        print_info("  2. Start the frontend: cd frontend && npm start")
+        print_info("  3. Access the application: http://localhost:3000")
     else:
         print_header("Setup Failed!")
         print_error("Please check the errors above and try again.")
