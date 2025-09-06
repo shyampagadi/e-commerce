@@ -1,0 +1,79 @@
+# Namespace and Resource Quota for E-commerce Foundation Infrastructure
+# This manifest creates the namespace and resource quotas for the e-commerce project
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ecommerce
+  labels:
+    name: ecommerce
+    environment: development
+    project: ecommerce-foundation
+    team: platform-engineering
+  annotations:
+    description: "Namespace for e-commerce foundation infrastructure"
+    contact: "platform-engineering@techcorp.com"
+---
+# Resource Quota to prevent resource exhaustion
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: ecommerce-quota
+  namespace: ecommerce
+  labels:
+    app: ecommerce
+    environment: development
+spec:
+  hard:
+    # CPU limits
+    requests.cpu: "2"
+    limits.cpu: "4"
+    
+    # Memory limits
+    requests.memory: 4Gi
+    limits.memory: 8Gi
+    
+    # Storage limits
+    persistentvolumeclaims: "4"
+    requests.storage: "20Gi"
+    
+    # Object limits
+    pods: "10"
+    services: "5"
+    configmaps: "10"
+    secrets: "10"
+    
+    # Network limits
+    count/ingresses.extensions: "2"
+    count/ingresses.networking.k8s.io: "2"
+---
+# Limit Range to set default resource limits
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: ecommerce-limits
+  namespace: ecommerce
+  labels:
+    app: ecommerce
+    environment: development
+spec:
+  limits:
+  - default:
+      cpu: "500m"
+      memory: "512Mi"
+    defaultRequest:
+      cpu: "100m"
+      memory: "128Mi"
+    type: Container
+  - max:
+      cpu: "2"
+      memory: "2Gi"
+    min:
+      cpu: "50m"
+      memory: "64Mi"
+    type: Container
+  - max:
+      storage: "10Gi"
+    min:
+      storage: "1Gi"
+    type: PersistentVolumeClaim
