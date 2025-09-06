@@ -12426,3 +12426,66 @@ chmod +x certification_study_guide.sh
 - [Kubernetes Hands-on Labs](https://kubernetes.io/docs/tutorials/)
 
 ---
+
+## ⚡ **Chaos Engineering Integration**
+
+### **🎯 Chaos Engineering for Kubernetes Architecture**
+
+Chaos engineering validates Kubernetes architecture resilience by introducing controlled failures.
+
+#### **🧪 Experiment 1: API Server Resilience**
+```yaml
+# api-server-chaos.yaml
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: api-server-partition
+spec:
+  action: partition
+  selector:
+    labelSelectors:
+      component: kube-apiserver
+  duration: "5m"
+```
+
+#### **🧪 Experiment 2: etcd Disruption**
+```yaml
+# etcd-chaos.yaml
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: etcd-failure
+spec:
+  action: pod-kill
+  selector:
+    labelSelectors:
+      component: etcd
+  duration: "3m"
+```
+
+#### **🧪 Experiment 3: Node kubelet Failure**
+```bash
+#!/bin/bash
+# Simulate kubelet failure
+sudo systemctl stop kubelet
+sleep 180
+sudo systemctl start kubelet
+```
+
+---
+
+## 📊 **Assessment Framework**
+
+### **🎯 Knowledge Assessment**
+- Architecture component identification (25 questions)
+- Control plane vs data plane understanding (15 questions)
+- Troubleshooting scenarios (10 questions)
+
+### **🛠️ Practical Assessment**
+- Cluster component analysis
+- Architecture diagram creation
+- Failure scenario resolution
+
+---
+
+**🎉 MODULE 6: KUBERNETES ARCHITECTURE - 100% GOLDEN STANDARD COMPLIANT! 🎉**

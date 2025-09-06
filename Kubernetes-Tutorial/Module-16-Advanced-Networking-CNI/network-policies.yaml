@@ -1,0 +1,261 @@
+# 🛡️ Advanced Network Policies for E-commerce Security
+# Comprehensive network policies for ingress and egress traffic control
+
+---
+# Ingress Network Policy: Frontend Access Control
+apiVersion: networking.k8s.io/v1        # Kubernetes networking API version
+kind: NetworkPolicy                     # Resource type for network traffic control
+metadata:                               # Resource metadata section
+  name: frontend-ingress-policy         # Policy name for frontend access control
+  namespace: ecommerce-prod             # Target namespace where policy applies
+  labels:                               # Labels for policy organization and selection
+    app: frontend                       # Application identifier for grouping
+    tier: web                          # Architecture tier classification
+    security-zone: dmz                 # Security zone designation for compliance
+spec:                                   # Policy specification section
+  podSelector:                          # Selector for pods this policy applies to
+    matchLabels:                        # Label matching criteria
+      app: frontend                     # Target pods with frontend application label
+      tier: web                        # Web tier pods only for precise targeting
+  policyTypes:                          # Types of traffic this policy controls
+  - Ingress                            # Apply ingress (incoming) rules only
+  ingress:                             # Ingress rules section - defines allowed incoming traffic
+  - from:                              # Source specification for allowed traffic
+    - namespaceSelector:               # Allow traffic from specific namespaces
+        matchLabels:                   # Namespace label matching criteria
+          name: ingress-nginx          # Allow from ingress controller namespace
+    - podSelector:                     # Allow traffic from specific pods
+        matchLabels:                   # Pod label matching criteria
+          app: nginx-ingress           # Allow from ingress controller pods
+    ports:                             # Port specifications for allowed traffic
+    - protocol: TCP                    # TCP protocol only for web traffic
+      port: 3000                      # React development server port
+    - protocol: TCP                    # TCP protocol for standard web ports
+      port: 80                        # HTTP port for web traffic
+    - protocol: TCP                    # TCP protocol for secure web traffic
+      port: 443                       # HTTPS port for encrypted web traffic
+  - from:                             # Additional ingress rule for monitoring
+    - podSelector:                     # Allow traffic from monitoring pods
+        matchLabels:                   # Monitoring pod identification
+          app: monitoring              # Allow monitoring tools access
+    ports:                             # Monitoring-specific ports
+    - protocol: TCP                    # TCP protocol for metrics
+      port: 9090                      # Metrics endpoint for Prometheus scraping
+
+---
+# Ingress Network Policy: Backend API Access Control
+apiVersion: networking.k8s.io/v1        # Kubernetes networking API version
+kind: NetworkPolicy                     # Resource type for network traffic control
+metadata:                               # Resource metadata section
+  name: backend-ingress-policy          # Backend API access policy name
+  namespace: ecommerce-prod             # Target namespace for policy application
+  labels:                               # Labels for policy organization
+    app: backend                        # Application identifier
+    tier: api                          # Architecture tier classification
+    security-zone: internal           # Internal security zone designation
+spec:                                   # Policy specification section
+  podSelector:                          # Selector for target pods
+    matchLabels:                        # Label matching criteria
+      app: backend                      # Target backend API pods
+      tier: api                        # API tier pods only
+  policyTypes:                          # Types of traffic control
+  - Ingress                            # Apply ingress rules only
+  ingress:                             # Ingress rules section
+  - from:                              # Source specification for allowed traffic
+    - podSelector:                     # Allow traffic from specific pods
+        matchLabels:                   # Pod label matching criteria
+          app: frontend                # Allow frontend to access backend
+    - podSelector:                     # Additional pod selector
+        matchLabels:                   # Admin panel access
+          app: admin-panel            # Allow admin panel access
+    ports:                             # Port specifications
+    - protocol: TCP                    # TCP protocol for API traffic
+      port: 8000                      # FastAPI server port
+  - from:                             # Monitoring access rule
+    - namespaceSelector:               # Allow from monitoring namespace
+        matchLabels:                   # Namespace identification
+          name: monitoring            # Allow monitoring namespace
+    ports:                             # Monitoring ports
+    - protocol: TCP                    # TCP protocol for health checks
+      port: 8000                      # API health checks
+    - protocol: TCP                    # TCP protocol for metrics
+      port: 9090                      # Metrics endpoint
+
+---
+# Egress Network Policy: Database Access Control
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: database-egress-policy           # Database access control
+  namespace: ecommerce-prod
+  labels:
+    app: backend
+    tier: api
+    data-access: restricted
+spec:
+  podSelector:
+    matchLabels:
+      app: backend                       # Backend pods only
+  policyTypes:
+  - Egress                              # Apply egress rules
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: postgresql               # Allow access to database pods
+    ports:
+    - protocol: TCP
+      port: 5432                        # PostgreSQL port
+  - to:
+    - podSelector:
+        matchLabels:
+          app: redis                    # Allow access to Redis cache
+    ports:
+    - protocol: TCP
+      port: 6379                        # Redis port
+  - to: []                              # Allow DNS resolution
+    ports:
+    - protocol: UDP
+      port: 53                          # DNS port
+
+---
+# Egress Network Policy: External API Access Control
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: external-api-egress-policy       # Control external API access
+  namespace: ecommerce-prod
+  labels:
+    security-policy: external-access
+    compliance: pci-dss
+spec:
+  podSelector:
+    matchLabels:
+      external-access: "allowed"         # Only pods with this label
+  policyTypes:
+  - Egress
+  egress:
+  # Allow access to payment gateway APIs
+  - to:
+    - namespaceSelector: {}             # Any namespace
+      podSelector:
+        matchLabels:
+          service: payment-gateway      # Payment service pods
+    ports:
+    - protocol: TCP
+      port: 443                         # HTTPS only for payment APIs
+  # Allow access to shipping APIs
+  - to:
+    - ipBlock:
+        cidr: 203.0.113.0/24           # Shipping provider IP range
+        except:
+        - 203.0.113.1/32               # Exclude specific IPs
+    ports:
+    - protocol: TCP
+      port: 443                         # HTTPS for shipping APIs
+  # Allow access to email service APIs
+  - to:
+    - ipBlock:
+        cidr: 198.51.100.0/24          # Email service provider range
+    ports:
+    - protocol: TCP
+      port: 587                         # SMTP with TLS
+    - protocol: TCP
+      port: 465                         # SMTPS
+  # DNS resolution for external services
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53                          # DNS queries
+    - protocol: TCP
+      port: 53                          # TCP DNS queries
+
+---
+# Comprehensive Deny-All Default Policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all                 # Default security posture
+  namespace: ecommerce-prod
+  labels:
+    security-policy: default-deny
+    compliance: zero-trust
+spec:
+  podSelector: {}                        # Apply to all pods in namespace
+  policyTypes:
+  - Ingress                             # Deny all ingress
+  - Egress                              # Deny all egress
+
+---
+# Network Policy: Cross-Namespace Communication
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: cross-namespace-policy           # Inter-namespace communication
+  namespace: ecommerce-prod
+spec:
+  podSelector:
+    matchLabels:
+      cross-namespace: "allowed"         # Pods allowed cross-namespace access
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          environment: production        # Only from production namespaces
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring              # Allow monitoring namespace
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          shared-services: "true"       # Access to shared services
+    ports:
+    - protocol: TCP
+      port: 443                         # HTTPS communication only
+
+---
+# Network Policy: Development Environment Isolation
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: dev-environment-isolation        # Isolate development workloads
+  namespace: ecommerce-dev
+  labels:
+    environment: development
+    isolation: strict
+spec:
+  podSelector: {}                        # Apply to all pods in dev namespace
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ecommerce-dev           # Only from same namespace
+    - podSelector: {}                   # All pods in same namespace
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: ecommerce-dev           # Only to same namespace
+  - to: []                              # Allow DNS
+    ports:
+    - protocol: UDP
+      port: 53
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0                # Allow internet access for development
+        except:
+        - 10.0.0.0/8                   # Except internal networks
+        - 172.16.0.0/12
+        - 192.168.0.0/16
+    ports:
+    - protocol: TCP
+      port: 80                          # HTTP
+    - protocol: TCP
+      port: 443                         # HTTPS

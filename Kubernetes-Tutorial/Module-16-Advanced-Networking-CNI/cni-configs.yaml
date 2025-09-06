@@ -1,0 +1,146 @@
+# 🔧 CNI Plugin Configurations
+# This file contains production-ready CNI configurations for different scenarios
+
+---
+# Calico CNI Configuration for High-Security E-commerce
+apiVersion: v1                           # Kubernetes API version for ConfigMap resource
+kind: ConfigMap                          # Resource type for storing configuration data
+metadata:                                # Resource metadata section
+  name: calico-config                    # ConfigMap name used by Calico components
+  namespace: kube-system                 # System namespace for cluster-wide components
+data:                                    # Configuration data section
+  # CNI network configuration for Calico - defines how pods get network connectivity
+  cni_network_config: |-                # YAML literal block for JSON CNI config
+    {
+      "name": "k8s-pod-network",         # Network name identifier for this CNI configuration
+      "cniVersion": "0.3.1",            # CNI specification version - ensures compatibility
+      "plugins": [                       # Array of CNI plugins to execute in order
+        {
+          "type": "calico",              # Primary CNI plugin type - handles IP assignment and routing
+          "log_level": "info",           # Logging verbosity - info provides good troubleshooting detail
+          "datastore_type": "kubernetes", # Backend datastore - uses Kubernetes etcd for configuration
+          "mtu": 1440,                   # Maximum transmission unit - optimized for overlay networks
+          "ipam": {                      # IP Address Management configuration block
+            "type": "calico-ipam"        # Use Calico's built-in IPAM for IP allocation
+          },
+          "policy": {                    # Network policy configuration
+            "type": "k8s"                # Use Kubernetes NetworkPolicy resources for traffic control
+          },
+          "kubernetes": {                # Kubernetes-specific configuration
+            "kubeconfig": "/etc/cni/net.d/calico-kubeconfig"  # Path to kubeconfig for API access
+          }
+        },
+        {
+          "type": "portmap",             # Port mapping plugin for NodePort and LoadBalancer services
+          "snat": true,                  # Enable source NAT for outbound traffic
+          "capabilities": {"portMappings": true}  # Enable port mapping capabilities
+        },
+        {
+          "type": "bandwidth",           # Bandwidth limiting plugin for QoS
+          "capabilities": {"bandwidth": true}     # Enable bandwidth control capabilities
+        }
+      ]
+    }
+
+---
+# Cilium CNI Configuration for High-Performance Scenarios
+apiVersion: v1                           # Kubernetes API version for ConfigMap resource
+kind: ConfigMap                          # Resource type for storing configuration data
+metadata:                                # Resource metadata section
+  name: cilium-config                    # ConfigMap name used by Cilium components
+  namespace: kube-system                 # System namespace for cluster-wide components
+data:                                    # Configuration data section
+  # Enable eBPF-based networking for maximum performance
+  enable-bpf-masquerade: "true"          # Use eBPF for masquerading - higher performance than iptables
+  enable-ipv4-masquerade: "true"         # Enable IPv4 masquerading for outbound traffic
+  enable-ipv6-masquerade: "false"        # Disable IPv6 masquerading - not needed in most deployments
+  
+  # Network policy enforcement configuration
+  enable-policy: "default"               # Enable network policy enforcement by default
+  policy-enforcement-mode: "default"     # Policy enforcement mode - default provides balanced security
+  
+  # Performance optimizations for high-throughput workloads
+  enable-bandwidth-manager: "true"       # Enable bandwidth management for QoS
+  enable-local-redirect-policy: "true"   # Enable local traffic redirection for performance
+  
+  # Observability features for network monitoring
+  enable-hubble: "true"                  # Enable Hubble observability platform
+  hubble-metrics-server: ":9091"         # Hubble metrics server endpoint for Prometheus
+  
+  # Security and health checking features
+  enable-endpoint-health-checking: "true"  # Enable endpoint health checks for reliability
+  enable-health-checking: "true"           # Enable general health checking mechanisms
+
+---
+# Flannel CNI Configuration for Simple Deployments
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kube-flannel-cfg
+  namespace: kube-system
+data:
+  cni-conf.json: |
+    {
+      "name": "cbr0",                     # Bridge name
+      "cniVersion": "0.3.1",             # CNI specification version
+      "plugins": [
+        {
+          "type": "flannel",              # Flannel CNI plugin
+          "delegate": {
+            "hairpinMode": true,          # Enable hairpin mode for local traffic
+            "isDefaultGateway": true,     # Set as default gateway
+            "ipMasq": true                # Enable IP masquerading
+          }
+        },
+        {
+          "type": "portmap",              # Port mapping plugin
+          "capabilities": {
+            "portMappings": true          # Enable port mapping capabilities
+          }
+        }
+      ]
+    }
+  net-conf.json: |
+    {
+      "Network": "10.244.0.0/16",        # Pod network CIDR
+      "Backend": {
+        "Type": "vxlan"                  # Use VXLAN backend for overlay networking
+      }
+    }
+
+---
+# Multus CNI Configuration for Multiple Network Interfaces
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: multus-cni-config
+  namespace: kube-system
+data:
+  cni-conf.json: |
+    {
+      "name": "multus-cni-network",      # Multus network name
+      "type": "multus",                  # Multus CNI plugin type
+      "capabilities": {
+        "portMappings": true             # Enable port mapping
+      },
+      "delegates": [
+        {
+          "cniVersion": "0.3.1",         # CNI version for primary network
+          "name": "default-cni-network", # Primary network name
+          "plugins": [
+            {
+              "type": "calico",           # Use Calico as primary CNI
+              "log_level": "info",       # Logging configuration
+              "datastore_type": "kubernetes",  # Kubernetes datastore
+              "ipam": {
+                "type": "calico-ipam"    # Calico IP management
+              },
+              "policy": {
+                "type": "k8s"            # Kubernetes network policies
+              }
+            }
+          ]
+        }
+      ],
+      "kubeconfig": "/etc/cni/net.d/multus.d/multus.kubeconfig"  # Kubeconfig path
+    }

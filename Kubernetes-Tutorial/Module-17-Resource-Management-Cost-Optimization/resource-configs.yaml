@@ -1,0 +1,268 @@
+# 💰 Resource Management and Cost Optimization Configurations
+# Complete resource management setup for e-commerce platform
+
+---
+# E-commerce Backend with Optimized Resources (Guaranteed QoS)
+apiVersion: apps/v1                           # Kubernetes API version for Deployment
+kind: Deployment                              # Resource type for managing pod replicas
+metadata:                                     # Resource metadata section
+  name: ecommerce-backend                     # Deployment name for backend service
+  namespace: ecommerce-prod                   # Production namespace
+  labels:                                     # Labels for resource organization
+    app: backend                              # Application identifier
+    tier: api                                # Architecture tier designation
+    cost-center: engineering                  # Cost allocation label
+    environment: production                   # Environment classification
+spec:                                         # Deployment specification
+  replicas: 3                                 # Number of pod replicas for high availability
+  selector:                                   # Pod selector for deployment management
+    matchLabels:                              # Label matching criteria
+      app: backend                            # Must match pod template labels
+      tier: api                              # Tier-specific selection
+  template:                                   # Pod template specification
+    metadata:                                 # Pod metadata
+      labels:                                 # Pod labels (must match selector)
+        app: backend                          # Application label
+        tier: api                            # Tier label
+        qos-class: guaranteed                 # QoS classification hint
+    spec:                                     # Pod specification
+      containers:                             # Container definitions
+      - name: fastapi-backend                 # Container name
+        image: ecommerce/backend:v1.2.0       # Container image with version tag
+        ports:                                # Container port definitions
+        - containerPort: 8000                 # FastAPI application port
+          name: http                          # Port name for service reference
+          protocol: TCP                       # Network protocol
+        resources:                            # Resource requirements (Guaranteed QoS)
+          requests:                           # Minimum guaranteed resources
+            cpu: 500m                         # 0.5 CPU cores minimum
+            memory: 1Gi                       # 1 GiB memory minimum
+          limits:                             # Maximum allowed resources
+            cpu: 500m                         # Same as requests for Guaranteed QoS
+            memory: 1Gi                       # Same as requests for Guaranteed QoS
+        env:                                  # Environment variables
+        - name: DATABASE_URL                  # Database connection string
+          valueFrom:                          # Value from secret reference
+            secretKeyRef:                     # Secret key reference
+              name: db-credentials            # Secret name
+              key: database-url               # Key within secret
+        - name: REDIS_URL                     # Redis connection string
+          value: "redis://redis-service:6379" # Direct value for internal service
+        livenessProbe:                        # Container health check
+          httpGet:                            # HTTP-based probe
+            path: /health                     # Health check endpoint
+            port: http                        # Use named port
+          initialDelaySeconds: 30             # Wait before first probe
+          periodSeconds: 10                   # Probe frequency
+          timeoutSeconds: 5                   # Probe timeout
+          failureThreshold: 3                 # Failures before restart
+        readinessProbe:                       # Container readiness check
+          httpGet:                            # HTTP-based probe
+            path: /ready                      # Readiness endpoint
+            port: http                        # Use named port
+          initialDelaySeconds: 5              # Wait before first probe
+          periodSeconds: 5                    # Probe frequency
+          timeoutSeconds: 3                   # Probe timeout
+          failureThreshold: 3                 # Failures before marking unready
+
+---
+# E-commerce Frontend with Burstable QoS
+apiVersion: apps/v1                           # Kubernetes API version
+kind: Deployment                              # Deployment resource type
+metadata:                                     # Resource metadata
+  name: ecommerce-frontend                    # Frontend deployment name
+  namespace: ecommerce-prod                   # Production namespace
+  labels:                                     # Resource labels
+    app: frontend                             # Application identifier
+    tier: web                                # Web tier classification
+    cost-center: marketing                    # Cost allocation for frontend
+    environment: production                   # Environment designation
+spec:                                         # Deployment specification
+  replicas: 2                                 # Frontend replica count
+  selector:                                   # Pod selector
+    matchLabels:                              # Label matching
+      app: frontend                           # Application label match
+      tier: web                              # Tier label match
+  template:                                   # Pod template
+    metadata:                                 # Pod metadata
+      labels:                                 # Pod labels
+        app: frontend                         # Application label
+        tier: web                            # Tier label
+        qos-class: burstable                  # QoS classification hint
+    spec:                                     # Pod specification
+      containers:                             # Container definitions
+      - name: react-frontend                  # Container name
+        image: ecommerce/frontend:v1.1.0      # Frontend image with version
+        ports:                                # Port definitions
+        - containerPort: 3000                 # React development server port
+          name: http                          # Named port
+          protocol: TCP                       # Protocol specification
+        resources:                            # Resource configuration (Burstable QoS)
+          requests:                           # Minimum resource requests
+            cpu: 100m                         # 0.1 CPU cores minimum
+            memory: 256Mi                     # 256 MiB memory minimum
+          limits:                             # Maximum resource limits
+            cpu: 500m                         # 0.5 CPU cores maximum (burst capability)
+            memory: 512Mi                     # 512 MiB memory maximum
+        env:                                  # Environment variables
+        - name: REACT_APP_API_URL             # Backend API URL
+          value: "http://backend-service:8000" # Internal service reference
+        - name: NODE_ENV                      # Node.js environment
+          value: "production"                 # Production environment setting
+
+---
+# Database with Resource Limits and Persistent Storage
+apiVersion: apps/v1                           # Kubernetes API version
+kind: StatefulSet                             # StatefulSet for stateful workloads
+metadata:                                     # Resource metadata
+  name: ecommerce-database                    # Database StatefulSet name
+  namespace: ecommerce-prod                   # Production namespace
+  labels:                                     # Resource labels
+    app: database                             # Application identifier
+    tier: data                               # Data tier classification
+    cost-center: infrastructure              # Infrastructure cost allocation
+    environment: production                   # Environment designation
+spec:                                         # StatefulSet specification
+  serviceName: database-headless             # Headless service name
+  replicas: 1                                 # Single database instance
+  selector:                                   # Pod selector
+    matchLabels:                              # Label matching criteria
+      app: database                           # Application label
+      tier: data                             # Data tier label
+  template:                                   # Pod template
+    metadata:                                 # Pod metadata
+      labels:                                 # Pod labels
+        app: database                         # Application label
+        tier: data                           # Tier label
+        qos-class: guaranteed                 # QoS classification
+    spec:                                     # Pod specification
+      containers:                             # Container definitions
+      - name: postgresql                      # PostgreSQL container
+        image: postgres:13-alpine             # PostgreSQL image with Alpine base
+        ports:                                # Port definitions
+        - containerPort: 5432                 # PostgreSQL default port
+          name: postgres                      # Named port
+          protocol: TCP                       # Protocol specification
+        resources:                            # Resource configuration (Guaranteed QoS)
+          requests:                           # Resource requests
+            cpu: 1000m                        # 1 CPU core for database performance
+            memory: 2Gi                       # 2 GiB memory for database operations
+          limits:                             # Resource limits (same as requests)
+            cpu: 1000m                        # 1 CPU core limit
+            memory: 2Gi                       # 2 GiB memory limit
+        env:                                  # Environment variables
+        - name: POSTGRES_DB                   # Database name
+          value: "ecommerce"                  # E-commerce database
+        - name: POSTGRES_USER                 # Database user
+          valueFrom:                          # Value from secret
+            secretKeyRef:                     # Secret reference
+              name: db-credentials            # Secret name
+              key: username                   # Username key
+        - name: POSTGRES_PASSWORD             # Database password
+          valueFrom:                          # Value from secret
+            secretKeyRef:                     # Secret reference
+              name: db-credentials            # Secret name
+              key: password                   # Password key
+        volumeMounts:                         # Volume mount points
+        - name: postgres-storage              # Volume name
+          mountPath: /var/lib/postgresql/data # PostgreSQL data directory
+          subPath: postgres                   # Subdirectory within volume
+        livenessProbe:                        # Database health check
+          exec:                               # Command-based probe
+            command:                          # Health check command
+            - pg_isready                      # PostgreSQL readiness check
+            - -U                              # Username flag
+            - $(POSTGRES_USER)                # Environment variable reference
+          initialDelaySeconds: 30             # Initial delay before probing
+          periodSeconds: 10                   # Probe frequency
+          timeoutSeconds: 5                   # Probe timeout
+          failureThreshold: 3                 # Failure threshold
+        readinessProbe:                       # Database readiness check
+          exec:                               # Command-based probe
+            command:                          # Readiness command
+            - pg_isready                      # PostgreSQL readiness utility
+            - -U                              # Username parameter
+            - $(POSTGRES_USER)                # User from environment
+          initialDelaySeconds: 5              # Initial delay
+          periodSeconds: 5                    # Check frequency
+          timeoutSeconds: 3                   # Timeout duration
+  volumeClaimTemplates:                       # Persistent volume templates
+  - metadata:                                 # Volume claim metadata
+      name: postgres-storage                  # Volume claim name
+      labels:                                 # Volume labels
+        app: database                         # Application association
+        tier: data                           # Data tier designation
+    spec:                                     # Volume claim specification
+      accessModes:                            # Access mode requirements
+      - ReadWriteOnce                         # Single node read-write access
+      storageClassName: fast-ssd              # Storage class for performance
+      resources:                              # Storage resource requirements
+        requests:                             # Storage request
+          storage: 100Gi                      # 100 GiB storage allocation
+
+---
+# Resource Quota for Production Namespace
+apiVersion: v1                                # Core API version
+kind: ResourceQuota                           # Resource quota resource type
+metadata:                                     # Resource metadata
+  name: ecommerce-prod-quota                  # Resource quota name
+  namespace: ecommerce-prod                   # Target namespace
+  labels:                                     # Resource labels
+    cost-center: engineering                  # Cost center designation
+    environment: production                   # Environment classification
+spec:                                         # Resource quota specification
+  hard:                                       # Hard resource limits
+    # Compute Resources
+    requests.cpu: "10"                        # Total CPU requests limit (10 cores)
+    requests.memory: 20Gi                     # Total memory requests limit (20 GiB)
+    limits.cpu: "20"                          # Total CPU limits (20 cores)
+    limits.memory: 40Gi                       # Total memory limits (40 GiB)
+    
+    # Storage Resources
+    requests.storage: 1Ti                     # Total storage requests (1 TiB)
+    persistentvolumeclaims: "10"              # Maximum PVC count
+    
+    # Object Counts
+    pods: "50"                                # Maximum pod count
+    services: "20"                            # Maximum service count
+    secrets: "30"                             # Maximum secret count
+    configmaps: "30"                          # Maximum ConfigMap count
+    
+    # Load Balancer Resources
+    services.loadbalancers: "5"               # Maximum LoadBalancer services
+    services.nodeports: "10"                  # Maximum NodePort services
+
+---
+# Limit Range for Default Resource Constraints
+apiVersion: v1                                # Core API version
+kind: LimitRange                              # LimitRange resource type
+metadata:                                     # Resource metadata
+  name: ecommerce-prod-limits                 # LimitRange name
+  namespace: ecommerce-prod                   # Target namespace
+  labels:                                     # Resource labels
+    cost-center: engineering                  # Cost allocation
+    environment: production                   # Environment designation
+spec:                                         # LimitRange specification
+  limits:                                     # Resource limit definitions
+  - type: Container                           # Container-level limits
+    default:                                  # Default limits (if not specified)
+      cpu: 500m                               # Default CPU limit (0.5 cores)
+      memory: 1Gi                             # Default memory limit (1 GiB)
+    defaultRequest:                           # Default requests (if not specified)
+      cpu: 100m                               # Default CPU request (0.1 cores)
+      memory: 256Mi                           # Default memory request (256 MiB)
+    min:                                      # Minimum allowed resources
+      cpu: 50m                                # Minimum CPU (0.05 cores)
+      memory: 64Mi                            # Minimum memory (64 MiB)
+    max:                                      # Maximum allowed resources
+      cpu: 4000m                              # Maximum CPU (4 cores)
+      memory: 8Gi                             # Maximum memory (8 GiB)
+  - type: Pod                                 # Pod-level limits
+    max:                                      # Maximum pod resources
+      cpu: 8000m                              # Maximum pod CPU (8 cores)
+      memory: 16Gi                            # Maximum pod memory (16 GiB)
+  - type: PersistentVolumeClaim               # PVC limits
+    min:                                      # Minimum PVC size
+      storage: 1Gi                            # Minimum storage (1 GiB)
+    max:                                      # Maximum PVC size
+      storage: 500Gi                          # Maximum storage (500 GiB)

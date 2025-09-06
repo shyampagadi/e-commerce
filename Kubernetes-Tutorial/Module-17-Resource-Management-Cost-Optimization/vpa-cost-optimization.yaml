@@ -1,0 +1,297 @@
+# 📊 Vertical Pod Autoscaler and Cost Optimization Configurations
+# Advanced resource optimization for e-commerce platform
+
+---
+# Vertical Pod Autoscaler for Backend Service
+apiVersion: autoscaling.k8s.io/v1            # VPA API version
+kind: VerticalPodAutoscaler                   # VPA resource type
+metadata:                                     # Resource metadata
+  name: backend-vpa                           # VPA name for backend service
+  namespace: ecommerce-prod                   # Production namespace
+  labels:                                     # Resource labels
+    app: backend                              # Target application
+    optimization: automated                   # Optimization type
+    cost-center: engineering                  # Cost allocation
+spec:                                         # VPA specification
+  targetRef:                                  # Target resource reference
+    apiVersion: apps/v1                       # Target API version
+    kind: Deployment                          # Target resource type
+    name: ecommerce-backend                   # Target deployment name
+  updatePolicy:                               # Update policy configuration
+    updateMode: "Auto"                        # Automatic resource updates
+    # Options: "Off" (recommendations only), "Initial" (set on creation), "Auto" (update running pods)
+  resourcePolicy:                             # Resource policy constraints
+    containerPolicies:                        # Per-container policies
+    - containerName: fastapi-backend          # Target container name
+      minAllowed:                             # Minimum allowed resources
+        cpu: 100m                             # Minimum CPU (0.1 cores)
+        memory: 256Mi                         # Minimum memory (256 MiB)
+      maxAllowed:                             # Maximum allowed resources
+        cpu: 2000m                            # Maximum CPU (2 cores)
+        memory: 4Gi                           # Maximum memory (4 GiB)
+      controlledResources:                    # Resources under VPA control
+      - cpu                                   # CPU resource management
+      - memory                                # Memory resource management
+      controlledValues: RequestsAndLimits     # Control both requests and limits
+      # Options: RequestsAndLimits, RequestsOnly
+
+---
+# VPA for Frontend Service (Recommendation Mode)
+apiVersion: autoscaling.k8s.io/v1            # VPA API version
+kind: VerticalPodAutoscaler                   # VPA resource type
+metadata:                                     # Resource metadata
+  name: frontend-vpa                          # VPA name for frontend
+  namespace: ecommerce-prod                   # Production namespace
+  labels:                                     # Resource labels
+    app: frontend                             # Target application
+    optimization: recommendation              # Recommendation-only mode
+    cost-center: marketing                    # Cost allocation
+spec:                                         # VPA specification
+  targetRef:                                  # Target resource reference
+    apiVersion: apps/v1                       # Target API version
+    kind: Deployment                          # Target resource type
+    name: ecommerce-frontend                  # Target deployment name
+  updatePolicy:                               # Update policy
+    updateMode: "Off"                         # Recommendation mode only (no automatic updates)
+  resourcePolicy:                             # Resource policy
+    containerPolicies:                        # Container-specific policies
+    - containerName: react-frontend           # Target container
+      minAllowed:                             # Minimum resources
+        cpu: 50m                              # Minimum CPU
+        memory: 128Mi                         # Minimum memory
+      maxAllowed:                             # Maximum resources
+        cpu: 1000m                            # Maximum CPU (1 core)
+        memory: 2Gi                           # Maximum memory (2 GiB)
+      controlledResources:                    # Controlled resources
+      - cpu                                   # CPU management
+      - memory                                # Memory management
+
+---
+# VPA for Database (Conservative Mode)
+apiVersion: autoscaling.k8s.io/v1            # VPA API version
+kind: VerticalPodAutoscaler                   # VPA resource type
+metadata:                                     # Resource metadata
+  name: database-vpa                          # VPA name for database
+  namespace: ecommerce-prod                   # Production namespace
+  labels:                                     # Resource labels
+    app: database                             # Target application
+    optimization: conservative                # Conservative optimization
+    cost-center: infrastructure              # Infrastructure cost center
+spec:                                         # VPA specification
+  targetRef:                                  # Target reference
+    apiVersion: apps/v1                       # API version
+    kind: StatefulSet                         # StatefulSet target
+    name: ecommerce-database                  # Database StatefulSet
+  updatePolicy:                               # Update policy
+    updateMode: "Initial"                     # Only set resources on pod creation
+  resourcePolicy:                             # Resource policy
+    containerPolicies:                        # Container policies
+    - containerName: postgresql               # PostgreSQL container
+      minAllowed:                             # Minimum resources
+        cpu: 500m                             # Minimum CPU (0.5 cores)
+        memory: 1Gi                           # Minimum memory (1 GiB)
+      maxAllowed:                             # Maximum resources
+        cpu: 4000m                            # Maximum CPU (4 cores)
+        memory: 8Gi                           # Maximum memory (8 GiB)
+      controlledResources:                    # Controlled resources
+      - cpu                                   # CPU optimization
+      - memory                                # Memory optimization
+
+---
+# Kubecost Configuration for Cost Monitoring
+apiVersion: v1                                # Core API version
+kind: ConfigMap                               # ConfigMap resource type
+metadata:                                     # Resource metadata
+  name: kubecost-cost-analyzer-config         # Kubecost configuration name
+  namespace: kubecost                         # Kubecost namespace
+  labels:                                     # Resource labels
+    app: cost-analyzer                        # Kubecost application
+    component: config                         # Configuration component
+spec:                                         # ConfigMap specification
+data:                                         # Configuration data
+  # Kubecost configuration for e-commerce cost tracking
+  kubecost-config.yaml: |                    # Kubecost configuration file
+    # Cost allocation configuration
+    costAllocation:
+      enabled: true                           # Enable cost allocation
+      aggregateBy:                            # Aggregation dimensions
+        - namespace                           # Group by namespace
+        - deployment                          # Group by deployment
+        - service                             # Group by service
+        - label:cost-center                   # Group by cost center label
+      
+    # Cloud provider configuration
+    cloudProvider:
+      aws:                                    # AWS configuration
+        enabled: true                         # Enable AWS cost integration
+        region: us-west-2                     # AWS region
+        spotDataRegion: us-west-2             # Spot instance data region
+        spotDataBucket: kubecost-spot-data    # S3 bucket for spot data
+        athenaProjectID: kubecost-athena      # Athena project ID
+        
+    # Prometheus configuration
+    prometheus:
+      enabled: true                           # Enable Prometheus integration
+      fqdn: http://prometheus-server.monitoring.svc.cluster.local:80  # Prometheus URL
+      
+    # Grafana configuration
+    grafana:
+      enabled: true                           # Enable Grafana dashboards
+      fqdn: http://grafana.monitoring.svc.cluster.local:80  # Grafana URL
+      
+    # Cost optimization recommendations
+    recommendations:
+      enabled: true                           # Enable recommendations
+      rightSizing:                            # Right-sizing recommendations
+        enabled: true                         # Enable right-sizing
+        targetUtilization: 0.8                # Target CPU/memory utilization (80%)
+        window: 7d                            # Analysis window (7 days)
+      
+    # Alert configuration
+    alerts:
+      enabled: true                           # Enable cost alerts
+      slack:                                  # Slack integration
+        enabled: true                         # Enable Slack notifications
+        webhook: https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK  # Slack webhook URL
+      email:                                  # Email alerts
+        enabled: true                         # Enable email notifications
+        smtp:                                 # SMTP configuration
+          server: smtp.company.com            # SMTP server
+          port: 587                           # SMTP port
+          username: alerts@company.com        # SMTP username
+          
+    # Budget configuration
+    budgets:                                  # Cost budgets
+      - name: ecommerce-prod                  # Budget name
+        namespace: ecommerce-prod             # Target namespace
+        monthly: 5000                         # Monthly budget ($5000)
+        alerts:                               # Budget alerts
+          - threshold: 0.8                    # Alert at 80% of budget
+            type: slack                       # Alert type
+          - threshold: 0.9                    # Alert at 90% of budget
+            type: email                       # Email alert
+            
+      - name: ecommerce-dev                   # Development budget
+        namespace: ecommerce-dev              # Development namespace
+        monthly: 1000                         # Monthly budget ($1000)
+        alerts:                               # Budget alerts
+          - threshold: 0.9                    # Alert at 90%
+            type: slack                       # Slack notification
+
+---
+# Goldilocks VPA Recommender Configuration
+apiVersion: v1                                # Core API version
+kind: ConfigMap                               # ConfigMap resource type
+metadata:                                     # Resource metadata
+  name: goldilocks-config                     # Goldilocks configuration
+  namespace: goldilocks                       # Goldilocks namespace
+  labels:                                     # Resource labels
+    app: goldilocks                           # Goldilocks application
+    component: controller                     # Controller component
+data:                                         # Configuration data
+  config.yaml: |                             # Goldilocks configuration
+    # VPA recommendation configuration
+    vpa:
+      enabled: true                           # Enable VPA recommendations
+      updateMode: "Off"                       # Default to recommendation mode
+      
+    # Namespace configuration
+    namespaces:                               # Namespace-specific settings
+      ecommerce-prod:                         # Production namespace
+        enabled: true                         # Enable recommendations
+        updateMode: "Off"                     # Recommendation only for production
+        excludeContainers:                    # Exclude specific containers
+          - istio-proxy                       # Exclude service mesh sidecars
+          - linkerd-proxy                     # Exclude linkerd sidecars
+          
+      ecommerce-dev:                          # Development namespace
+        enabled: true                         # Enable recommendations
+        updateMode: "Auto"                    # Auto-update for development
+        
+    # Resource policy defaults
+    resourcePolicy:                           # Default resource policies
+      minCPU: 10m                             # Minimum CPU recommendation
+      maxCPU: 8000m                           # Maximum CPU recommendation
+      minMemory: 64Mi                         # Minimum memory recommendation
+      maxMemory: 16Gi                         # Maximum memory recommendation
+      
+    # Recommendation engine settings
+    recommendations:                          # Recommendation settings
+      targetUtilization:                      # Target utilization levels
+        cpu: 0.8                              # Target CPU utilization (80%)
+        memory: 0.8                           # Target memory utilization (80%)
+      historyLength: 7d                       # Historical data window
+      updateFrequency: 1h                     # Recommendation update frequency
+
+---
+# Cost Optimization CronJob for Regular Analysis
+apiVersion: batch/v1                          # Batch API version
+kind: CronJob                                 # CronJob resource type
+metadata:                                     # Resource metadata
+  name: cost-optimization-analysis            # CronJob name
+  namespace: ecommerce-prod                   # Production namespace
+  labels:                                     # Resource labels
+    app: cost-optimizer                       # Cost optimization application
+    component: analyzer                       # Analyzer component
+    cost-center: engineering                  # Engineering cost center
+spec:                                         # CronJob specification
+  schedule: "0 6 * * *"                       # Daily at 6 AM UTC
+  jobTemplate:                                # Job template
+    spec:                                     # Job specification
+      template:                               # Pod template
+        metadata:                             # Pod metadata
+          labels:                             # Pod labels
+            app: cost-optimizer               # Application label
+            component: analyzer               # Component label
+        spec:                                 # Pod specification
+          restartPolicy: OnFailure            # Restart policy for failed jobs
+          containers:                         # Container definitions
+          - name: cost-analyzer                # Container name
+            image: kubecost/cost-analyzer:latest  # Kubecost analyzer image
+            command:                          # Container command
+            - /bin/sh                         # Shell command
+            - -c                              # Command flag
+            - |                               # Multi-line script
+              # Cost optimization analysis script
+              echo "Starting daily cost optimization analysis..."
+              
+              # Generate cost report
+              curl -s "http://kubecost-cost-analyzer.kubecost:9090/model/allocation" \
+                -d window=1d \
+                -d aggregate=deployment \
+                -G > /tmp/daily-costs.json
+              
+              # Analyze resource utilization
+              curl -s "http://kubecost-cost-analyzer.kubecost:9090/model/assets" \
+                -d window=7d \
+                -G > /tmp/utilization.json
+              
+              # Generate right-sizing recommendations
+              curl -s "http://kubecost-cost-analyzer.kubecost:9090/model/savings/requestSizing" \
+                -d window=7d \
+                -G > /tmp/rightsizing.json
+              
+              # Send report to Slack (if configured)
+              if [ -n "$SLACK_WEBHOOK" ]; then
+                TOTAL_COST=$(jq '.data[].totalCost' /tmp/daily-costs.json | awk '{sum+=$1} END {print sum}')
+                curl -X POST -H 'Content-type: application/json' \
+                  --data "{\"text\":\"Daily Cost Report: \$${TOTAL_COST} - Check Kubecost dashboard for details\"}" \
+                  $SLACK_WEBHOOK
+              fi
+              
+              echo "Cost optimization analysis completed"
+            env:                              # Environment variables
+            - name: SLACK_WEBHOOK             # Slack webhook URL
+              valueFrom:                      # Value from secret
+                secretKeyRef:                 # Secret reference
+                  name: cost-alerts           # Secret name
+                  key: slack-webhook          # Webhook key
+                  optional: true              # Optional secret
+            resources:                        # Container resources
+              requests:                       # Resource requests
+                cpu: 100m                     # CPU request
+                memory: 256Mi                 # Memory request
+              limits:                         # Resource limits
+                cpu: 500m                     # CPU limit
+                memory: 512Mi                 # Memory limit
+          serviceAccountName: cost-analyzer   # Service account for API access
