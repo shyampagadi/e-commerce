@@ -5139,3 +5139,56 @@ kubectl scale deployment backend --replicas=5 -l app=backend
 ---
 
 **🎉 MODULE 9: LABELS AND SELECTORS - 100% GOLDEN STANDARD COMPLIANT! 🎉**
+
+---
+
+## 🎯 **Enhanced Practice Problems**
+
+### **Practice Problem 1: Dynamic Cost Allocation System**
+**Business Scenario**: Implement real-time cost tracking for different business units
+
+**Requirements**:
+- Track costs per department, project, and environment
+- Generate monthly cost reports automatically
+- Implement cost alerts and budget controls
+- Support chargeback to business units
+
+**Solution Framework**:
+```yaml
+# Label strategy:
+# cost-center.kubernetes.io/department: "engineering"
+# cost-center.kubernetes.io/project: "ecommerce-platform"
+# cost-center.kubernetes.io/budget-code: "ENG-2024-Q4"
+# cost-center.kubernetes.io/owner: "platform-team"
+```
+
+### **Practice Problem 2: Automated Compliance Labeling**
+**Business Scenario**: Ensure all resources meet SOX compliance requirements
+
+**Requirements**:
+- Automatically label resources based on compliance requirements
+- Generate compliance reports for auditors
+- Implement policy enforcement based on labels
+- Track compliance violations and remediation
+
+### **Practice Problem 3: Multi-Tenant Resource Isolation**
+**Business Scenario**: Isolate resources for different customer tiers (Premium, Standard, Basic)
+
+**Requirements**:
+- Implement tenant-based resource allocation
+- Ensure network isolation between tenants
+- Support tenant-specific SLAs
+- Enable tenant cost tracking and billing
+
+### **Practice Problem 4: Canary Deployment Label Strategy**
+**Business Scenario**: Implement intelligent canary deployments based on user segments
+
+**Requirements**:
+- Route premium users to stable version
+- Route beta users to canary version
+- Implement automatic rollback based on metrics
+- Support A/B testing scenarios
+
+---
+
+**🌟 ACHIEVEMENT UNLOCKED: LABEL AND SELECTOR MASTER 🌟**

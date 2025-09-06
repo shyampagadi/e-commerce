@@ -49,6 +49,36 @@ TechCorp Solutions, a rapidly growing e-commerce company, requires a robust, sca
 - **Business Cost**: $200K+ annually in delayed feature releases
 - **Competitive Risk**: Slower time-to-market for new features
 
+#### **5. Linux Administration Gaps**
+- **Problem**: Team lacks comprehensive Linux command proficiency
+- **Impact**: 40% longer troubleshooting times for system issues
+- **Business Cost**: $75K+ annually in inefficient system management
+- **Risk Level**: Medium - affects operational efficiency
+
+#### **6. Container Knowledge Deficits**
+- **Problem**: Limited understanding of container fundamentals and Docker
+- **Impact**: 25% longer deployment cycles and container-related issues
+- **Business Cost**: $60K+ annually in deployment delays and container failures
+- **Risk Level**: Medium - affects development velocity
+
+#### **7. System Administration Weaknesses**
+- **Problem**: Insufficient Linux system administration skills
+- **Impact**: 35% longer resolution times for system-level issues
+- **Business Cost**: $80K+ annually in system maintenance overhead
+- **Risk Level**: Medium - affects system reliability
+
+#### **8. Networking Knowledge Gaps**
+- **Problem**: Limited understanding of networking fundamentals
+- **Impact**: 30% longer resolution times for network-related issues
+- **Business Cost**: $70K+ annually in network troubleshooting overhead
+- **Risk Level**: Medium - affects service connectivity
+
+#### **9. Configuration Management Issues**
+- **Problem**: Inconsistent YAML/JSON configuration management
+- **Impact**: 20% configuration errors leading to deployment failures
+- **Business Cost**: $50K+ annually in configuration-related downtime
+- **Risk Level**: Medium - affects deployment reliability
+
 #### **5. Cost Inefficiency**
 - **Problem**: Over/under-provisioning of resources
 - **Impact**: 40% higher infrastructure costs than necessary

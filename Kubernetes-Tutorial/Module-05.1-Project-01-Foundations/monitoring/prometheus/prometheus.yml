@@ -1,0 +1,1187 @@
+# =============================================================================
+# PROMETHEUS CONFIGURATION FOR E-COMMERCE FOUNDATION INFRASTRUCTURE
+# =============================================================================
+# This configuration file defines how Prometheus collects metrics from the
+# Kubernetes cluster and e-commerce application components. It includes
+# comprehensive monitoring of infrastructure, applications, and services.
+# =============================================================================
+
+global:
+  # =============================================================================
+  # GLOBAL CONFIGURATION SECTION
+  # =============================================================================
+  # The global section defines configuration parameters that apply to all
+  # scrape jobs and rule evaluations unless overridden at the job level.
+  # =============================================================================
+  
+  scrape_interval: 15s
+  # Purpose: Defines the default interval between scraping targets
+  # Why needed: Determines how frequently Prometheus collects metrics from targets
+  # Impact: Balances data freshness with resource usage and storage requirements
+  # Time: 15 seconds provides good balance for most monitoring scenarios
+  # Override: Individual jobs can override this with their own scrape_interval
+  
+  evaluation_interval: 15s
+  # Purpose: Defines the interval between rule evaluations
+  # Why needed: Determines how frequently Prometheus evaluates alerting and recording rules
+  # Impact: Affects alert responsiveness and recording rule update frequency
+  # Time: 15 seconds ensures timely alert evaluation and rule processing
+  # Rules: Both alerting rules and recording rules use this interval
+  
+  external_labels:
+  # =============================================================================
+  # EXTERNAL LABELS SECTION
+  # =============================================================================
+  # External labels are added to all time series and alerts sent to external
+  # systems. They help identify the source of metrics in federated setups.
+  # =============================================================================
+  
+    cluster: 'ecommerce-cluster'
+    # Purpose: Identifies the Kubernetes cluster this Prometheus instance monitors
+    # Why needed: Enables identification of metrics source in multi-cluster setups
+    # Impact: All metrics will be tagged with this cluster identifier
+    # Value: 'ecommerce-cluster' matches the project's cluster name
+    
+    environment: 'development'
+    # Purpose: Identifies the environment this Prometheus instance monitors
+    # Why needed: Enables environment-specific monitoring and alerting
+    # Impact: All metrics will be tagged with this environment identifier
+    # Value: 'development' indicates this is a development environment
+    
+    prometheus: 'ecommerce-prometheus'
+    # Purpose: Identifies this specific Prometheus instance
+    # Why needed: Enables identification of specific Prometheus instance in HA setups
+    # Impact: All metrics will be tagged with this Prometheus instance identifier
+    # Value: 'ecommerce-prometheus' matches the project's Prometheus instance name
+
+# =============================================================================
+# RULE FILES SECTION
+# =============================================================================
+# The rule_files section specifies files containing alerting and recording rules
+# that Prometheus should load and evaluate at the configured evaluation_interval.
+# =============================================================================
+
+rule_files:
+  # =============================================================================
+  # RULE FILE DEFINITIONS
+  # =============================================================================
+  # Each rule file contains PromQL expressions for alerting and recording rules.
+  # These files are loaded and evaluated periodically by Prometheus.
+  # =============================================================================
+  
+  - "ecommerce-alerts.yml"
+  # Purpose: Defines alerting rules specific to the e-commerce application
+  # Why needed: Enables application-specific monitoring and alerting
+  # Impact: Prometheus will evaluate these rules and trigger alerts when conditions are met
+  # Content: Contains alerts for application health, performance, and business metrics
+  # File: ecommerce-alerts.yml should be in the same directory as prometheus.yml
+  
+  - "kubernetes-alerts.yml"
+  # Purpose: Defines alerting rules for Kubernetes cluster infrastructure
+  # Why needed: Enables infrastructure monitoring and alerting
+  # Impact: Prometheus will evaluate these rules and trigger alerts for cluster issues
+  # Content: Contains alerts for node health, pod status, resource usage, etc.
+  # File: kubernetes-alerts.yml should be in the same directory as prometheus.yml
+
+# =============================================================================
+# SCRAPE CONFIGURATIONS SECTION
+# =============================================================================
+# The scrape_configs section defines how Prometheus discovers and scrapes targets.
+# Each job configuration specifies targets, scraping parameters, and relabeling rules.
+# =============================================================================
+
+scrape_configs:
+  # =============================================================================
+  # SCRAPE JOB DEFINITIONS
+  # =============================================================================
+  # Each job defines a set of targets to scrape and how to scrape them.
+  # Jobs can use static configuration or service discovery mechanisms.
+  # =============================================================================
+  
+  # =============================================================================
+  # PROMETHEUS SELF-MONITORING JOB
+  # =============================================================================
+  # This job monitors Prometheus itself, providing metrics about its own operation.
+  # =============================================================================
+  
+  - job_name: 'prometheus'
+    # Purpose: Defines a job to monitor Prometheus itself
+    # Why needed: Enables self-monitoring of Prometheus performance and health
+    # Impact: Provides metrics about Prometheus operation, storage, and query performance
+    # Target: localhost:9090 (Prometheus's own metrics endpoint)
+    
+    static_configs:
+    # =============================================================================
+    # STATIC CONFIGURATION
+    # =============================================================================
+    # Static configuration defines a fixed list of targets to scrape.
+    # This is used when targets are known in advance and don't change frequently.
+    # =============================================================================
+    
+      - targets: ['localhost:9090']
+      # Purpose: Specifies the target endpoint for Prometheus self-monitoring
+      # Why needed: Prometheus exposes its own metrics on port 9090
+      # Impact: Enables collection of Prometheus internal metrics
+      # Endpoint: localhost:9090 is the default Prometheus metrics endpoint
+    
+    scrape_interval: 5s
+    # Purpose: Overrides the global scrape interval for this job
+    # Why needed: Prometheus self-monitoring benefits from more frequent scraping
+    # Impact: Collects Prometheus metrics every 5 seconds instead of 15 seconds
+    # Time: 5 seconds provides more granular monitoring of Prometheus performance
+    
+    metrics_path: /metrics
+    # Purpose: Specifies the HTTP path to scrape for metrics
+    # Why needed: Defines where Prometheus exposes its metrics endpoint
+    # Impact: Scrapes metrics from http://localhost:9090/metrics
+    # Path: /metrics is the standard Prometheus metrics endpoint
+
+  # =============================================================================
+  # KUBERNETES API SERVER MONITORING JOB
+  # =============================================================================
+  # This job monitors the Kubernetes API server, providing metrics about
+  # API server performance, request rates, and error rates.
+  # =============================================================================
+  
+  - job_name: 'kubernetes-apiservers'
+    # Purpose: Defines a job to monitor the Kubernetes API server
+    # Why needed: Enables monitoring of API server performance and health
+    # Impact: Provides metrics about API server operation, request rates, and errors
+    # Target: Kubernetes API server endpoints discovered via service discovery
+    
+    kubernetes_sd_configs:
+    # =============================================================================
+    # KUBERNETES SERVICE DISCOVERY CONFIGURATION
+    # =============================================================================
+    # Kubernetes service discovery automatically discovers targets based on
+    # Kubernetes API resources. This enables dynamic target discovery.
+    # =============================================================================
+    
+      - role: endpoints
+      # Purpose: Discovers targets from Kubernetes endpoints
+      # Why needed: API server metrics are exposed via endpoints
+      # Impact: Automatically discovers API server endpoints
+      # Role: 'endpoints' discovers targets from Kubernetes Endpoints resources
+    
+    scheme: https
+    # Purpose: Specifies the protocol scheme for scraping
+    # Why needed: Kubernetes API server uses HTTPS for secure communication
+    # Impact: Scrapes metrics using HTTPS instead of HTTP
+    # Security: Ensures encrypted communication with the API server
+    
+    tls_config:
+    # =============================================================================
+    # TLS CONFIGURATION
+    # =============================================================================
+    # TLS configuration defines how to authenticate with the API server
+    # using certificates and tokens from the service account.
+    # =============================================================================
+    
+      ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      # Purpose: Specifies the CA certificate for API server authentication
+      # Why needed: Validates the API server's SSL certificate
+      # Impact: Ensures secure and authenticated connection to API server
+      # Path: Standard location for service account CA certificate
+    
+    bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+    # Purpose: Specifies the bearer token for API server authentication
+    # Why needed: Authenticates Prometheus with the Kubernetes API server
+    # Impact: Enables Prometheus to access API server metrics
+    # Path: Standard location for service account token
+    
+    relabel_configs:
+    # =============================================================================
+    # RELABELING CONFIGURATION
+    # =============================================================================
+    # Relabeling rules transform discovered targets before scraping.
+    # This enables filtering and labeling of targets based on metadata.
+    # =============================================================================
+    
+      - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+        # Purpose: Specifies which labels to use for filtering
+        # Why needed: Enables filtering of discovered endpoints
+        # Impact: Uses namespace, service name, and port name for filtering
+        # Labels: __meta_kubernetes_* labels contain Kubernetes metadata
+        
+        action: keep
+        # Purpose: Specifies the action to take on matching targets
+        # Why needed: Keeps only targets that match the specified criteria
+        # Impact: Filters out endpoints that don't match the regex
+        # Action: 'keep' retains targets that match the regex
+        
+        regex: default;kubernetes;https
+        # Purpose: Defines the regex pattern for filtering
+        # Why needed: Filters for the specific API server endpoint
+        # Impact: Keeps only the default/kubernetes service with https port
+        # Pattern: namespace=default, service=kubernetes, port=https
+
+  # =============================================================================
+  # KUBERNETES NODES MONITORING JOB
+  # =============================================================================
+  # This job monitors Kubernetes worker nodes, providing metrics about
+  # node health, resource usage, and system performance.
+  # =============================================================================
+  
+  - job_name: 'kubernetes-nodes'
+    # Purpose: Defines a job to monitor Kubernetes worker nodes
+    # Why needed: Enables monitoring of node health, resources, and performance
+    # Impact: Provides metrics about CPU, memory, disk, and network usage per node
+    # Target: Kubernetes worker nodes discovered via service discovery
+    
+    kubernetes_sd_configs:
+    # =============================================================================
+    # KUBERNETES SERVICE DISCOVERY FOR NODES
+    # =============================================================================
+    # Uses Kubernetes service discovery to find worker nodes
+    # for dynamic monitoring of node resources and health.
+    # =============================================================================
+    
+      - role: node
+      # Purpose: Discovers targets from Kubernetes nodes
+      # Why needed: Node metrics are exposed via the Kubernetes API
+      # Impact: Automatically discovers all worker nodes in the cluster
+      # Role: 'node' discovers targets from Kubernetes Node resources
+    
+    scheme: https
+    # Purpose: Specifies the protocol scheme for scraping
+    # Why needed: Kubernetes API server uses HTTPS for secure communication
+    # Impact: Scrapes node metrics using HTTPS instead of HTTP
+    # Security: Ensures encrypted communication with the API server
+    
+    tls_config:
+    # =============================================================================
+    # TLS CONFIGURATION FOR NODE MONITORING
+    # =============================================================================
+    # TLS configuration defines how to authenticate with the API server
+    # using certificates and tokens from the service account.
+    # =============================================================================
+    
+      ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      # Purpose: Specifies the CA certificate for API server authentication
+      # Why needed: Validates the API server's SSL certificate
+      # Impact: Ensures secure and authenticated connection to API server
+      # Path: Standard location for service account CA certificate
+    
+    bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+    # Purpose: Specifies the bearer token for API server authentication
+    # Why needed: Authenticates Prometheus with the Kubernetes API server
+    # Impact: Enables Prometheus to access node metrics via API server
+    # Path: Standard location for service account token
+    
+    relabel_configs:
+    # =============================================================================
+    # RELABELING CONFIGURATION FOR NODE MONITORING
+    # =============================================================================
+    # Relabeling rules transform discovered node targets before scraping.
+    # This enables proper labeling and routing of node metrics.
+    # =============================================================================
+    
+      - action: labelmap
+        # Purpose: Maps Kubernetes node labels to Prometheus labels
+        # Why needed: Preserves node metadata for filtering and grouping
+        # Impact: All node labels become Prometheus labels
+        # Action: 'labelmap' copies labels from source to target
+        
+        regex: __meta_kubernetes_node_label_(.+)
+        # Purpose: Defines the regex pattern for label mapping
+        # Why needed: Matches all Kubernetes node labels
+        # Impact: Maps node labels like 'kubernetes.io/hostname' to Prometheus labels
+        # Pattern: __meta_kubernetes_node_label_(.+) matches all node label metadata
+    
+      - target_label: __address__
+        # Purpose: Sets the target address for node metrics scraping
+        # Why needed: Node metrics are accessed via the API server proxy
+        # Impact: Routes node metrics requests through the API server
+        # Label: __address__ is the target endpoint for scraping
+        
+        replacement: kubernetes.default.svc:443
+        # Purpose: Specifies the API server endpoint for node metrics
+        # Why needed: Node metrics are accessed via API server proxy
+        # Impact: All node metrics requests go through kubernetes.default.svc:443
+        # Endpoint: kubernetes.default.svc:443 is the API server service endpoint
+    
+      - source_labels: [__meta_kubernetes_node_name]
+        # Purpose: Uses node name to construct the metrics path
+        # Why needed: Each node has a unique metrics path via API server
+        # Impact: Creates node-specific metrics paths
+        # Label: __meta_kubernetes_node_name contains the node name
+        
+        regex: (.+)
+        # Purpose: Captures the node name for path construction
+        # Why needed: Node name is needed to build the proxy path
+        # Impact: Captures the full node name for path replacement
+        # Pattern: (.+) captures the entire node name
+        
+        target_label: __metrics_path__
+        # Purpose: Sets the metrics path for node scraping
+        # Why needed: Defines where to find node metrics via API server
+        # Impact: Sets the path to scrape node metrics
+        # Label: __metrics_path__ is the HTTP path for metrics
+        
+        replacement: /api/v1/nodes/${1}/proxy/metrics
+        # Purpose: Constructs the API server proxy path for node metrics
+        # Why needed: Node metrics are accessed via API server proxy
+        # Impact: Creates paths like /api/v1/nodes/node-1/proxy/metrics
+        # Path: ${1} is replaced with the captured node name
+
+  # =============================================================================
+  # KUBERNETES PODS MONITORING JOB
+  # =============================================================================
+  # This job monitors Kubernetes pods that have Prometheus annotations,
+  # providing metrics about pod health, resource usage, and application performance.
+  # =============================================================================
+  
+  - job_name: 'kubernetes-pods'
+    # Purpose: Defines a job to monitor Kubernetes pods with Prometheus annotations
+    # Why needed: Enables monitoring of pod-level metrics and application health
+    # Impact: Provides metrics about pod resources, health, and application performance
+    # Target: Pods with prometheus.io/scrape=true annotation
+    
+    kubernetes_sd_configs:
+    # =============================================================================
+    # KUBERNETES SERVICE DISCOVERY FOR PODS
+    # =============================================================================
+    # Uses Kubernetes service discovery to find pods with Prometheus annotations
+    # for dynamic monitoring of pod-level metrics.
+    # =============================================================================
+    
+      - role: pod
+      # Purpose: Discovers targets from Kubernetes pods
+      # Why needed: Pod metrics are exposed by individual pods
+      # Impact: Automatically discovers all pods in the cluster
+      # Role: 'pod' discovers targets from Kubernetes Pod resources
+    
+    relabel_configs:
+    # =============================================================================
+    # RELABELING CONFIGURATION FOR POD MONITORING
+    # =============================================================================
+    # Relabeling rules filter and transform discovered pod targets before scraping.
+    # This enables selective monitoring based on pod annotations.
+    # =============================================================================
+    
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        # Purpose: Filters pods based on Prometheus scrape annotation
+        # Why needed: Only pods with explicit scrape annotation should be monitored
+        # Impact: Filters out pods that don't want to be monitored
+        # Label: __meta_kubernetes_pod_annotation_prometheus_io_scrape contains annotation value
+        
+        action: keep
+        # Purpose: Keeps only pods that have the scrape annotation set to true
+        # Why needed: Ensures only annotated pods are monitored
+        # Impact: Retains only pods with prometheus.io/scrape=true
+        # Action: 'keep' retains targets that match the regex
+        
+        regex: true
+        # Purpose: Defines the regex pattern for scrape annotation filtering
+        # Why needed: Matches the value 'true' in the scrape annotation
+        # Impact: Keeps only pods with prometheus.io/scrape=true
+        # Pattern: 'true' matches the boolean value for scraping enabled
+    
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+        # Purpose: Uses custom metrics path from pod annotation
+        # Why needed: Pods may expose metrics on non-standard paths
+        # Impact: Allows pods to specify custom metrics endpoints
+        # Label: __meta_kubernetes_pod_annotation_prometheus_io_path contains custom path
+        
+        action: replace
+        # Purpose: Replaces the default metrics path with custom path
+        # Why needed: Enables custom metrics paths per pod
+        # Impact: Uses custom path if specified, otherwise uses default
+        # Action: 'replace' replaces the target label value
+        
+        target_label: __metrics_path__
+        # Purpose: Sets the metrics path for pod scraping
+        # Why needed: Defines where to find pod metrics
+        # Impact: Sets the path to scrape pod metrics
+        # Label: __metrics_path__ is the HTTP path for metrics
+        
+        regex: (.+)
+        # Purpose: Captures the custom metrics path from annotation
+        # Why needed: Extracts the custom path value
+        # Impact: Captures the full custom path for replacement
+        # Pattern: (.+) captures the entire custom path value
+    
+      - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+        # Purpose: Constructs the target address with custom port
+        # Why needed: Pods may expose metrics on non-standard ports
+        # Impact: Allows pods to specify custom metrics ports
+        # Labels: __address__ contains pod IP, annotation contains custom port
+        
+        action: replace
+        # Purpose: Replaces the target address with custom port
+        # Why needed: Enables custom ports per pod
+        # Impact: Uses custom port if specified, otherwise uses default
+        # Action: 'replace' replaces the target label value
+        
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        # Purpose: Captures pod IP and custom port for address construction
+        # Why needed: Extracts IP and port for proper address formatting
+        # Impact: Captures IP (with optional existing port) and custom port
+        # Pattern: ([^:]+)(?::\d+)?;(\d+) captures IP, optional port, and custom port
+        
+        replacement: $1:$2
+        # Purpose: Constructs the final target address
+        # Why needed: Creates properly formatted address with custom port
+        # Impact: Creates addresses like 10.244.1.5:8080
+        # Format: $1 (IP) : $2 (custom port)
+        
+        target_label: __address__
+        # Purpose: Sets the target address for pod scraping
+        # Why needed: Defines the endpoint to scrape pod metrics
+        # Impact: Sets the address to scrape pod metrics
+        # Label: __address__ is the target endpoint for scraping
+    
+      - action: labelmap
+        # Purpose: Maps Kubernetes pod labels to Prometheus labels
+        # Why needed: Preserves pod metadata for filtering and grouping
+        # Impact: All pod labels become Prometheus labels
+        # Action: 'labelmap' copies labels from source to target
+        
+        regex: __meta_kubernetes_pod_label_(.+)
+        # Purpose: Defines the regex pattern for pod label mapping
+        # Why needed: Matches all Kubernetes pod labels
+        # Impact: Maps pod labels like 'app=backend' to Prometheus labels
+        # Pattern: __meta_kubernetes_pod_label_(.+) matches all pod label metadata
+    
+      - source_labels: [__meta_kubernetes_namespace]
+        # Purpose: Sets the kubernetes_namespace label
+        # Why needed: Provides namespace information for metrics
+        # Impact: All pod metrics are tagged with the namespace
+        # Label: __meta_kubernetes_namespace contains the namespace name
+        
+        action: replace
+        # Purpose: Replaces the target label with namespace value
+        # Why needed: Ensures consistent namespace labeling
+        # Impact: Sets kubernetes_namespace label to the pod's namespace
+        # Action: 'replace' replaces the target label value
+        
+        target_label: kubernetes_namespace
+        # Purpose: Specifies the target label for namespace information
+        # Why needed: Enables filtering and grouping by namespace
+        # Impact: Sets kubernetes_namespace label for all pod metrics
+        # Label: 'kubernetes_namespace' is a standard Kubernetes label
+    
+      - source_labels: [__meta_kubernetes_pod_name]
+        # Purpose: Sets the kubernetes_pod_name label
+        # Why needed: Provides pod name information for metrics
+        # Impact: All pod metrics are tagged with the pod name
+        # Label: __meta_kubernetes_pod_name contains the pod name
+        
+        action: replace
+        # Purpose: Replaces the target label with pod name value
+        # Why needed: Ensures consistent pod name labeling
+        # Impact: Sets kubernetes_pod_name label to the pod's name
+        # Action: 'replace' replaces the target label value
+        
+        target_label: kubernetes_pod_name
+        # Purpose: Specifies the target label for pod name information
+        # Why needed: Enables filtering and grouping by pod name
+        # Impact: Sets kubernetes_pod_name label for all pod metrics
+        # Label: 'kubernetes_pod_name' is a standard Kubernetes label
+
+  # =============================================================================
+  # E-COMMERCE BACKEND APPLICATION MONITORING JOB
+  # =============================================================================
+  # This job monitors the e-commerce backend application, providing metrics
+  # about application performance, business logic, and API endpoints.
+  # =============================================================================
+  
+  - job_name: 'ecommerce-backend'
+    # Purpose: Defines a job to monitor the e-commerce backend application
+    # Why needed: Enables monitoring of application performance and business metrics
+    # Impact: Provides metrics about API performance, request rates, and errors
+    # Target: E-commerce backend service endpoints in the ecommerce namespace
+    
+    kubernetes_sd_configs:
+    # =============================================================================
+    # KUBERNETES SERVICE DISCOVERY FOR E-COMMERCE BACKEND
+    # =============================================================================
+    # Uses Kubernetes service discovery to find backend service endpoints
+    # in the ecommerce namespace for dynamic monitoring.
+    # =============================================================================
+    
+      - role: endpoints
+        # Purpose: Discovers targets from Kubernetes endpoints
+        # Why needed: Backend metrics are exposed via service endpoints
+        # Impact: Automatically discovers backend service endpoints
+        # Role: 'endpoints' discovers targets from Kubernetes Endpoints resources
+        
+        namespaces:
+        # =============================================================================
+        # NAMESPACE FILTERING
+        # =============================================================================
+        # Limits service discovery to specific namespaces to reduce
+        # discovery overhead and focus on relevant targets.
+        # =============================================================================
+        
+          names:
+          # Purpose: Specifies which namespaces to discover targets in
+          # Why needed: Limits discovery to the ecommerce namespace
+          # Impact: Only discovers endpoints in the ecommerce namespace
+          # Performance: Reduces discovery overhead by limiting scope
+            
+            - ecommerce
+            # Purpose: Specifies the ecommerce namespace for target discovery
+            # Why needed: Backend application runs in the ecommerce namespace
+            # Impact: Discovers only endpoints in the ecommerce namespace
+            # Value: 'ecommerce' matches the project's application namespace
+    
+    relabel_configs:
+    # =============================================================================
+    # RELABELING CONFIGURATION FOR E-COMMERCE BACKEND
+    # =============================================================================
+    # Relabeling rules filter and transform discovered backend targets
+    # to ensure only the correct service endpoints are monitored.
+    # =============================================================================
+    
+      - source_labels: [__meta_kubernetes_service_name]
+        # Purpose: Filters targets by service name
+        # Why needed: Ensures only backend service endpoints are monitored
+        # Impact: Filters out other services in the ecommerce namespace
+        # Label: __meta_kubernetes_service_name contains the service name
+        
+        action: keep
+        # Purpose: Keeps only targets that match the service name
+        # Why needed: Filters for the specific backend service
+        # Impact: Retains only ecommerce-backend-service endpoints
+        # Action: 'keep' retains targets that match the regex
+        
+        regex: ecommerce-backend-service
+        # Purpose: Defines the regex pattern for service name filtering
+        # Why needed: Matches the exact backend service name
+        # Impact: Keeps only ecommerce-backend-service endpoints
+        # Pattern: 'ecommerce-backend-service' matches the backend service name
+    
+      - source_labels: [__meta_kubernetes_endpoint_port_name]
+        # Purpose: Filters targets by port name
+        # Why needed: Ensures only HTTP port endpoints are monitored
+        # Impact: Filters out non-HTTP ports (e.g., admin ports)
+        # Label: __meta_kubernetes_endpoint_port_name contains the port name
+        
+        action: keep
+        # Purpose: Keeps only targets with HTTP port
+        # Why needed: Backend metrics are exposed on HTTP port
+        # Impact: Retains only HTTP port endpoints
+        # Action: 'keep' retains targets that match the regex
+        
+        regex: http
+        # Purpose: Defines the regex pattern for port name filtering
+        # Why needed: Matches the HTTP port name
+        # Impact: Keeps only HTTP port endpoints
+        # Pattern: 'http' matches the HTTP port name in the service
+    
+      - source_labels: [__meta_kubernetes_endpoint_address_target_name]
+        # Purpose: Sets the instance label from endpoint target name
+        # Why needed: Provides unique identifier for each backend pod
+        # Impact: Each backend pod gets a unique instance label
+        # Label: __meta_kubernetes_endpoint_address_target_name contains pod name
+        
+        target_label: instance
+        # Purpose: Specifies the target label for the instance identifier
+        # Why needed: Provides unique identification for each backend instance
+        # Impact: Sets instance label to the pod name
+        # Label: 'instance' is the standard Prometheus instance label
+    
+      - source_labels: [__meta_kubernetes_namespace]
+        # Purpose: Sets the kubernetes_namespace label
+        # Why needed: Provides namespace information for metrics
+        # Impact: All backend metrics are tagged with the namespace
+        # Label: __meta_kubernetes_namespace contains the namespace name
+        
+        target_label: kubernetes_namespace
+        # Purpose: Specifies the target label for namespace information
+        # Why needed: Enables filtering and grouping by namespace
+        # Impact: Sets kubernetes_namespace label to 'ecommerce'
+        # Label: 'kubernetes_namespace' is a standard Kubernetes label
+    
+      - source_labels: [__meta_kubernetes_service_name]
+        # Purpose: Sets the kubernetes_service_name label
+        # Why needed: Provides service information for metrics
+        # Impact: All backend metrics are tagged with the service name
+        # Label: __meta_kubernetes_service_name contains the service name
+        
+        target_label: kubernetes_service_name
+        # Purpose: Specifies the target label for service information
+        # Why needed: Enables filtering and grouping by service
+        # Impact: Sets kubernetes_service_name label to 'ecommerce-backend-service'
+        # Label: 'kubernetes_service_name' is a standard Kubernetes label
+    
+    metrics_path: /metrics
+    # Purpose: Specifies the HTTP path to scrape for backend metrics
+    # Why needed: Defines where the backend exposes its metrics endpoint
+    # Impact: Scrapes metrics from http://backend-pod:80/metrics
+    # Path: /metrics is the standard Prometheus metrics endpoint
+    
+    scrape_interval: 30s
+    # Purpose: Overrides the global scrape interval for backend monitoring
+    # Why needed: Backend metrics don't need as frequent scraping as infrastructure
+    # Impact: Collects backend metrics every 30 seconds instead of 15 seconds
+    # Time: 30 seconds provides good balance for application monitoring
+
+  # =============================================================================
+  # NODE EXPORTER MONITORING JOB
+  # =============================================================================
+  # This job monitors Node Exporter instances running on Kubernetes nodes,
+  # providing detailed system metrics about CPU, memory, disk, and network usage.
+  # =============================================================================
+  
+  - job_name: 'node-exporter'
+    # Purpose: Defines a job to monitor Node Exporter instances
+    # Why needed: Enables detailed system-level monitoring of worker nodes
+    # Impact: Provides comprehensive metrics about node resources and performance
+    # Target: Node Exporter service endpoints discovered via service discovery
+    
+    kubernetes_sd_configs:
+    # =============================================================================
+    # KUBERNETES SERVICE DISCOVERY FOR NODE EXPORTER
+    # =============================================================================
+    # Uses Kubernetes service discovery to find Node Exporter service endpoints
+    # for monitoring system-level metrics on worker nodes.
+    # =============================================================================
+    
+      - role: endpoints
+      # Purpose: Discovers targets from Kubernetes endpoints
+      # Why needed: Node Exporter metrics are exposed via service endpoints
+      # Impact: Automatically discovers Node Exporter service endpoints
+      # Role: 'endpoints' discovers targets from Kubernetes Endpoints resources
+    
+    relabel_configs:
+    # =============================================================================
+    # RELABELING CONFIGURATION FOR NODE EXPORTER
+    # =============================================================================
+    # Relabeling rules filter and transform discovered Node Exporter targets
+    # to ensure only the correct service endpoints are monitored.
+    # =============================================================================
+    
+      - source_labels: [__meta_kubernetes_service_name]
+        # Purpose: Filters targets by service name
+        # Why needed: Ensures only Node Exporter service endpoints are monitored
+        # Impact: Filters out other services in the cluster
+        # Label: __meta_kubernetes_service_name contains the service name
+        
+        action: keep
+        # Purpose: Keeps only targets that match the Node Exporter service name
+        # Why needed: Filters for the specific Node Exporter service
+        # Impact: Retains only node-exporter service endpoints
+        # Action: 'keep' retains targets that match the regex
+        
+        regex: node-exporter
+        # Purpose: Defines the regex pattern for service name filtering
+        # Why needed: Matches the exact Node Exporter service name
+        # Impact: Keeps only node-exporter service endpoints
+        # Pattern: 'node-exporter' matches the Node Exporter service name
+    
+      - source_labels: [__meta_kubernetes_endpoint_port_name]
+        # Purpose: Filters targets by port name
+        # Why needed: Ensures only metrics port endpoints are monitored
+        # Impact: Filters out non-metrics ports (e.g., admin ports)
+        # Label: __meta_kubernetes_endpoint_port_name contains the port name
+        
+        action: keep
+        # Purpose: Keeps only targets with metrics port
+        # Why needed: Node Exporter metrics are exposed on metrics port
+        # Impact: Retains only metrics port endpoints
+        # Action: 'keep' retains targets that match the regex
+        
+        regex: metrics
+        # Purpose: Defines the regex pattern for port name filtering
+        # Why needed: Matches the metrics port name
+        # Impact: Keeps only metrics port endpoints
+        # Pattern: 'metrics' matches the metrics port name in the service
+    
+      - source_labels: [__meta_kubernetes_endpoint_address_target_name]
+        # Purpose: Sets the instance label from endpoint target name
+        # Why needed: Provides unique identifier for each Node Exporter instance
+        # Impact: Each Node Exporter instance gets a unique instance label
+        # Label: __meta_kubernetes_endpoint_address_target_name contains pod name
+        
+        target_label: instance
+        # Purpose: Specifies the target label for the instance identifier
+        # Why needed: Provides unique identification for each Node Exporter instance
+        # Impact: Sets instance label to the pod name
+        # Label: 'instance' is the standard Prometheus instance label
+    
+      - source_labels: [__meta_kubernetes_namespace]
+        # Purpose: Sets the kubernetes_namespace label
+        # Why needed: Provides namespace information for metrics
+        # Impact: All Node Exporter metrics are tagged with the namespace
+        # Label: __meta_kubernetes_namespace contains the namespace name
+        
+        target_label: kubernetes_namespace
+        # Purpose: Specifies the target label for namespace information
+        # Why needed: Enables filtering and grouping by namespace
+        # Impact: Sets kubernetes_namespace label to the Node Exporter namespace
+        # Label: 'kubernetes_namespace' is a standard Kubernetes label
+    
+      - source_labels: [__meta_kubernetes_service_name]
+        # Purpose: Sets the kubernetes_service_name label
+        # Why needed: Provides service information for metrics
+        # Impact: All Node Exporter metrics are tagged with the service name
+        # Label: __meta_kubernetes_service_name contains the service name
+        
+        target_label: kubernetes_service_name
+        # Purpose: Specifies the target label for service information
+        # Why needed: Enables filtering and grouping by service
+        # Impact: Sets kubernetes_service_name label to 'node-exporter'
+        # Label: 'kubernetes_service_name' is a standard Kubernetes label
+
+  # =============================================================================
+  # CADVISOR MONITORING JOB
+  # =============================================================================
+  # This job monitors cAdvisor instances running on Kubernetes nodes,
+  # providing detailed container metrics about CPU, memory, disk, and network usage.
+  # =============================================================================
+  
+  - job_name: 'cadvisor'
+    # Purpose: Defines a job to monitor cAdvisor instances
+    # Why needed: Enables detailed container-level monitoring of worker nodes
+    # Impact: Provides comprehensive metrics about container resources and performance
+    # Target: cAdvisor instances on Kubernetes nodes discovered via service discovery
+    
+    kubernetes_sd_configs:
+    # =============================================================================
+    # KUBERNETES SERVICE DISCOVERY FOR CADVISOR
+    # =============================================================================
+    # Uses Kubernetes service discovery to find cAdvisor instances
+    # for monitoring container-level metrics on worker nodes.
+    # =============================================================================
+    
+      - role: node
+      # Purpose: Discovers targets from Kubernetes nodes
+      # Why needed: cAdvisor runs as a daemon on each node
+      # Impact: Automatically discovers all worker nodes in the cluster
+      # Role: 'node' discovers targets from Kubernetes Node resources
+    
+    scheme: https
+    # Purpose: Specifies the protocol scheme for scraping
+    # Why needed: Kubernetes API server uses HTTPS for secure communication
+    # Impact: Scrapes cAdvisor metrics using HTTPS instead of HTTP
+    # Security: Ensures encrypted communication with the API server
+    
+    tls_config:
+    # =============================================================================
+    # TLS CONFIGURATION FOR CADVISOR MONITORING
+    # =============================================================================
+    # TLS configuration defines how to authenticate with the API server
+    # using certificates and tokens from the service account.
+    # =============================================================================
+    
+      ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      # Purpose: Specifies the CA certificate for API server authentication
+      # Why needed: Validates the API server's SSL certificate
+      # Impact: Ensures secure and authenticated connection to API server
+      # Path: Standard location for service account CA certificate
+    
+    bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+    # Purpose: Specifies the bearer token for API server authentication
+    # Why needed: Authenticates Prometheus with the Kubernetes API server
+    # Impact: Enables Prometheus to access cAdvisor metrics via API server
+    # Path: Standard location for service account token
+    
+    relabel_configs:
+    # =============================================================================
+    # RELABELING CONFIGURATION FOR CADVISOR MONITORING
+    # =============================================================================
+    # Relabeling rules transform discovered cAdvisor targets before scraping.
+    # This enables proper labeling and routing of container metrics.
+    # =============================================================================
+    
+      - action: labelmap
+        # Purpose: Maps Kubernetes node labels to Prometheus labels
+        # Why needed: Preserves node metadata for filtering and grouping
+        # Impact: All node labels become Prometheus labels
+        # Action: 'labelmap' copies labels from source to target
+        
+        regex: __meta_kubernetes_node_label_(.+)
+        # Purpose: Defines the regex pattern for label mapping
+        # Why needed: Matches all Kubernetes node labels
+        # Impact: Maps node labels like 'kubernetes.io/hostname' to Prometheus labels
+        # Pattern: __meta_kubernetes_node_label_(.+) matches all node label metadata
+    
+      - target_label: __address__
+        # Purpose: Sets the target address for cAdvisor metrics scraping
+        # Why needed: cAdvisor metrics are accessed via the API server proxy
+        # Impact: Routes cAdvisor metrics requests through the API server
+        # Label: __address__ is the target endpoint for scraping
+        
+        replacement: kubernetes.default.svc:443
+        # Purpose: Specifies the API server endpoint for cAdvisor metrics
+        # Why needed: cAdvisor metrics are accessed via API server proxy
+        # Impact: All cAdvisor metrics requests go through kubernetes.default.svc:443
+        # Endpoint: kubernetes.default.svc:443 is the API server service endpoint
+    
+      - source_labels: [__meta_kubernetes_node_name]
+        # Purpose: Uses node name to construct the cAdvisor metrics path
+        # Why needed: Each node has a unique cAdvisor metrics path via API server
+        # Impact: Creates node-specific cAdvisor metrics paths
+        # Label: __meta_kubernetes_node_name contains the node name
+        
+        regex: (.+)
+        # Purpose: Captures the node name for path construction
+        # Why needed: Node name is needed to build the proxy path
+        # Impact: Captures the full node name for path replacement
+        # Pattern: (.+) captures the entire node name
+        
+        target_label: __metrics_path__
+        # Purpose: Sets the metrics path for cAdvisor scraping
+        # Why needed: Defines where to find cAdvisor metrics via API server
+        # Impact: Sets the path to scrape cAdvisor metrics
+        # Label: __metrics_path__ is the HTTP path for metrics
+        
+        replacement: /api/v1/nodes/${1}/proxy/metrics/cadvisor
+        # Purpose: Constructs the API server proxy path for cAdvisor metrics
+        # Why needed: cAdvisor metrics are accessed via API server proxy
+        # Impact: Creates paths like /api/v1/nodes/node-1/proxy/metrics/cadvisor
+        # Path: ${1} is replaced with the captured node name, /cadvisor is the cAdvisor endpoint
+
+  # =============================================================================
+  # KUBERNETES SERVICES MONITORING JOB
+  # =============================================================================
+  # This job monitors Kubernetes services that have Prometheus annotations,
+  # providing metrics about service health, endpoints, and load balancing.
+  # =============================================================================
+  
+  - job_name: 'kubernetes-services'
+    # Purpose: Defines a job to monitor Kubernetes services with Prometheus annotations
+    # Why needed: Enables monitoring of service-level metrics and health
+    # Impact: Provides metrics about service endpoints, load balancing, and connectivity
+    # Target: Services with prometheus.io/scrape=true annotation
+    
+    kubernetes_sd_configs:
+    # =============================================================================
+    # KUBERNETES SERVICE DISCOVERY FOR SERVICES
+    # =============================================================================
+    # Uses Kubernetes service discovery to find services with Prometheus annotations
+    # for dynamic monitoring of service-level metrics.
+    # =============================================================================
+    
+      - role: service
+      # Purpose: Discovers targets from Kubernetes services
+      # Why needed: Service metrics are exposed by individual services
+      # Impact: Automatically discovers all services in the cluster
+      # Role: 'service' discovers targets from Kubernetes Service resources
+    
+    relabel_configs:
+    # =============================================================================
+    # RELABELING CONFIGURATION FOR SERVICE MONITORING
+    # =============================================================================
+    # Relabeling rules filter and transform discovered service targets before scraping.
+    # This enables selective monitoring based on service annotations.
+    # =============================================================================
+    
+      - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
+        # Purpose: Filters services based on Prometheus scrape annotation
+        # Why needed: Only services with explicit scrape annotation should be monitored
+        # Impact: Filters out services that don't want to be monitored
+        # Label: __meta_kubernetes_service_annotation_prometheus_io_scrape contains annotation value
+        
+        action: keep
+        # Purpose: Keeps only services that have the scrape annotation set to true
+        # Why needed: Ensures only annotated services are monitored
+        # Impact: Retains only services with prometheus.io/scrape=true
+        # Action: 'keep' retains targets that match the regex
+        
+        regex: true
+        # Purpose: Defines the regex pattern for scrape annotation filtering
+        # Why needed: Matches the value 'true' in the scrape annotation
+        # Impact: Keeps only services with prometheus.io/scrape=true
+        # Pattern: 'true' matches the boolean value for scraping enabled
+    
+      - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scheme]
+        # Purpose: Uses custom scheme from service annotation
+        # Why needed: Services may use different protocols (HTTP/HTTPS)
+        # Impact: Allows services to specify custom protocols
+        # Label: __meta_kubernetes_service_annotation_prometheus_io_scheme contains custom scheme
+        
+        action: replace
+        # Purpose: Replaces the default scheme with custom scheme
+        # Why needed: Enables custom protocols per service
+        # Impact: Uses custom scheme if specified, otherwise uses default
+        # Action: 'replace' replaces the target label value
+        
+        target_label: __scheme__
+        # Purpose: Sets the protocol scheme for service scraping
+        # Why needed: Defines the protocol to use for scraping
+        # Impact: Sets the scheme (http/https) for service metrics
+        # Label: __scheme__ is the protocol scheme for scraping
+        
+        regex: (https?)
+        # Purpose: Captures the custom scheme from annotation
+        # Why needed: Extracts the custom scheme value
+        # Impact: Captures the scheme (http or https) for replacement
+        # Pattern: (https?) captures http or https
+    
+      - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_path]
+        # Purpose: Uses custom metrics path from service annotation
+        # Why needed: Services may expose metrics on non-standard paths
+        # Impact: Allows services to specify custom metrics endpoints
+        # Label: __meta_kubernetes_service_annotation_prometheus_io_path contains custom path
+        
+        action: replace
+        # Purpose: Replaces the default metrics path with custom path
+        # Why needed: Enables custom metrics paths per service
+        # Impact: Uses custom path if specified, otherwise uses default
+        # Action: 'replace' replaces the target label value
+        
+        target_label: __metrics_path__
+        # Purpose: Sets the metrics path for service scraping
+        # Why needed: Defines where to find service metrics
+        # Impact: Sets the path to scrape service metrics
+        # Label: __metrics_path__ is the HTTP path for metrics
+        
+        regex: (.+)
+        # Purpose: Captures the custom metrics path from annotation
+        # Why needed: Extracts the custom path value
+        # Impact: Captures the full custom path for replacement
+        # Pattern: (.+) captures the entire custom path value
+    
+      - source_labels: [__address__, __meta_kubernetes_service_annotation_prometheus_io_port]
+        # Purpose: Constructs the target address with custom port
+        # Why needed: Services may expose metrics on non-standard ports
+        # Impact: Allows services to specify custom metrics ports
+        # Labels: __address__ contains service IP, annotation contains custom port
+        
+        action: replace
+        # Purpose: Replaces the target address with custom port
+        # Why needed: Enables custom ports per service
+        # Impact: Uses custom port if specified, otherwise uses default
+        # Action: 'replace' replaces the target label value
+        
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        # Purpose: Captures service IP and custom port for address construction
+        # Why needed: Extracts IP and port for proper address formatting
+        # Impact: Captures IP (with optional existing port) and custom port
+        # Pattern: ([^:]+)(?::\d+)?;(\d+) captures IP, optional port, and custom port
+        
+        replacement: $1:$2
+        # Purpose: Constructs the final target address
+        # Why needed: Creates properly formatted address with custom port
+        # Impact: Creates addresses like 10.96.0.1:8080
+        # Format: $1 (IP) : $2 (custom port)
+        
+        target_label: __address__
+        # Purpose: Sets the target address for service scraping
+        # Why needed: Defines the endpoint to scrape service metrics
+        # Impact: Sets the address to scrape service metrics
+        # Label: __address__ is the target endpoint for scraping
+    
+      - action: labelmap
+        # Purpose: Maps Kubernetes service labels to Prometheus labels
+        # Why needed: Preserves service metadata for filtering and grouping
+        # Impact: All service labels become Prometheus labels
+        # Action: 'labelmap' copies labels from source to target
+        
+        regex: __meta_kubernetes_service_label_(.+)
+        # Purpose: Defines the regex pattern for service label mapping
+        # Why needed: Matches all Kubernetes service labels
+        # Impact: Maps service labels like 'app=backend' to Prometheus labels
+        # Pattern: __meta_kubernetes_service_label_(.+) matches all service label metadata
+    
+      - source_labels: [__meta_kubernetes_namespace]
+        # Purpose: Sets the kubernetes_namespace label
+        # Why needed: Provides namespace information for metrics
+        # Impact: All service metrics are tagged with the namespace
+        # Label: __meta_kubernetes_namespace contains the namespace name
+        
+        action: replace
+        # Purpose: Replaces the target label with namespace value
+        # Why needed: Ensures consistent namespace labeling
+        # Impact: Sets kubernetes_namespace label to the service's namespace
+        # Action: 'replace' replaces the target label value
+        
+        target_label: kubernetes_namespace
+        # Purpose: Specifies the target label for namespace information
+        # Why needed: Enables filtering and grouping by namespace
+        # Impact: Sets kubernetes_namespace label for all service metrics
+        # Label: 'kubernetes_namespace' is a standard Kubernetes label
+    
+      - source_labels: [__meta_kubernetes_service_name]
+        # Purpose: Sets the kubernetes_service_name label
+        # Why needed: Provides service name information for metrics
+        # Impact: All service metrics are tagged with the service name
+        # Label: __meta_kubernetes_service_name contains the service name
+        
+        action: replace
+        # Purpose: Replaces the target label with service name value
+        # Why needed: Ensures consistent service name labeling
+        # Impact: Sets kubernetes_service_name label to the service's name
+        # Action: 'replace' replaces the target label value
+        
+        target_label: kubernetes_service_name
+        # Purpose: Specifies the target label for service name information
+        # Why needed: Enables filtering and grouping by service name
+        # Impact: Sets kubernetes_service_name label for all service metrics
+        # Label: 'kubernetes_service_name' is a standard Kubernetes label
+
+# =============================================================================
+# ALERTING CONFIGURATION SECTION
+# =============================================================================
+# The alerting section defines how Prometheus sends alerts to external
+# alerting systems like AlertManager for notification and escalation.
+# =============================================================================
+
+alerting:
+  # =============================================================================
+  # ALERTMANAGER CONFIGURATION
+  # =============================================================================
+  # Defines where Prometheus should send alerts for processing and notification.
+  # AlertManager handles alert routing, grouping, and notification delivery.
+  # =============================================================================
+  
+  alertmanagers:
+  # Purpose: Defines the AlertManager instances to send alerts to
+  # Why needed: Enables alert processing and notification delivery
+  # Impact: Alerts are sent to AlertManager for processing and routing
+  # Configuration: Can use static or service discovery configuration
+    
+    - static_configs:
+    # =============================================================================
+    # STATIC ALERTMANAGER CONFIGURATION
+    # =============================================================================
+    # Static configuration defines fixed AlertManager endpoints.
+    # This is used when AlertManager instances are known and stable.
+    # =============================================================================
+    
+        - targets:
+        # Purpose: Specifies the AlertManager endpoints
+        # Why needed: Defines where to send alerts for processing
+        # Impact: Alerts are sent to these AlertManager instances
+        # Endpoints: List of AlertManager service endpoints
+        
+          - alertmanager:9093
+          # Purpose: Specifies the AlertManager service endpoint
+          # Why needed: AlertManager listens on port 9093 for alerts
+          # Impact: Alerts are sent to alertmanager:9093
+          # Port: 9093 is the standard AlertManager port
+          # Service: 'alertmanager' is the Kubernetes service name
+
+# =============================================================================
+# STORAGE CONFIGURATION SECTION
+# =============================================================================
+# The storage section defines how Prometheus stores time series data
+# and manages data retention for efficient storage usage.
+# =============================================================================
+
+storage:
+  # =============================================================================
+  # TSDB (TIME SERIES DATABASE) CONFIGURATION
+  # =============================================================================
+  # TSDB is Prometheus's built-in time series database for storing metrics.
+  # This configuration defines retention policies and storage limits.
+  # =============================================================================
+  
+  tsdb:
+  # Purpose: Configures the Time Series Database storage settings
+  # Why needed: Defines how metrics are stored and retained
+  # Impact: Controls storage usage and data retention policies
+  # Database: TSDB is Prometheus's native time series storage engine
+    
+    retention.time: 15d
+    # Purpose: Defines how long to retain time series data
+    # Why needed: Prevents unlimited storage growth and manages disk usage
+    # Impact: Data older than 15 days is automatically deleted
+    # Time: 15 days provides good balance between data availability and storage
+    # Unit: 'd' represents days (15d = 15 days)
+    
+    retention.size: 1GB
+    # Purpose: Defines the maximum storage size for time series data
+    # Why needed: Prevents storage from growing beyond available disk space
+    # Impact: When storage reaches 1GB, oldest data is deleted
+    # Size: 1GB provides reasonable storage for development environment
+    # Unit: 'GB' represents gigabytes (1GB = 1 gigabyte)
+
+# =============================================================================
+# REMOTE WRITE CONFIGURATION (OPTIONAL)
+# =============================================================================
+# Remote write allows Prometheus to send samples to external systems
+# for long-term storage, federation, or real-time processing.
+# =============================================================================
+
+# remote_write:
+#   # =============================================================================
+#   # REMOTE WRITE TARGETS
+#   # =============================================================================
+#   # Defines external systems to send metrics to for storage or processing.
+#   # This is useful for long-term storage or real-time analytics.
+#   # =============================================================================
+#   
+#   - url: "https://prometheus-remote-write-endpoint/api/v1/write"
+#     # Purpose: Specifies the remote write endpoint URL
+#     # Why needed: Enables sending metrics to external storage systems
+#     # Impact: Metrics are sent to this endpoint for processing
+#     # URL: Replace with actual remote write endpoint
+#     
+#     basic_auth:
+#     # =============================================================================
+#     # BASIC AUTHENTICATION FOR REMOTE WRITE
+#     # =============================================================================
+#     # Provides authentication credentials for the remote write endpoint.
+#     # This ensures secure communication with external systems.
+#     # =============================================================================
+#     
+#       username: "username"
+#       # Purpose: Specifies the username for authentication
+#       # Why needed: Authenticates with the remote write endpoint
+#       # Impact: Enables secure access to remote write service
+#       # Value: Replace with actual username
+#       
+#       password: "password"
+#       # Purpose: Specifies the password for authentication
+#       # Why needed: Authenticates with the remote write endpoint
+#       # Impact: Enables secure access to remote write service
+#       # Value: Replace with actual password
+
+# =============================================================================
+# REMOTE READ CONFIGURATION (OPTIONAL)
+# =============================================================================
+# Remote read allows Prometheus to read samples from external systems
+# for querying historical data or federated data sources.
+# =============================================================================
+
+# remote_read:
+#   # =============================================================================
+#   # REMOTE READ TARGETS
+#   # =============================================================================
+#   # Defines external systems to read metrics from for querying.
+#   # This is useful for accessing historical data or federated queries.
+#   # =============================================================================
+#   
+#   - url: "https://prometheus-remote-read-endpoint/api/v1/read"
+#     # Purpose: Specifies the remote read endpoint URL
+#     # Why needed: Enables reading metrics from external storage systems
+#     # Impact: Queries can access data from this endpoint
+#     # URL: Replace with actual remote read endpoint
+#     
+#     basic_auth:
+#     # =============================================================================
+#     # BASIC AUTHENTICATION FOR REMOTE READ
+#     # =============================================================================
+#     # Provides authentication credentials for the remote read endpoint.
+#     # This ensures secure communication with external systems.
+#     # =============================================================================
+#     
+#       username: "username"
+#       # Purpose: Specifies the username for authentication
+#       # Why needed: Authenticates with the remote read endpoint
+#       # Impact: Enables secure access to remote read service
+#       # Value: Replace with actual username
+#       
+#       password: "password"
+#       # Purpose: Specifies the password for authentication
+#       # Why needed: Authenticates with the remote read endpoint
+#       # Impact: Enables secure access to remote read service
+#       # Value: Replace with actual password
+
+# =============================================================================
+# END OF PROMETHEUS CONFIGURATION
+# =============================================================================
+# This configuration provides comprehensive monitoring for the e-commerce
+# foundation infrastructure, including:
+# - Self-monitoring of Prometheus
+# - Kubernetes cluster monitoring (API server, nodes, pods, services)
+# - E-commerce application monitoring (backend)
+# - Infrastructure monitoring (Node Exporter, cAdvisor)
+# - Alerting configuration for AlertManager
+# - Storage configuration with retention policies
+# - Optional remote write/read for external systems
+# =============================================================================

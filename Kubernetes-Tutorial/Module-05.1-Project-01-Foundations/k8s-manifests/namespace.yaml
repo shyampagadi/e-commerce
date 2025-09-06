@@ -1,51 +1,165 @@
 # Namespace and Resource Quota for E-commerce Foundation Infrastructure
 # This manifest creates the namespace and resource quotas for the e-commerce project
 
+# =============================================================================
+# NAMESPACE DEFINITION
+# =============================================================================
+# Purpose: Creates a logical boundary for e-commerce application resources
+# Why needed: Provides isolation, resource management, and access control
+# Kubernetes concept: Namespaces are virtual clusters within a physical cluster
+
 apiVersion: v1
+# API Version: v1 is the stable version for core Kubernetes resources
+# This is the most commonly used API version for basic resources like Namespace
+
 kind: Namespace
+# Resource Type: Namespace is a Kubernetes resource that provides logical separation
+# Namespaces allow multiple teams to share the same cluster without conflicts
+
 metadata:
+  # Metadata section contains identifying information about the resource
   name: ecommerce
+  # Name: Unique identifier for the namespace within the cluster
+  # This name will be used to reference the namespace in other resources
+  
   labels:
+    # Labels: Key-value pairs for organizing and selecting resources
     name: ecommerce
+    # name: ecommerce - Identifies this as the e-commerce namespace
     environment: development
+    # environment: development - Indicates this is a development environment
     project: ecommerce-foundation
+    # project: ecommerce-foundation - Groups resources by project
     team: platform-engineering
+    # team: platform-engineering - Identifies the owning team
+  
   annotations:
+    # Annotations: Additional metadata that doesn't affect resource behavior
     description: "Namespace for e-commerce foundation infrastructure"
+    # description: Human-readable description of the namespace purpose
     contact: "platform-engineering@techcorp.com"
+    # contact: Email address for the team responsible for this namespace
 ---
-# Resource Quota to prevent resource exhaustion
+# =============================================================================
+# RESOURCE QUOTA DEFINITION
+# =============================================================================
+# Purpose: Limits the total amount of resources that can be consumed in the namespace
+# Why needed: Prevents resource exhaustion and ensures fair resource allocation
+# Kubernetes concept: ResourceQuota enforces resource limits at the namespace level
+
 apiVersion: v1
+# API Version: v1 is the stable version for ResourceQuota resources
+
 kind: ResourceQuota
+# Resource Type: ResourceQuota limits the amount of resources in a namespace
+# This prevents any single namespace from consuming all cluster resources
+
 metadata:
+  # Metadata section for the ResourceQuota resource
   name: ecommerce-quota
+  # Name: Unique identifier for this resource quota within the namespace
   namespace: ecommerce
+  # Namespace: Specifies which namespace this quota applies to
+  # Must match the namespace created above
+  
   labels:
+    # Labels: Key-value pairs for organizing and selecting resources
     app: ecommerce
+    # app: ecommerce - Identifies this quota as belonging to the e-commerce app
     environment: development
+    # environment: development - Indicates this is for development environment
+
 spec:
+  # Specification section defines the actual quota limits
   hard:
-    # CPU limits
+    # hard: Enforces strict limits - requests exceeding these will be rejected
+    
+    # =============================================================================
+    # CPU RESOURCE LIMITS
+    # =============================================================================
     requests.cpu: "2"
+    # requests.cpu: "2" - Maximum total CPU requests allowed in the namespace
+    # Value: 2 CPU cores (2000 millicores)
+    # Purpose: Limits the sum of all CPU requests from pods in this namespace
+    # Impact: Pods requesting more than 2 CPU cores total will be rejected
+    
     limits.cpu: "4"
+    # limits.cpu: "4" - Maximum total CPU limits allowed in the namespace
+    # Value: 4 CPU cores (4000 millicores)
+    # Purpose: Limits the sum of all CPU limits from pods in this namespace
+    # Impact: Pods with limits exceeding 4 CPU cores total will be rejected
     
-    # Memory limits
+    # =============================================================================
+    # MEMORY RESOURCE LIMITS
+    # =============================================================================
     requests.memory: 4Gi
+    # requests.memory: 4Gi - Maximum total memory requests allowed
+    # Value: 4 Gibibytes (4 * 1024^3 bytes)
+    # Purpose: Limits the sum of all memory requests from pods
+    # Impact: Pods requesting more than 4Gi memory total will be rejected
+    
     limits.memory: 8Gi
+    # limits.memory: 8Gi - Maximum total memory limits allowed
+    # Value: 8 Gibibytes (8 * 1024^3 bytes)
+    # Purpose: Limits the sum of all memory limits from pods
+    # Impact: Pods with limits exceeding 8Gi memory total will be rejected
     
-    # Storage limits
+    # =============================================================================
+    # STORAGE RESOURCE LIMITS
+    # =============================================================================
     persistentvolumeclaims: "4"
+    # persistentvolumeclaims: "4" - Maximum number of PVCs allowed
+    # Value: 4 persistent volume claims
+    # Purpose: Limits the number of storage claims in the namespace
+    # Impact: Creating more than 4 PVCs will be rejected
+    
     requests.storage: "20Gi"
+    # requests.storage: "20Gi" - Maximum total storage requests allowed
+    # Value: 20 Gibibytes of storage
+    # Purpose: Limits the total storage capacity that can be requested
+    # Impact: PVCs requesting more than 20Gi total storage will be rejected
     
-    # Object limits
+    # =============================================================================
+    # OBJECT COUNT LIMITS
+    # =============================================================================
     pods: "10"
-    services: "5"
-    configmaps: "10"
-    secrets: "10"
+    # pods: "10" - Maximum number of pods allowed in the namespace
+    # Value: 10 pods
+    # Purpose: Prevents namespace from creating too many pods
+    # Impact: Creating more than 10 pods will be rejected
     
-    # Network limits
+    services: "5"
+    # services: "5" - Maximum number of services allowed
+    # Value: 5 services
+    # Purpose: Limits the number of service endpoints
+    # Impact: Creating more than 5 services will be rejected
+    
+    configmaps: "10"
+    # configmaps: "10" - Maximum number of ConfigMaps allowed
+    # Value: 10 ConfigMaps
+    # Purpose: Limits configuration storage objects
+    # Impact: Creating more than 10 ConfigMaps will be rejected
+    
+    secrets: "10"
+    # secrets: "10" - Maximum number of Secrets allowed
+    # Value: 10 Secrets
+    # Purpose: Limits sensitive data storage objects
+    # Impact: Creating more than 10 Secrets will be rejected
+    
+    # =============================================================================
+    # NETWORK RESOURCE LIMITS
+    # =============================================================================
     count/ingresses.extensions: "2"
+    # count/ingresses.extensions: "2" - Maximum Ingress resources (extensions API)
+    # Value: 2 Ingress resources
+    # Purpose: Limits external access points
+    # Impact: Creating more than 2 Ingress resources will be rejected
+    
     count/ingresses.networking.k8s.io: "2"
+    # count/ingresses.networking.k8s.io: "2" - Maximum Ingress resources (networking API)
+    # Value: 2 Ingress resources
+    # Purpose: Limits external access points (newer API version)
+    # Impact: Creating more than 2 Ingress resources will be rejected
 ---
 # Limit Range to set default resource limits
 apiVersion: v1

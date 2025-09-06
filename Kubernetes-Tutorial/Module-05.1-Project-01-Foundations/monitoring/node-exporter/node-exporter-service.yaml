@@ -1,0 +1,117 @@
+# =============================================================================
+# NODE EXPORTER SERVICE MANIFEST
+# =============================================================================
+# This manifest creates a Kubernetes Service for Node Exporter to expose
+# system metrics from all nodes for the e-commerce foundation infrastructure.
+# =============================================================================
+
+apiVersion: v1
+# =============================================================================
+# API VERSION SPECIFICATION
+# =============================================================================
+# Specifies the Kubernetes API version for this resource manifest.
+# v1 is the stable, production-ready version for Service resources.
+# =============================================================================
+
+kind: Service
+# =============================================================================
+# RESOURCE KIND DEFINITION
+# =============================================================================
+# Service is a Kubernetes resource that provides stable network access to pods.
+# This service exposes Node Exporter metrics on a consistent port and IP.
+# =============================================================================
+
+metadata:
+  # =============================================================================
+  # METADATA SECTION
+  # =============================================================================
+  # Contains metadata about the Service including name, namespace, and labels.
+  # =============================================================================
+  
+  name: node-exporter
+  # Purpose: Specifies the unique name of the Service within the namespace
+  # Why needed: Identifies the Service for management and reference
+  # Impact: Service will be named 'node-exporter' and accessible by this name
+  # Naming: Follows kebab-case convention for Kubernetes resources
+  
+  namespace: monitoring
+  # Purpose: Specifies the Kubernetes namespace where the Service will be created
+  # Why needed: Isolates monitoring components in dedicated namespace
+  # Impact: Service will be created in the monitoring namespace
+  # Namespace: 'monitoring' is the standard namespace for monitoring components
+  
+  labels:
+  # =============================================================================
+  # LABELS SECTION
+  # =============================================================================
+  # Labels provide metadata for resource identification and selection.
+  # =============================================================================
+    
+    app: node-exporter
+    # Purpose: Identifies the application name
+    # Why needed: Enables resource selection and management
+    # Impact: Service can be selected using app=node-exporter
+    # Value: 'node-exporter' matches the application name
+    
+    component: monitoring
+    # Purpose: Identifies the component type
+    # Why needed: Groups related monitoring components
+    # Impact: Service can be selected using component=monitoring
+    # Value: 'monitoring' identifies this as a monitoring component
+
+spec:
+  # =============================================================================
+  # SERVICE SPECIFICATION
+  # =============================================================================
+  # Defines the desired state of the Service including ports and selectors.
+  # =============================================================================
+  
+  type: ClusterIP
+  # Purpose: Specifies the Service type for internal cluster communication
+  # Why needed: Node Exporter metrics should only be accessible within the cluster
+  # Impact: Service is only accessible from within the Kubernetes cluster
+  # Type: ClusterIP provides internal cluster access only
+  
+  ports:
+  # =============================================================================
+  # SERVICE PORTS
+  # =============================================================================
+  # Defines the ports that the Service exposes and maps to pod ports.
+  # =============================================================================
+    
+  - name: metrics
+    # Purpose: Specifies the port name for service discovery
+    # Why needed: Identifies the port for Prometheus service discovery
+    # Impact: Port can be referenced by name in Prometheus configuration
+    # Name: 'metrics' identifies this as the metrics port
+    
+    port: 9100
+    # Purpose: Specifies the port number that the Service exposes
+    # Why needed: Node Exporter listens on port 9100
+    # Impact: Service exposes metrics on port 9100
+    # Port: 9100 is the standard Node Exporter port
+    
+    targetPort: 9100
+    # Purpose: Specifies the port number on the target pods
+    # Why needed: Maps Service port to pod port
+    # Impact: Traffic to Service port 9100 is forwarded to pod port 9100
+    # Port: 9100 matches the Node Exporter container port
+    
+    protocol: TCP
+    # Purpose: Specifies the network protocol
+    # Why needed: Defines the protocol for port communication
+    # Impact: Port uses TCP protocol for reliable communication
+    # Protocol: TCP is the standard protocol for metrics collection
+  
+  selector:
+  # =============================================================================
+  # POD SELECTOR
+  # =============================================================================
+  # Defines which pods the Service should route traffic to.
+  # =============================================================================
+    
+    app: node-exporter
+    # Purpose: Selects pods with the app=node-exporter label
+    # Why needed: Routes traffic to Node Exporter pods
+    # Impact: Service will route traffic to all pods with this label
+    # Label: app=node-exporter matches the DaemonSet pod labels

@@ -1,0 +1,148 @@
+# =============================================================================
+# DATABASE SERVICE MANIFEST
+# =============================================================================
+# This manifest defines the service configuration for the e-commerce database
+# application. It provides a stable network endpoint for accessing the database
+# and enables secure communication between the backend and database.
+# =============================================================================
+
+apiVersion: v1
+kind: Service
+metadata:
+  # =============================================================================
+  # METADATA SECTION
+  # =============================================================================
+  # The metadata section provides identifying information about the service
+  # resource, including its name, namespace, and labels for organization and
+  # selection purposes.
+  # =============================================================================
+  
+  name: ecommerce-database-service
+  # Purpose: Unique identifier for the database service within the namespace
+  # Why needed: Kubernetes uses this name for service discovery and DNS resolution
+  # Impact: Required for kubectl operations and internal service communication
+  
+  namespace: ecommerce
+  # Purpose: Specifies which namespace this service belongs to
+  # Why needed: Provides logical separation and resource isolation
+  # Impact: Ensures database service runs in the same namespace as frontend and backend
+  
+  labels:
+    # =============================================================================
+    # LABELS SECTION
+    # =============================================================================
+    # Labels provide key-value pairs for identifying and selecting resources.
+    # They enable efficient resource management and service discovery.
+    # =============================================================================
+    
+    app: ecommerce-database
+    # Purpose: Identifies this as the database component of the e-commerce application
+    # Why needed: Enables service discovery and resource selection
+    # Impact: Allows other services to identify and connect to the database
+    
+    tier: database
+    # Purpose: Categorizes this as a database tier component
+    # Why needed: Enables tier-based resource management and monitoring
+    # Impact: Allows filtering and grouping of database resources
+    
+    version: v1.0.0
+    # Purpose: Tracks the version of the database service
+    # Why needed: Enables version management and service discovery
+    # Impact: Supports version-based service selection and routing
+    
+    component: database
+    # Purpose: Identifies this as a database component service
+    # Why needed: Enables component-based resource organization
+    # Impact: Allows filtering by component type for monitoring and management
+
+spec:
+  # =============================================================================
+  # SPECIFICATION SECTION
+  # =============================================================================
+  # The spec section defines the desired state of the service, including
+  # selector, ports, and service type configuration.
+  # =============================================================================
+  
+  type: ClusterIP
+  # Purpose: Specifies the service type for internal cluster communication
+  # Why needed: Provides internal access to database pods within the cluster
+  # Impact: Database is accessible only within the cluster network
+  # Service type: ClusterIP is the default type for internal services
+  # Security: ClusterIP prevents external access to the database
+  
+  selector:
+    # =============================================================================
+    # SELECTOR SECTION
+    # =============================================================================
+    # The selector defines which pods this service will route traffic to.
+    # It must match the labels in the pod template of the deployment.
+    # =============================================================================
+    
+    app: ecommerce-database
+    # Purpose: Matches pods with the database application label
+    # Why needed: Enables the service to route traffic to database pods
+    # Impact: Ensures only database pods receive traffic from this service
+    
+    tier: database
+    # Purpose: Ensures only database tier pods are selected
+    # Why needed: Provides additional specificity for pod selection
+    # Impact: Prevents accidental traffic routing to other tier pods
+
+  ports:
+  # =============================================================================
+  # PORTS SECTION
+  # =============================================================================
+  # The ports section defines the network ports that the service will expose
+  # and how traffic will be routed to the backend pods.
+  # =============================================================================
+  
+  - name: postgres
+    # Purpose: Names the port for easy reference and identification
+    # Why needed: Enables port identification in services and ingress
+    # Impact: Allows other resources to reference this port by name
+    # Port name: "postgres" indicates this is the PostgreSQL database port
+    
+    port: 5432
+    # Purpose: Specifies the port the service will listen on
+    # Why needed: Defines the external port for accessing the database
+    # Impact: Backend connects to the database using port 5432
+    # Protocol: PostgreSQL default port 5432
+    
+    targetPort: 5432
+    # Purpose: Specifies the port on the database pods to route traffic to
+    # Why needed: Maps external service port to internal pod port
+    # Impact: Traffic to service port 5432 is routed to pod port 5432
+    # Port mapping: Service port 5432 -> Pod port 5432
+    
+    protocol: TCP
+    # Purpose: Specifies the network protocol for this port
+    # Why needed: Defines the communication protocol for the service
+    # Impact: Ensures proper network configuration and routing
+    # Protocol: TCP for reliable PostgreSQL communication
+
+  sessionAffinity: None
+  # Purpose: Specifies how traffic is distributed across backend pods
+  # Why needed: Controls load balancing behavior for the database service
+  # Impact: Traffic is distributed evenly across all database pod replicas
+  # Affinity: None means no session affinity (stateless load balancing)
+  # Note: Single replica database, so session affinity is not critical
+
+  # =============================================================================
+  # SERVICE DISCOVERY AND DNS
+  # =============================================================================
+  # This service will be accessible via DNS within the cluster:
+  # - Full DNS name: ecommerce-database-service.ecommerce.svc.cluster.local
+  # - Short DNS name: ecommerce-database-service.ecommerce
+  # - Namespace-scoped: ecommerce-database-service
+  # =============================================================================
+
+# =============================================================================
+# END OF DATABASE SERVICE MANIFEST
+# =============================================================================
+# This manifest creates a service for the e-commerce database application that:
+# - Provides stable network access to database pods
+# - Enables secure internal cluster communication
+# - Uses ClusterIP type for secure internal access
+# - Maps external port 5432 to internal pod port 5432
+# - Supports PostgreSQL database connections
+# =============================================================================

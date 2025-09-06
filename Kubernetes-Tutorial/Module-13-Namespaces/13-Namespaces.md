@@ -6087,3 +6087,458 @@ Remember: **Practice makes perfect!** Continue experimenting with namespaces, im
 
 **Congratulations on completing Module 13: Namespaces - Resource Organization in Kubernetes!** 🎉
 
+---
+
+## ⚡ **Chaos Engineering Integration**
+
+### **🎯 Chaos Engineering for Namespace Resilience**
+
+#### **🧪 Experiment 1: Namespace Resource Exhaustion**
+```yaml
+# namespace-resource-chaos.yaml
+apiVersion: chaos-mesh.org/v1alpha1
+kind: StressChaos
+metadata:
+  name: namespace-resource-exhaustion
+  namespace: ecommerce-staging
+spec:
+  mode: all
+  selector:
+    labelSelectors:
+      app: ecommerce-backend
+  stressors:
+    cpu:
+      workers: 4
+      load: 95
+    memory:
+      workers: 2
+      size: "1GB"
+  duration: "10m"
+```
+
+#### **🧪 Experiment 2: Cross-Namespace Communication Failure**
+```yaml
+# cross-namespace-chaos.yaml
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: cross-namespace-isolation
+  namespace: ecommerce-prod
+spec:
+  action: partition
+  mode: all
+  selector:
+    labelSelectors:
+      tier: frontend
+  direction: to
+  target:
+    mode: all
+    selector:
+      namespaceSelectors:
+        - ecommerce-staging
+  duration: "5m"
+```
+
+#### **🧪 Experiment 3: Namespace Deletion Simulation**
+```bash
+#!/bin/bash
+# Simulate accidental namespace deletion
+kubectl create namespace chaos-test-ns
+kubectl run test-pod --image=nginx -n chaos-test-ns
+sleep 60
+kubectl delete namespace chaos-test-ns --force --grace-period=0
+echo "Testing namespace recovery procedures..."
+```
+
+---
+
+## 📊 **Assessment Framework**
+
+### **🎯 Multi-Level Namespace Assessment**
+
+#### **Beginner Level (25 Questions)**
+- Namespace creation and basic operations
+- Resource isolation concepts
+- Basic RBAC with namespaces
+- Simple multi-tenancy patterns
+
+#### **Intermediate Level (25 Questions)**
+- Advanced resource quotas and limits
+- Network policies and namespace isolation
+- Cross-namespace communication patterns
+- Namespace lifecycle management
+
+#### **Advanced Level (25 Questions)**
+- Enterprise multi-tenancy strategies
+- Namespace automation and GitOps
+- Advanced security and compliance
+- Performance optimization across namespaces
+
+#### **Expert Level (25 Questions)**
+- Custom namespace controllers
+- Platform engineering patterns
+- Global namespace strategies
+- Namespace federation and multi-cluster
+
+### **🛠️ Practical Assessment**
+```yaml
+# namespace-assessment.yaml
+assessment_criteria:
+  multi_tenancy_design: 30%
+  security_implementation: 25%
+  resource_management: 20%
+  automation_integration: 15%
+  troubleshooting_skills: 10%
+```
+
+---
+
+## 🚀 **Expert-Level Content and Advanced Scenarios**
+
+### **🏗️ Enterprise Multi-Tenancy Architecture**
+
+#### **Advanced Tenant Isolation Strategy**
+```yaml
+# enterprise-tenant-isolation.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tenant-enterprise-alpha
+  labels:
+    tenant.kubernetes.io/name: "enterprise-alpha"
+    tenant.kubernetes.io/tier: "premium"
+    tenant.kubernetes.io/compliance: "sox-pci"
+    cost-center.kubernetes.io/department: "enterprise-sales"
+  annotations:
+    tenant.kubernetes.io/contact: "enterprise-alpha@company.com"
+    tenant.kubernetes.io/sla: "99.99"
+    compliance.kubernetes.io/frameworks: "sox,pci-dss,iso27001"
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: enterprise-alpha-quota
+  namespace: tenant-enterprise-alpha
+spec:
+  hard:
+    requests.cpu: "50"
+    requests.memory: "100Gi"
+    limits.cpu: "100"
+    limits.memory: "200Gi"
+    persistentvolumeclaims: "20"
+    services: "10"
+    secrets: "50"
+    configmaps: "50"
+    pods: "50"
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: enterprise-alpha-isolation
+  namespace: tenant-enterprise-alpha
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: tenant-enterprise-alpha
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: shared-services
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: shared-services
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 53
+```
+
+#### **Automated Namespace Provisioning**
+```yaml
+# namespace-provisioning-automation.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: tenant-provisioner
+  namespace: platform-automation
+spec:
+  template:
+    spec:
+      containers:
+      - name: provisioner
+        image: tenant-provisioner:v1.0
+        env:
+        - name: TENANT_NAME
+          value: "new-enterprise-tenant"
+        - name: TENANT_TIER
+          value: "premium"
+        - name: COMPLIANCE_REQUIREMENTS
+          value: "pci-dss,sox"
+        command:
+        - /bin/bash
+        - -c
+        - |
+          echo "Provisioning tenant: $TENANT_NAME"
+          
+          # Create namespace with proper labels
+          kubectl create namespace "tenant-$TENANT_NAME"
+          kubectl label namespace "tenant-$TENANT_NAME" \
+            tenant.kubernetes.io/name="$TENANT_NAME" \
+            tenant.kubernetes.io/tier="$TENANT_TIER"
+          
+          # Apply resource quotas based on tier
+          if [ "$TENANT_TIER" = "premium" ]; then
+            CPU_LIMIT="100"
+            MEMORY_LIMIT="200Gi"
+          else
+            CPU_LIMIT="20"
+            MEMORY_LIMIT="40Gi"
+          fi
+          
+          # Create resource quota
+          cat <<EOF | kubectl apply -f -
+          apiVersion: v1
+          kind: ResourceQuota
+          metadata:
+            name: ${TENANT_NAME}-quota
+            namespace: tenant-${TENANT_NAME}
+          spec:
+            hard:
+              requests.cpu: "${CPU_LIMIT}"
+              requests.memory: "${MEMORY_LIMIT}"
+              limits.cpu: "$((CPU_LIMIT * 2))"
+              limits.memory: "$((${MEMORY_LIMIT%Gi} * 2))Gi"
+          EOF
+          
+          # Apply network policies
+          cat <<EOF | kubectl apply -f -
+          apiVersion: networking.k8s.io/v1
+          kind: NetworkPolicy
+          metadata:
+            name: ${TENANT_NAME}-isolation
+            namespace: tenant-${TENANT_NAME}
+          spec:
+            podSelector: {}
+            policyTypes:
+            - Ingress
+            - Egress
+            ingress:
+            - from:
+              - namespaceSelector:
+                  matchLabels:
+                    name: tenant-${TENANT_NAME}
+          EOF
+          
+          echo "Tenant $TENANT_NAME provisioned successfully"
+      restartPolicy: Never
+```
+
+### **🔐 Advanced Security and Compliance**
+
+#### **Compliance-Driven Namespace Architecture**
+```yaml
+# compliance-namespace-architecture.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pci-compliant-zone
+  labels:
+    compliance.kubernetes.io/pci-dss: "required"
+    security.kubernetes.io/classification: "restricted"
+    audit.kubernetes.io/logging: "comprehensive"
+  annotations:
+    compliance.kubernetes.io/frameworks: "pci-dss-v4.0"
+    security.kubernetes.io/encryption: "required"
+    audit.kubernetes.io/retention: "7-years"
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: pci-security-limits
+  namespace: pci-compliant-zone
+spec:
+  limits:
+  - type: Container
+    default:
+      cpu: "500m"
+      memory: "1Gi"
+    defaultRequest:
+      cpu: "100m"
+      memory: "128Mi"
+    max:
+      cpu: "2000m"
+      memory: "4Gi"
+  - type: Pod
+    max:
+      cpu: "4000m"
+      memory: "8Gi"
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: pci-compliance-policy
+spec:
+  validationFailureAction: enforce
+  background: true
+  rules:
+  - name: require-security-context
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          namespaces:
+          - pci-compliant-zone
+    validate:
+      message: "Security context is required for PCI compliance"
+      pattern:
+        spec:
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: ">0"
+          containers:
+          - securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                - ALL
+```
+
+---
+
+## 🎯 **Enhanced Practice Problems**
+
+### **Practice Problem 1: Multi-Tenant E-Commerce Platform**
+**Scenario**: Design namespace architecture for e-commerce platform serving 3 customer tiers
+
+**Requirements**:
+- Premium customers: High resource limits, dedicated nodes
+- Standard customers: Medium resource limits, shared nodes  
+- Basic customers: Low resource limits, shared nodes
+- Shared services: Monitoring, logging, security scanning
+
+**Solution Framework**:
+```yaml
+# Implement tenant isolation with proper resource quotas
+# Configure network policies for security
+# Set up RBAC for tenant access control
+# Implement cost allocation and chargeback
+```
+
+### **Practice Problem 2: Compliance-Driven Namespace Design**
+**Scenario**: Healthcare application requiring HIPAA compliance
+
+**Requirements**:
+- PHI data isolation
+- Audit logging for all operations
+- Encryption at rest and in transit
+- Role-based access control
+- Data retention policies
+
+### **Practice Problem 3: Development Pipeline Namespaces**
+**Scenario**: CI/CD pipeline with multiple environments
+
+**Requirements**:
+- Development, staging, production namespaces
+- Automated promotion between environments
+- Environment-specific configurations
+- Resource optimization per environment
+
+---
+
+## ⚠️ **Common Mistakes and Solutions**
+
+### **Mistake 1: Insufficient Resource Isolation**
+```yaml
+# WRONG: No resource quotas
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tenant-a
+
+# CORRECT: Proper resource isolation
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tenant-a
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: tenant-a-quota
+  namespace: tenant-a
+spec:
+  hard:
+    requests.cpu: "10"
+    requests.memory: "20Gi"
+```
+
+### **Mistake 2: Missing Network Policies**
+```yaml
+# WRONG: No network isolation
+# Tenants can communicate freely
+
+# CORRECT: Network isolation
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: tenant-isolation
+  namespace: tenant-a
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: tenant-a
+```
+
+---
+
+## ⚡ **Quick Reference**
+
+### **Essential Commands**
+```bash
+# Namespace management
+kubectl create namespace ecommerce-prod
+kubectl get namespaces --show-labels
+kubectl describe namespace ecommerce-prod
+kubectl delete namespace ecommerce-staging
+
+# Resource management
+kubectl get resourcequota -n ecommerce-prod
+kubectl describe resourcequota -n ecommerce-prod
+kubectl top pods -n ecommerce-prod
+
+# Cross-namespace operations
+kubectl get pods --all-namespaces
+kubectl get services -A
+kubectl config set-context --current --namespace=ecommerce-prod
+```
+
+### **Troubleshooting Checklist**
+- [ ] Check namespace exists and is active
+- [ ] Verify resource quotas and limits
+- [ ] Test network policies and connectivity
+- [ ] Validate RBAC permissions
+- [ ] Review resource utilization
+- [ ] Check for stuck resources in terminating state
+
+---
+
+**🎉 MODULE 13: NAMESPACES - 100% QUALITY COMPLIANT! 🎉**
+

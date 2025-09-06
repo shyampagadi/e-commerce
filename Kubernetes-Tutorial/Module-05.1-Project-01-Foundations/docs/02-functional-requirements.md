@@ -16,21 +16,111 @@ This document defines the detailed functional requirements for the E-commerce Fo
 
 ## 🏗️ **System Architecture Requirements**
 
-### **1. Containerization Requirements**
+### **1. Linux Command Proficiency Requirements (Module 0)**
 
-#### **1.1 Application Containerization**
-- **REQ-001**: The e-commerce backend application MUST be containerized using Docker
-- **REQ-002**: Container images MUST be based on minimal base images (e.g., python:3.11-slim)
-- **REQ-003**: Container images MUST NOT run as root user
-- **REQ-004**: Container images MUST include health check endpoints
-- **REQ-005**: Container images MUST be optimized for size (<500MB)
-- **REQ-006**: Container images MUST be scanned for security vulnerabilities
+#### **1.1 Essential Linux Commands**
+- **REQ-001**: Team MUST demonstrate proficiency in file operations (ls, cp, mv, rm, mkdir, rmdir, find, locate)
+- **REQ-002**: Team MUST demonstrate proficiency in text processing (cat, less, more, head, tail, grep, awk, sed, cut, sort, uniq)
+- **REQ-003**: Team MUST demonstrate proficiency in system monitoring (ps, top, htop, kill, killall, pgrep, pkill, uptime, date)
+- **REQ-004**: Team MUST demonstrate proficiency in network tools (ping, traceroute, netstat, ss, curl, wget, telnet)
+- **REQ-005**: Team MUST demonstrate proficiency in file permissions (chmod, chown, chgrp, umask)
+- **REQ-006**: Team MUST demonstrate proficiency in system information (uname, whoami, id, w, who, df, du, mount, umount)
+- **REQ-007**: Team MUST demonstrate proficiency in text editors (nano, vim, emacs)
+- **REQ-008**: Team MUST demonstrate proficiency in shell operations (history, alias, export, source, which, whereis)
 
-#### **1.2 Multi-Stage Build Requirements**
-- **REQ-007**: Dockerfile MUST use multi-stage builds for optimization
-- **REQ-008**: Build dependencies MUST be excluded from final image
-- **REQ-009**: Application code MUST be copied with proper ownership
-- **REQ-010**: Environment variables MUST be properly configured
+#### **1.2 Advanced Linux Tools**
+- **REQ-009**: Team MUST demonstrate proficiency in JSON processing (jq, yq)
+- **REQ-010**: Team MUST demonstrate proficiency in system monitoring tools (iotop, nethogs, glances, htop)
+- **REQ-011**: Team MUST demonstrate proficiency in network analysis (tcpdump, wireshark, nmap)
+- **REQ-012**: Team MUST demonstrate proficiency in file transfer (rsync, scp, sftp)
+- **REQ-013**: Team MUST demonstrate proficiency in package management (apt, yum, dnf, pacman, zypper)
+
+### **2. Container Fundamentals Requirements (Module 1)**
+
+#### **2.1 Container Architecture Understanding**
+- **REQ-014**: Team MUST understand Linux namespaces (all 7 types: PID, Network, Mount, UTS, IPC, User, Cgroup)
+- **REQ-015**: Team MUST understand control groups (cgroups) for resource management
+- **REQ-016**: Team MUST understand container security model and isolation
+- **REQ-017**: Team MUST understand container networking and storage drivers
+
+#### **2.2 Docker Proficiency**
+- **REQ-018**: Team MUST demonstrate proficiency in Docker commands (run, build, push, pull, exec, logs, inspect)
+- **REQ-019**: Team MUST demonstrate proficiency in Dockerfile creation and optimization
+- **REQ-020**: Team MUST demonstrate proficiency in Docker Compose for multi-container applications
+- **REQ-021**: Team MUST demonstrate proficiency in container lifecycle management
+- **REQ-022**: Team MUST demonstrate proficiency in image optimization and multi-stage builds
+
+#### **2.3 Container Security**
+- **REQ-023**: Containers MUST run as non-root users
+- **REQ-024**: Container images MUST be scanned for vulnerabilities
+- **REQ-025**: Container images MUST use minimal base images
+- **REQ-026**: Container images MUST include health check endpoints
+
+### **3. Linux System Administration Requirements (Module 2)**
+
+#### **3.1 Process Management**
+- **REQ-027**: Team MUST demonstrate proficiency in process monitoring (ps, top, htop, iotop)
+- **REQ-028**: Team MUST demonstrate proficiency in process control (kill, killall, pgrep, pkill)
+- **REQ-029**: Team MUST demonstrate proficiency in systemd service management
+- **REQ-030**: Team MUST demonstrate proficiency in journald log management
+
+#### **3.2 System Monitoring**
+- **REQ-031**: Team MUST demonstrate proficiency in system resource monitoring (CPU, memory, disk, network)
+- **REQ-032**: Team MUST demonstrate proficiency in system performance analysis
+- **REQ-033**: Team MUST demonstrate proficiency in system troubleshooting tools (strace, lsof, ss, netstat)
+
+#### **3.3 File System Management**
+- **REQ-034**: Team MUST demonstrate proficiency in file system operations
+- **REQ-035**: Team MUST demonstrate proficiency in disk management (fdisk, lsblk, mount, umount)
+- **REQ-036**: Team MUST demonstrate proficiency in file permissions and ownership
+
+### **4. Networking Fundamentals Requirements (Module 3)**
+
+#### **4.1 OSI 7-Layer Model Understanding**
+- **REQ-037**: Team MUST understand all 7 layers of the OSI model
+- **REQ-038**: Team MUST understand TCP/IP protocol stack
+- **REQ-039**: Team MUST understand network security implications for each layer
+- **REQ-040**: Team MUST understand performance characteristics for each layer
+
+#### **4.2 Network Tools Proficiency**
+- **REQ-041**: Team MUST demonstrate proficiency in network analysis (tcpdump, wireshark)
+- **REQ-042**: Team MUST demonstrate proficiency in DNS resolution (nslookup, dig)
+- **REQ-043**: Team MUST demonstrate proficiency in network connectivity testing (ping, traceroute)
+- **REQ-044**: Team MUST demonstrate proficiency in firewall management (iptables, netfilter)
+
+#### **4.3 Network Security**
+- **REQ-045**: Team MUST understand network security best practices
+- **REQ-046**: Team MUST understand load balancing concepts
+- **REQ-047**: Team MUST understand service discovery mechanisms
+
+### **5. YAML/JSON Configuration Requirements (Module 4)**
+
+#### **5.1 Configuration Management**
+- **REQ-048**: Team MUST demonstrate proficiency in YAML syntax and structure
+- **REQ-049**: Team MUST demonstrate proficiency in JSON syntax and structure
+- **REQ-050**: Team MUST demonstrate proficiency in configuration validation (yaml-lint, jsonlint)
+- **REQ-051**: Team MUST demonstrate proficiency in configuration processing (yq, jq)
+
+#### **5.2 Infrastructure as Code**
+- **REQ-052**: Team MUST understand declarative vs imperative approaches
+- **REQ-053**: Team MUST understand version control for configurations
+- **REQ-054**: Team MUST understand configuration security best practices
+
+### **6. Containerization Requirements**
+
+#### **6.1 Application Containerization**
+- **REQ-055**: The e-commerce backend application MUST be containerized using Docker
+- **REQ-056**: Container images MUST be based on minimal base images (e.g., python:3.11-slim)
+- **REQ-057**: Container images MUST NOT run as root user
+- **REQ-058**: Container images MUST include health check endpoints
+- **REQ-059**: Container images MUST be optimized for size (<500MB)
+- **REQ-060**: Container images MUST be scanned for security vulnerabilities
+
+#### **6.2 Multi-Stage Build Requirements**
+- **REQ-061**: Dockerfile MUST use multi-stage builds for optimization
+- **REQ-062**: Build dependencies MUST be excluded from final image
+- **REQ-063**: Application code MUST be copied with proper ownership
+- **REQ-064**: Environment variables MUST be properly configured
 
 ### **2. Kubernetes Cluster Requirements**
 
@@ -76,27 +166,103 @@ This document defines the detailed functional requirements for the E-commerce Fo
 - **REQ-037**: Service MUST have proper selector configuration
 - **REQ-038**: Service MUST expose port 80 internally
 
-### **4. Monitoring Requirements**
+### **7. Monitoring and Observability Requirements (Module 5)**
 
-#### **4.1 Metrics Collection**
-- **REQ-039**: Prometheus MUST be deployed for metrics collection
-- **REQ-040**: Node Exporter MUST be running on all nodes
-- **REQ-041**: Application metrics MUST be collected
-- **REQ-042**: Kubernetes metrics MUST be collected
-- **REQ-043**: Metrics MUST be stored for 15 days minimum
+#### **7.1 Monitoring Architecture Understanding**
+- **REQ-065**: Team MUST understand monitoring architecture and observability principles
+- **REQ-066**: Team MUST understand different types of metrics (counter, gauge, histogram, summary)
+- **REQ-067**: Team MUST understand alerting principles and best practices
+- **REQ-068**: Team MUST understand performance monitoring concepts
 
-#### **4.2 Visualization**
-- **REQ-044**: Grafana MUST be deployed for visualization
-- **REQ-045**: Grafana MUST have pre-configured dashboards
-- **REQ-046**: Dashboards MUST show cluster health
-- **REQ-047**: Dashboards MUST show application metrics
-- **REQ-048**: Dashboards MUST be accessible via web interface
+#### **7.2 Prometheus Proficiency**
+- **REQ-069**: Team MUST demonstrate proficiency in Prometheus configuration
+- **REQ-070**: Team MUST demonstrate proficiency in PromQL query language
+- **REQ-071**: Team MUST demonstrate proficiency in metric collection and storage
+- **REQ-072**: Team MUST demonstrate proficiency in alert rule configuration
 
-#### **4.3 Alerting**
-- **REQ-049**: Alert rules MUST be configured for critical metrics
-- **REQ-050**: Alerts MUST be sent for pod failures
-- **REQ-051**: Alerts MUST be sent for high resource usage
-- **REQ-052**: Alerts MUST be sent for service unavailability
+#### **7.3 Grafana Proficiency**
+- **REQ-073**: Team MUST demonstrate proficiency in Grafana dashboard creation
+- **REQ-074**: Team MUST demonstrate proficiency in data source configuration
+- **REQ-075**: Team MUST demonstrate proficiency in visualization techniques
+- **REQ-076**: Team MUST demonstrate proficiency in dashboard sharing and management
+
+#### **7.4 Node Exporter and cAdvisor**
+- **REQ-077**: Team MUST demonstrate proficiency in Node Exporter configuration
+- **REQ-078**: Team MUST demonstrate proficiency in cAdvisor container monitoring
+- **REQ-079**: Team MUST demonstrate proficiency in system metrics collection
+- **REQ-080**: Team MUST demonstrate proficiency in container metrics collection
+
+#### **7.5 AlertManager**
+- **REQ-081**: Team MUST demonstrate proficiency in AlertManager configuration
+- **REQ-082**: Team MUST demonstrate proficiency in alert routing and grouping
+- **REQ-083**: Team MUST demonstrate proficiency in notification channel setup
+- **REQ-084**: Team MUST demonstrate proficiency in alert silencing and inhibition
+
+### **8. Kubernetes Cluster Requirements**
+
+#### **8.1 Cluster Architecture**
+- **REQ-085**: Cluster MUST consist of 1 master node and 1 worker node minimum
+- **REQ-086**: Master node MUST run all control plane components
+- **REQ-087**: Worker node MUST run application workloads
+- **REQ-088**: Cluster MUST use containerd as container runtime
+- **REQ-089**: Cluster MUST use Flannel as CNI plugin
+
+#### **8.2 Cluster Components**
+- **REQ-090**: API Server MUST be accessible on port 6443
+- **REQ-091**: etcd MUST be running and accessible
+- **REQ-092**: Scheduler MUST be operational
+- **REQ-093**: Controller Manager MUST be running
+- **REQ-094**: Kubelet MUST be running on all nodes
+- **REQ-095**: Kube-proxy MUST be running on all nodes
+
+#### **8.3 Network Requirements**
+- **REQ-096**: Pod-to-pod communication MUST work across nodes
+- **REQ-097**: Service discovery MUST be functional
+- **REQ-098**: DNS resolution MUST work for services
+- **REQ-099**: Network policies MUST be configurable
+
+### **9. Application Deployment Requirements**
+
+#### **9.1 Namespace Requirements**
+- **REQ-100**: Application MUST be deployed in dedicated namespace
+- **REQ-101**: Namespace MUST have resource quotas configured
+- **REQ-102**: Namespace MUST have proper labels and annotations
+- **REQ-103**: RBAC MUST be configured for namespace access
+
+#### **9.2 Deployment Requirements**
+- **REQ-104**: Application MUST be deployed using Deployment controller
+- **REQ-105**: Deployment MUST have 2 replicas minimum
+- **REQ-106**: Deployment MUST have proper resource limits
+- **REQ-107**: Deployment MUST have health checks configured
+- **REQ-108**: Deployment MUST support rolling updates
+
+#### **9.3 Service Requirements**
+- **REQ-109**: Application MUST be accessible via Service
+- **REQ-110**: Service MUST use ClusterIP type
+- **REQ-111**: Service MUST have proper selector configuration
+- **REQ-112**: Service MUST expose port 80 internally
+
+### **10. Monitoring Implementation Requirements**
+
+#### **10.1 Metrics Collection**
+- **REQ-113**: Prometheus MUST be deployed for metrics collection
+- **REQ-114**: Node Exporter MUST be running on all nodes
+- **REQ-115**: Application metrics MUST be collected
+- **REQ-116**: Kubernetes metrics MUST be collected
+- **REQ-117**: Metrics MUST be stored for 15 days minimum
+
+#### **10.2 Visualization**
+- **REQ-118**: Grafana MUST be deployed for visualization
+- **REQ-119**: Grafana MUST have pre-configured dashboards
+- **REQ-120**: Dashboards MUST show cluster health
+- **REQ-121**: Dashboards MUST show application metrics
+- **REQ-122**: Dashboards MUST be accessible via web interface
+
+#### **10.3 Alerting**
+- **REQ-123**: Alert rules MUST be configured for critical metrics
+- **REQ-124**: Alerts MUST be sent for pod failures
+- **REQ-125**: Alerts MUST be sent for high resource usage
+- **REQ-126**: Alerts MUST be sent for service unavailability
 
 ---
 

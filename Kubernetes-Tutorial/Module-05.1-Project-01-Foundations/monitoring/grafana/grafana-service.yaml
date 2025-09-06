@@ -1,0 +1,117 @@
+# =============================================================================
+# GRAFANA SERVICE MANIFEST
+# =============================================================================
+# This manifest creates a Kubernetes Service for Grafana to expose
+# the web interface for the e-commerce foundation infrastructure monitoring.
+# =============================================================================
+
+apiVersion: v1
+# =============================================================================
+# API VERSION SPECIFICATION
+# =============================================================================
+# Specifies the Kubernetes API version for this resource manifest.
+# v1 is the stable, production-ready version for Service resources.
+# =============================================================================
+
+kind: Service
+# =============================================================================
+# RESOURCE KIND DEFINITION
+# =============================================================================
+# Service is a Kubernetes resource that provides stable network access to pods.
+# This service exposes Grafana web interface on a consistent port and IP.
+# =============================================================================
+
+metadata:
+  # =============================================================================
+  # METADATA SECTION
+  # =============================================================================
+  # Contains metadata about the Service including name, namespace, and labels.
+  # =============================================================================
+  
+  name: grafana
+  # Purpose: Specifies the unique name of the Service within the namespace
+  # Why needed: Identifies the Service for management and reference
+  # Impact: Service will be named 'grafana' and accessible by this name
+  # Naming: Follows kebab-case convention for Kubernetes resources
+  
+  namespace: monitoring
+  # Purpose: Specifies the Kubernetes namespace where the Service will be created
+  # Why needed: Isolates monitoring components in dedicated namespace
+  # Impact: Service will be created in the monitoring namespace
+  # Namespace: 'monitoring' is the standard namespace for monitoring components
+  
+  labels:
+  # =============================================================================
+  # LABELS SECTION
+  # =============================================================================
+  # Labels provide metadata for resource identification and selection.
+  # =============================================================================
+    
+    app: grafana
+    # Purpose: Identifies the application name
+    # Why needed: Enables resource selection and management
+    # Impact: Service can be selected using app=grafana
+    # Value: 'grafana' matches the application name
+    
+    component: monitoring
+    # Purpose: Identifies the component type
+    # Why needed: Groups related monitoring components
+    # Impact: Service can be selected using component=monitoring
+    # Value: 'monitoring' identifies this as a monitoring component
+
+spec:
+  # =============================================================================
+  # SERVICE SPECIFICATION
+  # =============================================================================
+  # Defines the desired state of the Service including ports and selectors.
+  # =============================================================================
+  
+  type: ClusterIP
+  # Purpose: Specifies the Service type for internal cluster communication
+  # Why needed: Grafana should be accessible from within the cluster
+  # Impact: Service is only accessible from within the Kubernetes cluster
+  # Type: ClusterIP provides internal cluster access only
+  
+  ports:
+  # =============================================================================
+  # SERVICE PORTS
+  # =============================================================================
+  # Defines the ports that the Service exposes and maps to pod ports.
+  # =============================================================================
+    
+  - name: http
+    # Purpose: Specifies the port name for service discovery
+    # Why needed: Identifies the port for HTTP access
+    # Impact: Port can be referenced by name in other configurations
+    # Name: 'http' identifies this as the HTTP port
+    
+    port: 3000
+    # Purpose: Specifies the port number that the Service exposes
+    # Why needed: Grafana listens on port 3000
+    # Impact: Service exposes Grafana on port 3000
+    # Port: 3000 is the standard Grafana port
+    
+    targetPort: 3000
+    # Purpose: Specifies the port number on the target pods
+    # Why needed: Maps Service port to pod port
+    # Impact: Traffic to Service port 3000 is forwarded to pod port 3000
+    # Port: 3000 matches the Grafana container port
+    
+    protocol: TCP
+    # Purpose: Specifies the network protocol
+    # Why needed: Defines the protocol for port communication
+    # Impact: Port uses TCP protocol for reliable communication
+    # Protocol: TCP is the standard protocol for HTTP
+  
+  selector:
+  # =============================================================================
+  # POD SELECTOR
+  # =============================================================================
+  # Defines which pods the Service should route traffic to.
+  # =============================================================================
+    
+    app: grafana
+    # Purpose: Selects pods with the app=grafana label
+    # Why needed: Routes traffic to Grafana pods
+    # Impact: Service will route traffic to all pods with this label
+    # Label: app=grafana matches the Deployment pod labels

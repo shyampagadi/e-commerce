@@ -47,38 +47,100 @@ check_root() {
 check_prerequisites() {
     log "Checking prerequisites..."
     
+    # =============================================================================
+    # OPERATING SYSTEM CHECK
+    # =============================================================================
+    # Purpose: Verify the system is running a supported Linux distribution
+    # Why needed: Kubernetes has specific OS requirements for proper operation
+    
     # Check if running on supported OS
     if [[ ! -f /etc/os-release ]]; then
         error "Cannot determine OS version"
         exit 1
     fi
+    # Command: [[ ! -f /etc/os-release ]]
+    # Explanation: Tests if the /etc/os-release file exists
+    # Expected: File should exist on modern Linux distributions
+    # Impact: If missing, we cannot determine the OS type and version
     
     source /etc/os-release
+    # Command: source /etc/os-release
+    # Explanation: Loads OS identification variables into the current shell
+    # Variables loaded: ID (distribution), VERSION_ID (version), etc.
+    # Expected: Variables like ID="ubuntu", VERSION_ID="20.04" should be set
+    
     if [[ "$ID" != "ubuntu" ]] && [[ "$ID" != "debian" ]]; then
         error "This script only supports Ubuntu/Debian"
         exit 1
     fi
+    # Command: [[ "$ID" != "ubuntu" ]] && [[ "$ID" != "debian" ]]
+    # Explanation: Checks if the distribution is Ubuntu or Debian
+    # Expected: ID should be "ubuntu" or "debian"
+    # Impact: Other distributions may have different package managers or configurations
     
     # Check if running on supported Ubuntu version
     if [[ "$VERSION_ID" != "20.04" ]] && [[ "$VERSION_ID" != "22.04" ]]; then
         warning "This script is tested on Ubuntu 20.04/22.04. Current version: $VERSION_ID"
     fi
+    # Command: [[ "$VERSION_ID" != "20.04" ]] && [[ "$VERSION_ID" != "22.04" ]]
+    # Explanation: Checks if the version is a supported Ubuntu release
+    # Expected: VERSION_ID should be "20.04" or "22.04"
+    # Impact: Other versions may have different package availability or configurations
+    
+    # =============================================================================
+    # MEMORY CHECK
+    # =============================================================================
+    # Purpose: Verify sufficient RAM is available for Kubernetes cluster
+    # Why needed: Kubernetes requires minimum memory for proper operation
     
     # Check available memory
     local mem_gb=$(free -g | awk '/^Mem:/{print $2}')
+    # Command: free -g | awk '/^Mem:/{print $2}'
+    # Explanation: 
+    #   - free -g: Shows memory usage in gigabytes
+    #   - awk '/^Mem:/{print $2}': Extracts the total memory value
+    # Expected: Returns total RAM in GB (e.g., "8" for 8GB)
+    # Impact: Used to verify minimum memory requirements
+    
     if [[ $mem_gb -lt 2 ]]; then
         error "Minimum 2GB RAM required. Available: ${mem_gb}GB"
         exit 1
     fi
+    # Command: [[ $mem_gb -lt 2 ]]
+    # Explanation: Tests if available memory is less than 2GB
+    # Expected: Should be false (sufficient memory available)
+    # Impact: Insufficient memory will cause Kubernetes components to fail
+    
+    # =============================================================================
+    # DISK SPACE CHECK
+    # =============================================================================
+    # Purpose: Verify sufficient disk space is available for Kubernetes data
+    # Why needed: Kubernetes stores cluster data, container images, and logs
     
     # Check available disk space
     local disk_gb=$(df -BG / | awk 'NR==2{print $4}' | sed 's/G//')
+    # Command: df -BG / | awk 'NR==2{print $4}' | sed 's/G//'
+    # Explanation:
+    #   - df -BG /: Shows disk usage in gigabytes for root filesystem
+    #   - awk 'NR==2{print $4}': Extracts the available space value (4th column, 2nd row)
+    #   - sed 's/G//': Removes the 'G' suffix to get numeric value
+    # Expected: Returns available disk space in GB (e.g., "50" for 50GB)
+    # Impact: Used to verify minimum disk space requirements
+    
     if [[ $disk_gb -lt 20 ]]; then
         error "Minimum 20GB disk space required. Available: ${disk_gb}GB"
         exit 1
     fi
+    # Command: [[ $disk_gb -lt 20 ]]
+    # Explanation: Tests if available disk space is less than 20GB
+    # Expected: Should be false (sufficient disk space available)
+    # Impact: Insufficient disk space will cause container image pulls and data storage to fail
     
     success "Prerequisites check passed"
+    # Command: success "Prerequisites check passed"
+    # Explanation: Logs success message if all checks pass
+    # Expected: Green success message displayed
+    # Impact: Indicates system is ready for Kubernetes installation
 }
 
 # Function to install required packages

@@ -1,0 +1,155 @@
+# =============================================================================
+# BACKEND SERVICE MANIFEST
+# =============================================================================
+# This manifest creates a Kubernetes Service for the e-commerce backend
+# application, providing stable network access and load balancing for
+# the backend API endpoints.
+# =============================================================================
+
+apiVersion: v1
+# =============================================================================
+# API VERSION SPECIFICATION
+# =============================================================================
+# Specifies the Kubernetes API version for this resource manifest.
+# v1 is the stable, production-ready version for Service resources.
+# =============================================================================
+
+kind: Service
+# =============================================================================
+# RESOURCE KIND DEFINITION
+# =============================================================================
+# Service is a Kubernetes resource that provides stable network access to pods.
+# This service exposes the backend API on a consistent port and IP address.
+# =============================================================================
+
+metadata:
+  # =============================================================================
+  # METADATA SECTION
+  # =============================================================================
+  # Contains metadata about the Service including name, namespace, and labels.
+  # =============================================================================
+  
+  name: ecommerce-backend-service
+  # Purpose: Specifies the unique name of the Service within the namespace
+  # Why needed: Identifies the Service for management and reference
+  # Impact: Service will be named 'ecommerce-backend-service' and accessible by this name
+  # Naming: Follows kebab-case convention for Kubernetes resources
+  
+  namespace: ecommerce
+  # Purpose: Specifies the Kubernetes namespace where the Service will be created
+  # Why needed: Isolates e-commerce components in dedicated namespace
+  # Impact: Service will be created in the ecommerce namespace
+  # Namespace: 'ecommerce' is the application namespace for all e-commerce components
+  
+  labels:
+  # =============================================================================
+  # LABELS SECTION
+  # =============================================================================
+  # Labels provide metadata for resource identification and selection.
+  # =============================================================================
+    
+    app: ecommerce-backend
+    # Purpose: Identifies the application name
+    # Why needed: Enables resource selection and management
+    # Impact: Service can be selected using app=ecommerce-backend
+    # Value: 'ecommerce-backend' matches the backend application name
+    
+    version: v1.0.0
+    # Purpose: Tracks the version of the backend application
+    # Why needed: Enables version management and rollback capabilities
+    # Impact: Version information is available for resource management
+    # Value: 'v1.0.0' is the current backend version
+    
+    environment: development
+    # Purpose: Identifies the deployment environment
+    # Why needed: Enables environment-specific resource management
+    # Impact: Resources can be selected by environment
+    # Value: 'development' indicates this is a development environment
+    
+    component: backend
+    # Purpose: Identifies the component type
+    # Why needed: Groups related backend components
+    # Impact: Service can be selected using component=backend
+    # Value: 'backend' identifies this as a backend component
+  
+  annotations:
+  # =============================================================================
+  # ANNOTATIONS SECTION
+  # =============================================================================
+  # Annotations provide additional metadata that doesn't affect resource behavior.
+  # =============================================================================
+    
+    description: "Service for e-commerce backend application"
+    # Purpose: Provides human-readable description of the service
+    # Why needed: Helps with documentation and understanding
+    # Impact: Description is visible in kubectl describe output
+    # Value: Clear description of the service purpose
+    
+    contact: "platform-engineering@techcorp.com"
+    # Purpose: Specifies contact information for the service
+    # Why needed: Provides contact details for support and maintenance
+    # Impact: Contact information is available for troubleshooting
+    # Value: Email address for the platform engineering team
+
+spec:
+  # =============================================================================
+  # SERVICE SPECIFICATION
+  # =============================================================================
+  # Defines the desired state of the Service including ports and selectors.
+  # =============================================================================
+  
+  type: ClusterIP
+  # Purpose: Specifies the Service type for internal cluster communication
+  # Why needed: Backend API should only be accessible from within the cluster
+  # Impact: Service is only accessible from within the Kubernetes cluster
+  # Type: ClusterIP provides internal cluster access only
+  
+  sessionAffinity: None
+  # Purpose: Specifies session affinity behavior
+  # Why needed: Determines how requests are distributed to backend pods
+  # Impact: Requests are distributed evenly across all backend pods
+  # Value: None means no session affinity (stateless load balancing)
+  
+  ports:
+  # =============================================================================
+  # SERVICE PORTS
+  # =============================================================================
+  # Defines the ports that the Service exposes and maps to pod ports.
+  # =============================================================================
+    
+  - name: http
+    # Purpose: Specifies the port name for service discovery
+    # Why needed: Identifies the port for HTTP API access
+    # Impact: Port can be referenced by name in other configurations
+    # Name: 'http' identifies this as the HTTP API port
+    
+    port: 80
+    # Purpose: Specifies the port number that the Service exposes
+    # Why needed: Backend API listens on port 80
+    # Impact: Service exposes API on port 80
+    # Port: 80 is the standard HTTP port
+    
+    targetPort: 8000
+    # Purpose: Specifies the port number on the target pods
+    # Why needed: Maps Service port to pod port
+    # Impact: Traffic to Service port 80 is forwarded to pod port 8000
+    # Port: 8000 is the port where the backend container listens
+    
+    protocol: TCP
+    # Purpose: Specifies the network protocol
+    # Why needed: Defines the protocol for port communication
+    # Impact: Port uses TCP protocol for reliable communication
+    # Protocol: TCP is the standard protocol for HTTP APIs
+  
+  selector:
+  # =============================================================================
+  # POD SELECTOR
+  # =============================================================================
+  # Defines which pods the Service should route traffic to.
+  # =============================================================================
+    
+    app: ecommerce-backend
+    # Purpose: Selects pods with the app=ecommerce-backend label
+    # Why needed: Routes traffic to backend application pods
+    # Impact: Service will route traffic to all pods with this label
+    # Label: app=ecommerce-backend matches the backend deployment pod labels

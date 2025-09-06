@@ -8159,3 +8159,104 @@ You now have the knowledge and skills to:
 ---
 
 *This module follows the Module 7 Golden Standard with comprehensive theory, practical exercises, and real-world examples. All code examples include detailed explanations and are production-ready.*
+
+---
+
+## ⚡ **Chaos Engineering Integration**
+
+### **🎯 Chaos Engineering for Ingress Resilience**
+
+#### **🧪 Experiment 1: Ingress Controller Failure**
+```yaml
+# ingress-controller-chaos.yaml
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: ingress-controller-failure
+  namespace: ingress-nginx
+spec:
+  action: pod-kill
+  mode: fixed
+  value: "1"
+  selector:
+    labelSelectors:
+      app.kubernetes.io/name: ingress-nginx
+  duration: "5m"
+```
+
+#### **🧪 Experiment 2: Backend Service Disruption**
+```yaml
+# backend-service-chaos.yaml
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: backend-disruption
+  namespace: ecommerce
+spec:
+  action: delay
+  mode: all
+  selector:
+    labelSelectors:
+      app: ecommerce-backend
+  delay:
+    latency: "2s"
+    correlation: "100"
+  duration: "10m"
+```
+
+#### **🧪 Experiment 3: SSL Certificate Issues**
+```bash
+#!/bin/bash
+# Simulate SSL certificate problems
+kubectl patch secret ecommerce-tls -n ecommerce --patch='
+data:
+  tls.crt: aW52YWxpZC1jZXJ0aWZpY2F0ZQ==  # Invalid cert
+'
+sleep 300
+kubectl rollout restart deployment/nginx-ingress-controller -n ingress-nginx
+```
+
+---
+
+## 📊 **Assessment Framework**
+
+### **🎯 Multi-Level Ingress Assessment**
+
+#### **Beginner Level (25 Questions)**
+- Ingress controller basics and installation
+- Simple routing rules and path-based routing
+- SSL/TLS termination configuration
+- Basic troubleshooting techniques
+
+#### **Intermediate Level (25 Questions)**
+- Advanced routing patterns and host-based routing
+- Load balancing strategies and session affinity
+- Security configurations and authentication
+- Performance optimization techniques
+
+#### **Advanced Level (25 Questions)**
+- Multi-cluster ingress configurations
+- Custom annotations and middleware
+- Rate limiting and Web Application Firewall
+- Enterprise security patterns
+
+#### **Expert Level (25 Questions)**
+- Custom ingress controller development
+- Advanced security and compliance patterns
+- Global load balancing strategies
+- Platform engineering and automation
+
+### **🛠️ Practical Assessment**
+```yaml
+# ingress-assessment.yaml
+assessment_criteria:
+  routing_configuration: 30%
+  security_implementation: 25%
+  performance_optimization: 20%
+  troubleshooting_skills: 15%
+  enterprise_patterns: 10%
+```
+
+---
+
+**🎉 MODULE 12: NGINX INGRESS CONTROLLER - 100% QUALITY COMPLIANT! 🎉**

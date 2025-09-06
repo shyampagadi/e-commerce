@@ -1,0 +1,457 @@
+# =============================================================================
+# NODE EXPORTER DEPLOYMENT MANIFEST
+# =============================================================================
+# This manifest deploys Node Exporter as a DaemonSet to collect comprehensive
+# system metrics from all Kubernetes nodes for the e-commerce foundation
+# infrastructure. Node Exporter provides detailed hardware and OS metrics.
+# =============================================================================
+
+apiVersion: apps/v1
+# =============================================================================
+# API VERSION SPECIFICATION
+# =============================================================================
+# Specifies the Kubernetes API version for this resource manifest.
+# apps/v1 is the stable, production-ready version for DaemonSet resources.
+# This version provides full feature support and long-term stability.
+# =============================================================================
+
+kind: DaemonSet
+# =============================================================================
+# RESOURCE KIND DEFINITION
+# =============================================================================
+# DaemonSet is a Kubernetes workload controller that ensures exactly one pod
+# runs on each node in the cluster. This is perfect for Node Exporter because:
+# - Node Exporter needs to collect metrics from every node
+# - DaemonSet automatically handles node additions/removals
+# - Ensures consistent monitoring coverage across the entire cluster
+# - Provides automatic pod placement and scheduling
+# =============================================================================
+
+metadata:
+  # =============================================================================
+  # METADATA SECTION
+  # =============================================================================
+  # Contains metadata about the DaemonSet including name, namespace, labels,
+  # and annotations. This information is used for resource identification,
+  # selection, and management within the Kubernetes cluster.
+  # =============================================================================
+  
+  name: node-exporter
+  # Purpose: Specifies the unique name of the DaemonSet within the namespace
+  # Why needed: Identifies the DaemonSet for management, selection, and reference
+  # Impact: DaemonSet will be named 'node-exporter' and can be referenced by this name
+  # Naming: Follows kebab-case convention for Kubernetes resources (lowercase with hyphens)
+  # Uniqueness: Must be unique within the monitoring namespace
+  # Convention: Matches the application name for consistency and clarity
+  
+  namespace: monitoring
+  # Purpose: Specifies the Kubernetes namespace where the DaemonSet will be created
+  # Why needed: Isolates monitoring components in a dedicated namespace for organization
+  # Impact: Node Exporter pods will be created in the monitoring namespace
+  # Namespace: 'monitoring' is the standard namespace for all monitoring components
+  # Benefits: Provides logical separation, resource isolation, and easier management
+  # RBAC: Enables namespace-specific access control and permissions
+  
+  labels:
+  # =============================================================================
+  # LABELS SECTION
+  # =============================================================================
+  # Labels provide metadata for resource identification and selection.
+  # =============================================================================
+  
+    app: node-exporter
+    # Purpose: Identifies the application name
+    # Why needed: Enables resource selection and management
+    # Impact: Resources can be selected using app=node-exporter
+    # Value: 'node-exporter' matches the application name
+    
+    component: monitoring
+    # Purpose: Identifies the component type
+    # Why needed: Groups related monitoring components
+    # Impact: Resources can be selected using component=monitoring
+    # Value: 'monitoring' identifies this as a monitoring component
+    
+    version: v1.6.1
+    # Purpose: Specifies the version of Node Exporter
+    # Why needed: Enables version tracking and management
+    # Impact: Version information is available for resource management
+    # Value: 'v1.6.1' is the Node Exporter version
+
+spec:
+  # =============================================================================
+  # SPECIFICATION SECTION
+  # =============================================================================
+  # Defines the desired state of the DaemonSet including pod template and selectors.
+  # =============================================================================
+  
+  selector:
+  # =============================================================================
+  # SELECTOR SECTION
+  # =============================================================================
+  # Defines how the DaemonSet selects which pods to manage.
+  # =============================================================================
+    
+    matchLabels:
+    # Purpose: Specifies labels that pods must have to be managed
+    # Why needed: Ensures DaemonSet manages the correct pods
+    # Impact: Only pods with matching labels are managed
+    # Labels: Must match the pod template labels
+    
+      app: node-exporter
+      # Purpose: Matches the app label
+      # Why needed: Ensures DaemonSet manages Node Exporter pods
+      # Impact: Only pods with app=node-exporter are managed
+      # Value: 'node-exporter' matches the pod template label
+
+  template:
+  # =============================================================================
+  # POD TEMPLATE SECTION
+  # =============================================================================
+  # Defines the pod template that will be used to create pods on each node.
+  # =============================================================================
+    
+    metadata:
+    # =============================================================================
+    # POD METADATA SECTION
+    # =============================================================================
+    # Contains metadata for the pods created by this DaemonSet.
+    # =============================================================================
+      
+      labels:
+      # Purpose: Specifies labels for the pods
+      # Why needed: Enables pod identification and selection
+      # Impact: Pods will have these labels for management
+      # Labels: Must match the selector matchLabels
+      
+        app: node-exporter
+        # Purpose: Identifies the application name
+        # Why needed: Enables pod selection and management
+        # Impact: Pods can be selected using app=node-exporter
+        # Value: 'node-exporter' matches the application name
+        
+        component: monitoring
+        # Purpose: Identifies the component type
+        # Why needed: Groups related monitoring components
+        # Impact: Pods can be selected using component=monitoring
+        # Value: 'monitoring' identifies this as a monitoring component
+        
+        version: v1.6.1
+        # Purpose: Specifies the version of Node Exporter
+        # Why needed: Enables version tracking and management
+        # Impact: Version information is available for pod management
+        # Value: 'v1.6.1' is the Node Exporter version
+
+    spec:
+    # =============================================================================
+    # POD SPECIFICATION SECTION
+    # =============================================================================
+    # Defines the pod specification including containers, volumes, and security.
+    # =============================================================================
+      
+      hostNetwork: true
+      # Purpose: Uses the host's network namespace
+      # Why needed: Node Exporter needs access to host network interfaces
+      # Impact: Pod shares the host's network stack
+      # Network: Host network provides access to all network interfaces
+      
+      hostPID: true
+      # Purpose: Uses the host's PID namespace
+      # Why needed: Node Exporter needs access to host processes
+      # Impact: Pod shares the host's process namespace
+      # PID: Host PID provides access to all host processes
+      
+      containers:
+      # =============================================================================
+      # CONTAINERS SECTION
+      # =============================================================================
+      # Defines the containers that will run in the pod.
+      # =============================================================================
+      
+      - name: node-exporter
+        # Purpose: Specifies the container name
+        # Why needed: Identifies the container in the pod
+        # Impact: Container will be named 'node-exporter'
+        # Naming: Matches the application name
+        
+        image: prom/node-exporter:v1.6.1
+        # Purpose: Specifies the container image
+        # Why needed: Defines which image to run
+        # Impact: Node Exporter v1.6.1 will be used
+        # Image: prom/node-exporter:v1.6.1 is the official Node Exporter image
+        
+        args:
+        # =============================================================================
+        # CONTAINER ARGUMENTS
+        # =============================================================================
+        # Defines command-line arguments for the container.
+        # =============================================================================
+        
+        - --path.rootfs=/host
+        # Purpose: Specifies the root filesystem path
+        # Why needed: Node Exporter needs access to host filesystem
+        # Impact: Node Exporter will collect metrics from /host path
+        # Path: /host is the mounted host filesystem
+        
+        - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/docker/.+)($|/)
+        # Purpose: Excludes certain mount points from filesystem collection
+        # Why needed: Prevents collection of irrelevant filesystem metrics
+        # Impact: Excludes system mount points from metrics collection
+        # Exclude: dev, proc, sys, and docker mount points are excluded
+        
+        - --collector.filesystem.fs-types-exclude=^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs)$
+        # Purpose: Excludes certain filesystem types from collection
+        # Why needed: Prevents collection of irrelevant filesystem metrics
+        # Impact: Excludes system filesystem types from metrics collection
+        # Exclude: System filesystem types are excluded from collection
+        
+        ports:
+        # =============================================================================
+        # CONTAINER PORTS
+        # =============================================================================
+        # Defines the ports that the container exposes.
+        # =============================================================================
+        
+        - name: metrics
+          # Purpose: Specifies the port name
+          # Why needed: Identifies the port for service discovery
+          # Impact: Port can be referenced by name in services
+          # Name: 'metrics' identifies this as the metrics port
+          
+          containerPort: 9100
+          # Purpose: Specifies the port number
+          # Why needed: Node Exporter listens on port 9100
+          # Impact: Metrics will be available on port 9100
+          # Port: 9100 is the standard Node Exporter port
+          
+          protocol: TCP
+          # Purpose: Specifies the protocol
+          # Why needed: Defines the network protocol
+          # Impact: Port uses TCP protocol
+          # Protocol: TCP is the standard protocol for metrics
+        
+        resources:
+        # =============================================================================
+        # RESOURCE REQUIREMENTS
+        # =============================================================================
+        # Defines the resource requirements and limits for the container.
+        # =============================================================================
+        
+          requests:
+          # Purpose: Specifies the minimum resources required
+          # Why needed: Ensures container has sufficient resources
+          # Impact: Container is guaranteed these resources
+          # Resources: Minimum resources for container operation
+            
+            cpu: 100m
+            # Purpose: Specifies the minimum CPU required
+            # Why needed: Ensures container has sufficient CPU
+            # Impact: Container is guaranteed 100m CPU
+            # CPU: 100m (0.1 CPU cores) is sufficient for Node Exporter
+            
+            memory: 180Mi
+            # Purpose: Specifies the minimum memory required
+            # Why needed: Ensures container has sufficient memory
+            # Impact: Container is guaranteed 180Mi memory
+            # Memory: 180Mi is sufficient for Node Exporter operation
+        
+          limits:
+          # Purpose: Specifies the maximum resources allowed
+          # Why needed: Prevents container from consuming too many resources
+          # Impact: Container cannot exceed these resource limits
+          # Resources: Maximum resources for container operation
+            
+            cpu: 200m
+            # Purpose: Specifies the maximum CPU allowed
+            # Why needed: Prevents container from consuming too much CPU
+            # Impact: Container cannot exceed 200m CPU
+            # CPU: 200m (0.2 CPU cores) is the maximum for Node Exporter
+            
+            memory: 180Mi
+            # Purpose: Specifies the maximum memory allowed
+            # Why needed: Prevents container from consuming too much memory
+            # Impact: Container cannot exceed 180Mi memory
+            # Memory: 180Mi is the maximum for Node Exporter
+        
+        volumeMounts:
+        # =============================================================================
+        # VOLUME MOUNTS
+        # =============================================================================
+        # Defines the volumes that will be mounted in the container.
+        # =============================================================================
+        
+        - name: proc
+          # Purpose: Specifies the volume name
+          # Why needed: References the volume defined in volumes section
+          # Impact: Mounts the proc volume in the container
+          # Volume: 'proc' is the host /proc filesystem
+          
+          mountPath: /host/proc
+          # Purpose: Specifies the mount path in the container
+          # Why needed: Node Exporter needs access to /proc
+          # Impact: Host /proc is mounted at /host/proc
+          # Path: /host/proc provides access to process information
+          
+          readOnly: true
+          # Purpose: Specifies the mount as read-only
+          # Why needed: Prevents container from modifying host /proc
+          # Impact: Container can only read from /proc
+          # ReadOnly: true prevents accidental modifications
+        
+        - name: sys
+          # Purpose: Specifies the volume name
+          # Why needed: References the volume defined in volumes section
+          # Impact: Mounts the sys volume in the container
+          # Volume: 'sys' is the host /sys filesystem
+          
+          mountPath: /host/sys
+          # Purpose: Specifies the mount path in the container
+          # Why needed: Node Exporter needs access to /sys
+          # Impact: Host /sys is mounted at /host/sys
+          # Path: /host/sys provides access to system information
+          
+          readOnly: true
+          # Purpose: Specifies the mount as read-only
+          # Why needed: Prevents container from modifying host /sys
+          # Impact: Container can only read from /sys
+          # ReadOnly: true prevents accidental modifications
+        
+        - name: root
+          # Purpose: Specifies the volume name
+          # Why needed: References the volume defined in volumes section
+          # Impact: Mounts the root volume in the container
+          # Volume: 'root' is the host root filesystem
+          
+          mountPath: /host
+          # Purpose: Specifies the mount path in the container
+          # Why needed: Node Exporter needs access to host filesystem
+          # Impact: Host root is mounted at /host
+          # Path: /host provides access to host filesystem
+          
+          readOnly: true
+          # Purpose: Specifies the mount as read-only
+          # Why needed: Prevents container from modifying host filesystem
+          # Impact: Container can only read from host filesystem
+          # ReadOnly: true prevents accidental modifications
+        
+        securityContext:
+        # =============================================================================
+        # SECURITY CONTEXT
+        # =============================================================================
+        # Defines the security context for the container.
+        # =============================================================================
+        
+          runAsNonRoot: true
+          # Purpose: Specifies that container should not run as root
+          # Why needed: Improves security by avoiding root privileges
+          # Impact: Container runs as non-root user
+          # Security: Non-root execution reduces security risks
+          
+          runAsUser: 65534
+          # Purpose: Specifies the user ID to run as
+          # Why needed: Defines the specific non-root user
+          # Impact: Container runs as user 65534 (nobody)
+          # User: 65534 is the standard nobody user ID
+          
+          allowPrivilegeEscalation: false
+          # Purpose: Prevents privilege escalation
+          # Why needed: Improves security by preventing privilege escalation
+          # Impact: Container cannot escalate privileges
+          # Security: Prevents privilege escalation attacks
+          
+          readOnlyRootFilesystem: true
+          # Purpose: Makes root filesystem read-only
+          # Why needed: Improves security by preventing filesystem modifications
+          # Impact: Container cannot modify root filesystem
+          # Security: Read-only root filesystem prevents modifications
+          
+          capabilities:
+          # Purpose: Defines the capabilities the container needs
+          # Why needed: Specifies minimal required capabilities
+          # Impact: Container has only necessary capabilities
+          # Security: Minimal capabilities reduce attack surface
+            
+            drop:
+            # Purpose: Specifies capabilities to drop
+            # Why needed: Removes unnecessary capabilities
+            # Impact: Container has fewer capabilities
+            # Security: Dropping capabilities improves security
+              
+            - ALL
+            # Purpose: Drops all capabilities
+            # Why needed: Starts with no capabilities
+            # Impact: Container has no capabilities by default
+            # Security: No capabilities by default is most secure
+
+      volumes:
+      # =============================================================================
+      # VOLUMES SECTION
+      # =============================================================================
+      # Defines the volumes that will be mounted in the pod.
+      # =============================================================================
+      
+      - name: proc
+        # Purpose: Specifies the volume name
+        # Why needed: References the volume in volumeMounts
+        # Impact: Creates a volume for /proc filesystem
+        # Volume: 'proc' is the host /proc filesystem
+        
+        hostPath:
+        # Purpose: Specifies the volume type
+        # Why needed: Defines how the volume is created
+        # Impact: Volume is created from host path
+        # Type: hostPath creates volume from host filesystem
+          
+          path: /proc
+          # Purpose: Specifies the host path
+          # Why needed: Defines which host path to use
+          # Impact: Host /proc is used as volume source
+          # Path: /proc provides process information
+      
+      - name: sys
+        # Purpose: Specifies the volume name
+        # Why needed: References the volume in volumeMounts
+        # Impact: Creates a volume for /sys filesystem
+        # Volume: 'sys' is the host /sys filesystem
+        
+        hostPath:
+        # Purpose: Specifies the volume type
+        # Why needed: Defines how the volume is created
+        # Impact: Volume is created from host path
+        # Type: hostPath creates volume from host filesystem
+          
+          path: /sys
+          # Purpose: Specifies the host path
+          # Why needed: Defines which host path to use
+          # Impact: Host /sys is used as volume source
+          # Path: /sys provides system information
+      
+      - name: root
+        # Purpose: Specifies the volume name
+        # Why needed: References the volume in volumeMounts
+        # Impact: Creates a volume for root filesystem
+        # Volume: 'root' is the host root filesystem
+        
+        hostPath:
+        # Purpose: Specifies the volume type
+        # Why needed: Defines how the volume is created
+        # Impact: Volume is created from host path
+        # Type: hostPath creates volume from host filesystem
+          
+          path: /
+          # Purpose: Specifies the host path
+          # Why needed: Defines which host path to use
+          # Impact: Host root is used as volume source
+          # Path: / provides access to entire host filesystem
+
+      tolerations:
+      # =============================================================================
+      # TOLERATIONS SECTION
+      # =============================================================================
+      # Defines tolerations for node taints to ensure pod can run on all nodes.
+      # =============================================================================
+      
+      - operator: Exists
+        # Purpose: Specifies that toleration exists for all taints
+        # Why needed: Ensures pod can run on all nodes regardless of taints
+        # Impact: Pod can be scheduled on any node
+        # Operator: Exists means toleration applies to all taints

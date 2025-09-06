@@ -1,0 +1,294 @@
+# =============================================================================
+# GRAFANA DEPLOYMENT MANIFEST
+# =============================================================================
+# This manifest deploys Grafana for visualization and monitoring dashboards
+# for the e-commerce foundation infrastructure project.
+# =============================================================================
+
+apiVersion: apps/v1
+# =============================================================================
+# API VERSION SPECIFICATION
+# =============================================================================
+# Specifies the Kubernetes API version for this resource manifest.
+# apps/v1 is the stable, production-ready version for Deployment resources.
+# =============================================================================
+
+kind: Deployment
+# =============================================================================
+# RESOURCE KIND DEFINITION
+# =============================================================================
+# Deployment is a Kubernetes workload controller that manages pod replicas.
+# This ensures Grafana runs reliably with automatic restarts and updates.
+# =============================================================================
+
+metadata:
+  # =============================================================================
+  # METADATA SECTION
+  # =============================================================================
+  # Contains metadata about the Deployment including name, namespace, and labels.
+  # =============================================================================
+  
+  name: grafana
+  # Purpose: Specifies the unique name of the Deployment within the namespace
+  # Why needed: Identifies the Deployment for management and reference
+  # Impact: Deployment will be named 'grafana' and can be referenced by this name
+  # Naming: Follows kebab-case convention for Kubernetes resources
+  
+  namespace: monitoring
+  # Purpose: Specifies the Kubernetes namespace where the Deployment will be created
+  # Why needed: Isolates monitoring components in dedicated namespace
+  # Impact: Grafana will be deployed in the monitoring namespace
+  # Namespace: 'monitoring' is the standard namespace for monitoring components
+  
+  labels:
+  # =============================================================================
+  # LABELS SECTION
+  # =============================================================================
+  # Labels provide metadata for resource identification and selection.
+  # =============================================================================
+    
+    app: grafana
+    # Purpose: Identifies the application name
+    # Why needed: Enables resource selection and management
+    # Impact: Deployment can be selected using app=grafana
+    # Value: 'grafana' matches the application name
+    
+    component: monitoring
+    # Purpose: Identifies the component type
+    # Why needed: Groups related monitoring components
+    # Impact: Deployment can be selected using component=monitoring
+    # Value: 'monitoring' identifies this as a monitoring component
+
+spec:
+  # =============================================================================
+  # DEPLOYMENT SPECIFICATION
+  # =============================================================================
+  # Defines the desired state of the Deployment including replicas and pod template.
+  # =============================================================================
+  
+  replicas: 1
+  # Purpose: Specifies the number of pod replicas to maintain
+  # Why needed: Grafana is a stateful application that should run as single instance
+  # Impact: Exactly one Grafana pod will be running
+  # Replicas: 1 ensures single instance for data consistency
+  
+  selector:
+  # =============================================================================
+  # POD SELECTOR
+  # =============================================================================
+  # Defines which pods the Deployment should manage.
+  # =============================================================================
+    
+    matchLabels:
+    # Purpose: Specifies labels that pods must have to be managed
+    # Why needed: Ensures Deployment manages the correct pods
+    # Impact: Only pods with matching labels are managed
+    # Labels: Must match the pod template labels
+      
+      app: grafana
+      # Purpose: Matches the app label
+      # Why needed: Ensures Deployment manages Grafana pods
+      # Impact: Only pods with app=grafana are managed
+      # Value: 'grafana' matches the pod template label
+  
+  template:
+  # =============================================================================
+  # POD TEMPLATE SECTION
+  # =============================================================================
+  # Defines the pod template that will be used to create pods.
+  # =============================================================================
+    
+    metadata:
+    # =============================================================================
+    # POD METADATA SECTION
+    # =============================================================================
+    # Contains metadata for the pods created by this Deployment.
+    # =============================================================================
+      
+      labels:
+      # Purpose: Specifies labels for the pods
+      # Why needed: Enables pod identification and selection
+      # Impact: Pods will have these labels for management
+      # Labels: Must match the selector matchLabels
+      
+        app: grafana
+        # Purpose: Identifies the application name
+        # Why needed: Enables pod selection and management
+        # Impact: Pods can be selected using app=grafana
+        # Value: 'grafana' matches the application name
+        
+        component: monitoring
+        # Purpose: Identifies the component type
+        # Why needed: Groups related monitoring components
+        # Impact: Pods can be selected using component=monitoring
+        # Value: 'monitoring' identifies this as a monitoring component
+    
+    spec:
+    # =============================================================================
+    # POD SPECIFICATION SECTION
+    # =============================================================================
+    # Defines the pod specification including containers and volumes.
+    # =============================================================================
+      
+      containers:
+      # =============================================================================
+      # CONTAINERS SECTION
+      # =============================================================================
+      # Defines the containers that will run in the pod.
+      # =============================================================================
+      
+      - name: grafana
+        # Purpose: Specifies the container name
+        # Why needed: Identifies the container in the pod
+        # Impact: Container will be named 'grafana'
+        # Naming: Matches the application name
+        
+        image: grafana/grafana:10.2.0
+        # Purpose: Specifies the container image
+        # Why needed: Defines which Grafana image to run
+        # Impact: Grafana 10.2.0 will be used
+        # Image: grafana/grafana:10.2.0 is the official Grafana image
+        
+        ports:
+        # =============================================================================
+        # CONTAINER PORTS
+        # =============================================================================
+        # Defines the ports that the container exposes.
+        # =============================================================================
+        
+        - name: http
+          # Purpose: Specifies the port name
+          # Why needed: Identifies the port for service discovery
+          # Impact: Port can be referenced by name in services
+          # Name: 'http' identifies this as the HTTP port
+          
+          containerPort: 3000
+          # Purpose: Specifies the port number
+          # Why needed: Grafana listens on port 3000
+          # Impact: Grafana will be accessible on port 3000
+          # Port: 3000 is the standard Grafana port
+          
+          protocol: TCP
+          # Purpose: Specifies the protocol
+          # Why needed: Defines the network protocol
+          # Impact: Port uses TCP protocol
+          # Protocol: TCP is the standard protocol for HTTP
+        
+        env:
+        # =============================================================================
+        # ENVIRONMENT VARIABLES
+        # =============================================================================
+        # Defines environment variables for the container.
+        # =============================================================================
+        
+        - name: GF_SECURITY_ADMIN_PASSWORD
+          # Purpose: Sets the Grafana admin password
+          # Why needed: Provides authentication for Grafana access
+          # Impact: Sets the password for the admin user
+          # Security: Password should be changed in production
+          
+          value: "admin123"
+          # Purpose: Specifies the admin password value
+          # Why needed: Provides default password for initial access
+          # Impact: Admin user can login with this password
+          # Security: This is a default password - change in production
+        
+        - name: GF_INSTALL_PLUGINS
+          # Purpose: Specifies plugins to install automatically
+          # Why needed: Installs useful plugins for monitoring
+          # Impact: Plugins will be installed when container starts
+          # Plugins: Comma-separated list of plugin names
+          
+          value: "grafana-piechart-panel,grafana-worldmap-panel"
+          # Purpose: Installs pie chart and world map panel plugins
+          # Why needed: Provides additional visualization options
+          # Impact: Plugins will be available in Grafana
+          # Plugins: piechart-panel and worldmap-panel are useful for monitoring
+        
+        resources:
+        # =============================================================================
+        # RESOURCE REQUIREMENTS
+        # =============================================================================
+        # Defines the resource requirements and limits for the container.
+        # =============================================================================
+        
+          requests:
+          # Purpose: Specifies the minimum resources required
+          # Why needed: Ensures container has sufficient resources
+          # Impact: Container is guaranteed these resources
+          # Resources: Minimum resources for container operation
+            
+            cpu: 100m
+            # Purpose: Specifies the minimum CPU required
+            # Why needed: Ensures container has sufficient CPU
+            # Impact: Container is guaranteed 100m CPU
+            # CPU: 100m (0.1 CPU cores) is sufficient for Grafana
+            
+            memory: 128Mi
+            # Purpose: Specifies the minimum memory required
+            # Why needed: Ensures container has sufficient memory
+            # Impact: Container is guaranteed 128Mi memory
+            # Memory: 128Mi is sufficient for Grafana operation
+        
+          limits:
+          # Purpose: Specifies the maximum resources allowed
+          # Why needed: Prevents container from consuming too many resources
+          # Impact: Container cannot exceed these resource limits
+          # Resources: Maximum resources for container operation
+            
+            cpu: 500m
+            # Purpose: Specifies the maximum CPU allowed
+            # Why needed: Prevents container from consuming too much CPU
+            # Impact: Container cannot exceed 500m CPU
+            # CPU: 500m (0.5 CPU cores) is the maximum for Grafana
+            
+            memory: 512Mi
+            # Purpose: Specifies the maximum memory allowed
+            # Why needed: Prevents container from consuming too much memory
+            # Impact: Container cannot exceed 512Mi memory
+            # Memory: 512Mi is the maximum for Grafana
+        
+        volumeMounts:
+        # =============================================================================
+        # VOLUME MOUNTS
+        # =============================================================================
+        # Defines the volumes that will be mounted in the container.
+        # =============================================================================
+        
+        - name: grafana-storage
+          # Purpose: Specifies the volume name
+          # Why needed: References the volume defined in volumes section
+          # Impact: Mounts the Grafana storage volume in the container
+          # Volume: 'grafana-storage' is the persistent volume for data
+          
+          mountPath: /var/lib/grafana
+          # Purpose: Specifies the mount path in the container
+          # Why needed: Grafana stores data in this directory
+          # Impact: Grafana data is persisted in the mounted volume
+          # Path: /var/lib/grafana is the standard Grafana data directory
+          
+          readOnly: false
+          # Purpose: Specifies the mount as read-write
+          # Why needed: Grafana needs to write data to this directory
+          # Impact: Container can read and write to the mounted volume
+          # ReadOnly: false allows Grafana to persist data and configuration
+      
+      volumes:
+      # =============================================================================
+      # VOLUMES SECTION
+      # =============================================================================
+      # Defines the volumes that will be mounted in the pod.
+      # =============================================================================
+      
+      - name: grafana-storage
+        # Purpose: Specifies the volume name
+        # Why needed: References the volume in volumeMounts
+        # Impact: Creates a volume for Grafana data persistence
+        # Volume: 'grafana-storage' is the persistent volume for data
+        
+        emptyDir: {}
+        # Purpose: Creates an empty directory volume
+        # Why needed: Provides temporary storage for Grafana data
+        # Impact: Data is stored in pod's local filesystem
+        # Type: emptyDir provides temporary storage that persists for pod lifetime
+        # Note: In production, use persistentVolumeClaim for data persistence

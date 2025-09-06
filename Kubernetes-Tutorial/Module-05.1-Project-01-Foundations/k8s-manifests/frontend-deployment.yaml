@@ -1,0 +1,440 @@
+# =============================================================================
+# FRONTEND DEPLOYMENT MANIFEST
+# =============================================================================
+# This manifest defines the deployment configuration for the e-commerce frontend
+# application. It creates a React-based frontend that communicates with the
+# backend API service.
+# =============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  # =============================================================================
+  # METADATA SECTION
+  # =============================================================================
+  # The metadata section provides identifying information about the deployment
+  # resource, including its name, namespace, and labels for organization and
+  # selection purposes.
+  # =============================================================================
+  
+  name: ecommerce-frontend
+  # Purpose: Unique identifier for the frontend deployment within the namespace
+  # Why needed: Kubernetes uses this name to identify and manage the deployment
+  # Impact: Required for kubectl operations and service discovery
+  
+  namespace: ecommerce
+  # Purpose: Specifies which namespace this deployment belongs to
+  # Why needed: Provides logical separation and resource isolation
+  # Impact: Ensures frontend runs in the same namespace as backend and database
+  
+  labels:
+    # =============================================================================
+    # LABELS SECTION
+    # =============================================================================
+    # Labels provide key-value pairs for identifying and selecting resources.
+    # They enable efficient resource management and service discovery.
+    # =============================================================================
+    
+    app: ecommerce-frontend
+    # Purpose: Identifies this as the frontend component of the e-commerce application
+    # Why needed: Enables service discovery and resource selection
+    # Impact: Allows services to target this deployment specifically
+    
+    tier: frontend
+    # Purpose: Categorizes this as a frontend tier component
+    # Why needed: Enables tier-based resource management and monitoring
+    # Impact: Allows filtering and grouping of frontend resources
+    
+    version: v1.0.0
+    # Purpose: Tracks the version of the frontend application
+    # Why needed: Enables version management and rollback capabilities
+    # Impact: Supports blue-green deployments and version tracking
+    
+    component: web
+    # Purpose: Identifies this as a web component
+    # Why needed: Enables component-based resource organization
+    # Impact: Allows filtering by component type for monitoring and management
+
+spec:
+  # =============================================================================
+  # SPECIFICATION SECTION
+  # =============================================================================
+  # The spec section defines the desired state of the deployment, including
+  # replica count, selector, template, and container specifications.
+  # =============================================================================
+  
+  replicas: 2
+  # Purpose: Specifies the number of frontend pod replicas to maintain
+  # Why needed: Provides high availability and load distribution
+  # Impact: Ensures frontend remains available even if one pod fails
+  # Kubernetes concept: ReplicaSet controller maintains the specified number of pods
+  
+  selector:
+    # =============================================================================
+    # SELECTOR SECTION
+    # =============================================================================
+    # The selector defines how the deployment identifies which pods it manages.
+    # It must match the labels in the pod template.
+    # =============================================================================
+    
+    matchLabels:
+      app: ecommerce-frontend
+      # Purpose: Matches pods with this specific label
+      # Why needed: Enables the deployment to manage the correct pods
+      # Impact: Ensures only frontend pods are managed by this deployment
+      
+      tier: frontend
+      # Purpose: Ensures only frontend tier pods are selected
+      # Why needed: Provides additional specificity for pod selection
+      # Impact: Prevents accidental management of other tier pods
+
+  template:
+    # =============================================================================
+    # POD TEMPLATE SECTION
+    # =============================================================================
+    # The template defines the pod specification that will be used to create
+    # new pods when scaling or replacing existing ones.
+    # =============================================================================
+    
+    metadata:
+      # =============================================================================
+      # POD METADATA SECTION
+      # =============================================================================
+      # Pod metadata includes labels and annotations that identify and describe
+      # the pod instances created from this template.
+      # =============================================================================
+      
+      labels:
+        app: ecommerce-frontend
+        # Purpose: Identifies individual pods as frontend components
+        # Why needed: Enables service discovery and pod selection
+        # Impact: Allows services to route traffic to these pods
+        
+        tier: frontend
+        # Purpose: Categorizes pods as frontend tier
+        # Why needed: Enables tier-based resource management
+        # Impact: Allows filtering and monitoring by tier
+        
+        version: v1.0.0
+        # Purpose: Tracks the version of pods
+        # Why needed: Enables version management and rollback
+        # Impact: Supports deployment strategies and version tracking
+        
+        component: web
+        # Purpose: Identifies pods as web components
+        # Why needed: Enables component-based organization
+        # Impact: Allows filtering and management by component type
+
+    spec:
+      # =============================================================================
+      # POD SPECIFICATION SECTION
+      # =============================================================================
+      # The pod spec defines the containers, volumes, and other settings
+      # that will be applied to each pod created from this template.
+      # =============================================================================
+      
+      containers:
+      # =============================================================================
+      # CONTAINERS SECTION
+      # =============================================================================
+      # The containers section defines the application containers that will
+      # run within each pod. In this case, we have a single frontend container.
+      # =============================================================================
+      
+      - name: frontend
+        # Purpose: Unique name for the frontend container within the pod
+        # Why needed: Enables container identification and management
+        # Impact: Required for kubectl operations and container-specific commands
+        
+        image: ecommerce-frontend:v1.0.0
+        # Purpose: Specifies the Docker image to use for the frontend container
+        # Why needed: Defines the application code and runtime environment
+        # Impact: Determines the frontend application version and capabilities
+        # Image details: React-based frontend application with nginx server
+        
+        ports:
+        # =============================================================================
+        # PORTS SECTION
+        # =============================================================================
+        # The ports section defines the network ports that the container
+        # will listen on and expose to other containers and services.
+        # =============================================================================
+        
+        - containerPort: 80
+          # Purpose: Specifies the port the frontend container listens on
+          # Why needed: Enables network communication with the frontend
+          # Impact: Allows traffic to reach the frontend application
+          # Protocol: HTTP traffic on port 80
+          
+          name: http
+          # Purpose: Names the port for easy reference
+          # Why needed: Enables port identification in services and probes
+          # Impact: Allows services to reference this port by name
+          
+          protocol: TCP
+          # Purpose: Specifies the network protocol for this port
+          # Why needed: Defines the communication protocol
+          # Impact: Ensures proper network configuration
+
+        env:
+        # =============================================================================
+        # ENVIRONMENT VARIABLES SECTION
+        # =============================================================================
+        # The env section defines environment variables that will be available
+        # to the container at runtime, including API endpoints and configuration.
+        # =============================================================================
+        
+        - name: REACT_APP_API_URL
+          # Purpose: Defines the backend API URL for frontend to connect to
+          # Why needed: Enables frontend to communicate with backend services
+          # Impact: Configures the API endpoint for data fetching
+          # Value: Points to the backend service within the cluster
+          
+          value: "http://ecommerce-backend-service:80"
+          # Purpose: Specifies the backend service URL
+          # Why needed: Provides the exact endpoint for API calls
+          # Impact: Enables frontend-backend communication
+          # Service discovery: Uses Kubernetes service name for internal communication
+        
+        - name: NODE_ENV
+          # Purpose: Sets the Node.js environment mode
+          # Why needed: Configures the React application for production mode
+          # Impact: Optimizes the frontend application for production use
+          # Value: "production" enables optimizations and minification
+          
+          value: "production"
+          # Purpose: Specifies production environment configuration
+          # Why needed: Enables production optimizations and error handling
+          # Impact: Improves performance and security for production use
+
+        resources:
+        # =============================================================================
+        # RESOURCES SECTION
+        # =============================================================================
+        # The resources section defines CPU and memory limits and requests
+        # for the container, ensuring proper resource allocation and management.
+        # =============================================================================
+        
+          requests:
+          # =============================================================================
+          # RESOURCE REQUESTS SECTION
+          # =============================================================================
+          # Resource requests specify the minimum resources the container needs
+          # to run. Kubernetes uses these for scheduling decisions.
+          # =============================================================================
+          
+            memory: "256Mi"
+            # Purpose: Specifies minimum memory required for the frontend container
+            # Why needed: Ensures sufficient memory for React application and nginx
+            # Impact: Prevents scheduling on nodes with insufficient memory
+            # Unit: MiB (Mebibytes) - binary unit of memory measurement
+            
+            cpu: "100m"
+            # Purpose: Specifies minimum CPU required for the frontend container
+            # Why needed: Ensures sufficient CPU for React application processing
+            # Impact: Prevents scheduling on nodes with insufficient CPU
+            # Unit: "m" represents millicores (1/1000 of a CPU core)
+          
+          limits:
+          # =============================================================================
+          # RESOURCE LIMITS SECTION
+          # =============================================================================
+          # Resource limits specify the maximum resources the container can use.
+          # These prevent resource exhaustion and ensure fair resource sharing.
+          # =============================================================================
+          
+            memory: "512Mi"
+            # Purpose: Specifies maximum memory the frontend container can use
+            # Why needed: Prevents memory exhaustion and ensures fair resource sharing
+            # Impact: Container will be killed if it exceeds this limit
+            # Unit: MiB (Mebibytes) - binary unit of memory measurement
+            
+            cpu: "500m"
+            # Purpose: Specifies maximum CPU the frontend container can use
+            # Why needed: Prevents CPU exhaustion and ensures fair resource sharing
+            # Impact: Container will be throttled if it exceeds this limit
+            # Unit: "m" represents millicores (1/1000 of a CPU core)
+
+        livenessProbe:
+        # =============================================================================
+        # LIVENESS PROBE SECTION
+        # =============================================================================
+        # The liveness probe determines if the container is running properly.
+        # If the probe fails, Kubernetes will restart the container.
+        # =============================================================================
+        
+          httpGet:
+          # =============================================================================
+          # HTTP GET PROBE SECTION
+          # =============================================================================
+          # HTTP GET probe performs an HTTP GET request to check container health.
+          # This is ideal for web applications that serve HTTP content.
+          # =============================================================================
+          
+            path: /
+            # Purpose: Specifies the HTTP path to check for liveness
+            # Why needed: Provides a simple health check endpoint
+            # Impact: Kubernetes will restart container if this endpoint fails
+            # Endpoint: Root path should return HTTP 200 for healthy frontend
+            
+            port: 80
+            # Purpose: Specifies the port to check for liveness
+            # Why needed: Ensures the HTTP server is responding
+            # Impact: Validates that the frontend web server is working
+            # Protocol: HTTP GET request to port 80
+            
+            scheme: HTTP
+            # Purpose: Specifies the protocol scheme for the health check
+            # Why needed: Defines whether to use HTTP or HTTPS
+            # Impact: Determines the security level of the health check
+            # Value: HTTP for internal cluster communication
+        
+          initialDelaySeconds: 30
+          # Purpose: Specifies delay before first liveness probe
+          # Why needed: Allows container time to start up and initialize
+          # Impact: Prevents premature container restarts during startup
+          # Time: 30 seconds delay for React application to load
+          
+          periodSeconds: 10
+          # Purpose: Specifies interval between liveness probe checks
+          # Why needed: Provides regular health monitoring
+          # Impact: Balances monitoring frequency with resource usage
+          # Time: Check every 10 seconds for responsive health monitoring
+          
+          timeoutSeconds: 5
+          # Purpose: Specifies timeout for each liveness probe
+          # Why needed: Prevents hanging probes from blocking container management
+          # Impact: Ensures timely detection of unhealthy containers
+          # Time: 5 second timeout for HTTP GET request
+          
+          failureThreshold: 3
+          # Purpose: Specifies number of consecutive failures before restart
+          # Why needed: Prevents restarts due to temporary network issues
+          # Impact: Provides resilience against transient failures
+          # Count: 3 consecutive failures trigger container restart
+
+        readinessProbe:
+        # =============================================================================
+        # READINESS PROBE SECTION
+        # =============================================================================
+        # The readiness probe determines if the container is ready to receive traffic.
+        # If the probe fails, the container is removed from service endpoints.
+        # =============================================================================
+        
+          httpGet:
+          # =============================================================================
+          # HTTP GET PROBE SECTION
+          # =============================================================================
+          # HTTP GET probe performs an HTTP GET request to check readiness.
+          # This ensures the container is fully initialized before receiving traffic.
+          # =============================================================================
+          
+            path: /
+            # Purpose: Specifies the HTTP path to check for readiness
+            # Why needed: Provides a simple readiness check endpoint
+            # Impact: Container won't receive traffic until this endpoint succeeds
+            # Endpoint: Root path should return HTTP 200 for ready frontend
+            
+            port: 80
+            # Purpose: Specifies the port to check for readiness
+            # Why needed: Ensures the HTTP server is ready to serve requests
+            # Impact: Validates that the frontend web server is fully operational
+            # Protocol: HTTP GET request to port 80
+            
+            scheme: HTTP
+            # Purpose: Specifies the protocol scheme for the readiness check
+            # Why needed: Defines whether to use HTTP or HTTPS
+            # Impact: Determines the security level of the readiness check
+            # Value: HTTP for internal cluster communication
+        
+          initialDelaySeconds: 5
+          # Purpose: Specifies delay before first readiness probe
+          # Why needed: Allows container time to start up and initialize
+          # Impact: Prevents premature traffic routing during startup
+          # Time: 5 seconds delay for React application to load
+          
+          periodSeconds: 5
+          # Purpose: Specifies interval between readiness probe checks
+          # Why needed: Provides regular readiness monitoring
+          # Impact: Balances monitoring frequency with resource usage
+          # Time: Check every 5 seconds for responsive readiness monitoring
+          
+          timeoutSeconds: 3
+          # Purpose: Specifies timeout for each readiness probe
+          # Why needed: Prevents hanging probes from blocking traffic routing
+          # Impact: Ensures timely detection of unready containers
+          # Time: 3 second timeout for HTTP GET request
+          
+          successThreshold: 1
+          # Purpose: Specifies number of consecutive successes to mark as ready
+          # Why needed: Ensures container is consistently ready before traffic routing
+          # Impact: Provides confidence in container readiness
+          # Count: 1 success marks container as ready
+          
+          failureThreshold: 3
+          # Purpose: Specifies number of consecutive failures before marking unready
+          # Why needed: Prevents traffic routing to unhealthy containers
+          # Impact: Ensures only healthy containers receive traffic
+          # Count: 3 consecutive failures mark container as unready
+
+        imagePullPolicy: IfNotPresent
+        # Purpose: Specifies when to pull the container image
+        # Why needed: Controls image update behavior and resource usage
+        # Impact: Balances image freshness with resource efficiency
+        # Policy: Only pull if image not present locally (faster startup)
+
+      restartPolicy: Always
+      # Purpose: Specifies restart behavior for the pod
+      # Why needed: Ensures high availability and fault tolerance
+      # Impact: Pod will be restarted if it fails or is terminated
+      # Policy: Always restart regardless of exit reason
+
+      terminationGracePeriodSeconds: 30
+      # Purpose: Specifies grace period for pod termination
+      # Why needed: Allows graceful shutdown of the frontend application
+      # Impact: Prevents data loss and ensures clean shutdown
+      # Time: 30 seconds for React application to save state and close connections
+
+      dnsPolicy: ClusterFirst
+      # Purpose: Specifies DNS resolution policy for the pod
+      # Why needed: Ensures proper service discovery within the cluster
+      # Impact: Enables frontend to resolve backend service names
+      # Policy: Use cluster DNS first, then fall back to host DNS
+
+      securityContext:
+      # =============================================================================
+      # SECURITY CONTEXT SECTION
+      # =============================================================================
+      # The security context defines security settings for the pod and containers.
+      # This ensures secure operation and compliance with security policies.
+      # =============================================================================
+      
+        runAsNonRoot: true
+        # Purpose: Ensures the container runs as a non-root user
+        # Why needed: Improves security by reducing privilege escalation risks
+        # Impact: Prevents potential security vulnerabilities from root access
+        # Security: Reduces attack surface and follows security best practices
+        
+        runAsUser: 1000
+        # Purpose: Specifies the user ID for the container process
+        # Why needed: Ensures consistent and secure user identity
+        # Impact: Provides predictable security context for the frontend
+        # User: UID 1000 is a common non-root user ID
+        
+        fsGroup: 1000
+        # Purpose: Specifies the group ID for file system access
+        # Why needed: Ensures proper file permissions and access control
+        # Impact: Provides secure file system access for the frontend
+        # Group: GID 1000 matches the user ID for consistent permissions
+
+# =============================================================================
+# END OF FRONTEND DEPLOYMENT MANIFEST
+# =============================================================================
+# This manifest creates a highly available, secure, and monitored frontend
+# deployment for the e-commerce application. It includes:
+# - 2 replicas for high availability
+# - Resource limits and requests for proper resource management
+# - Health checks for reliability monitoring
+# - Security context for secure operation
+# - Environment variables for backend communication
+# =============================================================================

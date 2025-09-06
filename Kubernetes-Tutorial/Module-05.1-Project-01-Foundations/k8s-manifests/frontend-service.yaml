@@ -1,0 +1,146 @@
+# =============================================================================
+# FRONTEND SERVICE MANIFEST
+# =============================================================================
+# This manifest defines the service configuration for the e-commerce frontend
+# application. It provides a stable network endpoint for accessing the frontend
+# and enables load balancing across multiple frontend pod replicas.
+# =============================================================================
+
+apiVersion: v1
+kind: Service
+metadata:
+  # =============================================================================
+  # METADATA SECTION
+  # =============================================================================
+  # The metadata section provides identifying information about the service
+  # resource, including its name, namespace, and labels for organization and
+  # selection purposes.
+  # =============================================================================
+  
+  name: ecommerce-frontend-service
+  # Purpose: Unique identifier for the frontend service within the namespace
+  # Why needed: Kubernetes uses this name for service discovery and DNS resolution
+  # Impact: Required for kubectl operations and internal service communication
+  
+  namespace: ecommerce
+  # Purpose: Specifies which namespace this service belongs to
+  # Why needed: Provides logical separation and resource isolation
+  # Impact: Ensures frontend service runs in the same namespace as backend and database
+  
+  labels:
+    # =============================================================================
+    # LABELS SECTION
+    # =============================================================================
+    # Labels provide key-value pairs for identifying and selecting resources.
+    # They enable efficient resource management and service discovery.
+    # =============================================================================
+    
+    app: ecommerce-frontend
+    # Purpose: Identifies this as the frontend component of the e-commerce application
+    # Why needed: Enables service discovery and resource selection
+    # Impact: Allows other services to identify and connect to the frontend
+    
+    tier: frontend
+    # Purpose: Categorizes this as a frontend tier component
+    # Why needed: Enables tier-based resource management and monitoring
+    # Impact: Allows filtering and grouping of frontend resources
+    
+    version: v1.0.0
+    # Purpose: Tracks the version of the frontend service
+    # Why needed: Enables version management and service discovery
+    # Impact: Supports version-based service selection and routing
+    
+    component: web
+    # Purpose: Identifies this as a web component service
+    # Why needed: Enables component-based resource organization
+    # Impact: Allows filtering by component type for monitoring and management
+
+spec:
+  # =============================================================================
+  # SPECIFICATION SECTION
+  # =============================================================================
+  # The spec section defines the desired state of the service, including
+  # selector, ports, and service type configuration.
+  # =============================================================================
+  
+  type: ClusterIP
+  # Purpose: Specifies the service type for internal cluster communication
+  # Why needed: Provides internal access to frontend pods within the cluster
+  # Impact: Frontend is accessible only within the cluster network
+  # Service type: ClusterIP is the default type for internal services
+  
+  selector:
+    # =============================================================================
+    # SELECTOR SECTION
+    # =============================================================================
+    # The selector defines which pods this service will route traffic to.
+    # It must match the labels in the pod template of the deployment.
+    # =============================================================================
+    
+    app: ecommerce-frontend
+    # Purpose: Matches pods with the frontend application label
+    # Why needed: Enables the service to route traffic to frontend pods
+    # Impact: Ensures only frontend pods receive traffic from this service
+    
+    tier: frontend
+    # Purpose: Ensures only frontend tier pods are selected
+    # Why needed: Provides additional specificity for pod selection
+    # Impact: Prevents accidental traffic routing to other tier pods
+
+  ports:
+  # =============================================================================
+  # PORTS SECTION
+  # =============================================================================
+  # The ports section defines the network ports that the service will expose
+  # and how traffic will be routed to the backend pods.
+  # =============================================================================
+  
+  - name: http
+    # Purpose: Names the port for easy reference and identification
+    # Why needed: Enables port identification in services and ingress
+    # Impact: Allows other resources to reference this port by name
+    # Port name: "http" indicates this is the main HTTP port
+    
+    port: 80
+    # Purpose: Specifies the port the service will listen on
+    # Why needed: Defines the external port for accessing the frontend
+    # Impact: Clients connect to the frontend using port 80
+    # Protocol: HTTP traffic on port 80 (standard web port)
+    
+    targetPort: 80
+    # Purpose: Specifies the port on the backend pods to route traffic to
+    # Why needed: Maps external service port to internal pod port
+    # Impact: Traffic to service port 80 is routed to pod port 80
+    # Port mapping: Service port 80 -> Pod port 80
+    
+    protocol: TCP
+    # Purpose: Specifies the network protocol for this port
+    # Why needed: Defines the communication protocol for the service
+    # Impact: Ensures proper network configuration and routing
+    # Protocol: TCP for reliable HTTP communication
+
+  sessionAffinity: None
+  # Purpose: Specifies how traffic is distributed across backend pods
+  # Why needed: Controls load balancing behavior for the frontend service
+  # Impact: Traffic is distributed evenly across all frontend pod replicas
+  # Affinity: None means no session affinity (stateless load balancing)
+
+  # =============================================================================
+  # SERVICE DISCOVERY AND DNS
+  # =============================================================================
+  # This service will be accessible via DNS within the cluster:
+  # - Full DNS name: ecommerce-frontend-service.ecommerce.svc.cluster.local
+  # - Short DNS name: ecommerce-frontend-service.ecommerce
+  # - Namespace-scoped: ecommerce-frontend-service
+  # =============================================================================
+
+# =============================================================================
+# END OF FRONTEND SERVICE MANIFEST
+# =============================================================================
+# This manifest creates a service for the e-commerce frontend application that:
+# - Provides stable network access to frontend pods
+# - Enables load balancing across multiple frontend replicas
+# - Supports internal cluster communication
+# - Uses ClusterIP type for secure internal access
+# - Maps external port 80 to internal pod port 80
+# =============================================================================

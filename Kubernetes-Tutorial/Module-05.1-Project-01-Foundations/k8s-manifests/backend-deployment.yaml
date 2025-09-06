@@ -1,19 +1,49 @@
 # E-commerce Backend Deployment
 # This manifest deploys the e-commerce backend application with proper configuration
 
+# =============================================================================
+# DEPLOYMENT OVERVIEW
+# =============================================================================
+# Purpose: Deploys and manages the e-commerce backend application
+# Why Deployment: Provides rolling updates, rollbacks, and replica management
+# Kubernetes concept: Deployment is a higher-level abstraction that manages ReplicaSets
+
 apiVersion: apps/v1
+# API Version: apps/v1 is the stable version for Deployment resources
+# This version includes features like rolling updates and rollback capabilities
+
 kind: Deployment
+# Resource Type: Deployment manages a set of identical pods
+# Provides declarative updates for Pods and ReplicaSets
+
 metadata:
+  # Metadata section contains identifying information about the deployment
   name: ecommerce-backend
+  # Name: Unique identifier for the deployment within the namespace
+  # This name will be used to reference the deployment in other resources
+  
   namespace: ecommerce
+  # Namespace: Specifies which namespace this deployment belongs to
+  # Must match the namespace created in namespace.yaml
+  
   labels:
+    # Labels: Key-value pairs for organizing and selecting resources
     app: ecommerce-backend
+    # app: ecommerce-backend - Identifies this as the backend application
     version: v1.0.0
+    # version: v1.0.0 - Tracks the application version for rollback purposes
     environment: development
+    # environment: development - Indicates this is a development environment
     component: backend
+    # component: backend - Identifies this as the backend component
+  
   annotations:
+    # Annotations: Additional metadata that doesn't affect resource behavior
     deployment.kubernetes.io/revision: "1"
+    # deployment.kubernetes.io/revision: "1" - Tracks deployment revision number
+    # This is automatically managed by Kubernetes for rollback purposes
     description: "E-commerce backend application deployment"
+    # description: Human-readable description of the deployment purpose
 spec:
   # Number of replicas for high availability
   replicas: 2

@@ -1,0 +1,296 @@
+# =============================================================================
+# ALERTMANAGER CONFIGURATION FOR E-COMMERCE FOUNDATION INFRASTRUCTURE
+# =============================================================================
+# This configuration file defines how AlertManager processes and routes alerts
+# from Prometheus for the e-commerce foundation infrastructure project. It includes
+# comprehensive alert routing, notification channels, and alert management.
+# =============================================================================
+
+global:
+  # =============================================================================
+  # GLOBAL CONFIGURATION SECTION
+  # =============================================================================
+  # The global section defines configuration parameters that apply to all
+  # alert routing and notification channels unless overridden at the receiver level.
+  # =============================================================================
+  
+  smtp_smarthost: 'localhost:587'
+  # Purpose: Specifies the SMTP server endpoint for email notifications
+  # Why needed: Enables AlertManager to send email alerts via SMTP
+  # Impact: All email notifications will be sent through this SMTP server
+  # Server: localhost:587 is the standard SMTP submission port
+  # Protocol: SMTP (Simple Mail Transfer Protocol) for email delivery
+  # Port: 587 is the standard port for SMTP submission with TLS
+  
+  smtp_from: 'alertmanager@ecommerce.local'
+  # Purpose: Specifies the sender email address for all alert emails
+  # Why needed: Identifies the source of alert emails for recipients
+  # Impact: All alert emails will appear to come from this address
+  # Address: alertmanager@ecommerce.local is the project's dedicated alert sender
+  # Domain: ecommerce.local is the internal domain for the project
+  # Format: email@domain format for proper SMTP addressing
+
+route:
+  # =============================================================================
+  # ALERT ROUTING CONFIGURATION SECTION
+  # =============================================================================
+  # The route section defines how alerts are routed to different notification
+  # channels based on alert labels, severity levels, and custom routing rules.
+  # This enables intelligent alert distribution and prevents alert fatigue.
+  # =============================================================================
+  
+  group_by: ['alertname', 'cluster', 'service']
+  # Purpose: Specifies labels to group alerts by for batching
+  # Why needed: Prevents alert spam by grouping related alerts together
+  # Impact: Alerts with identical values for these labels are grouped
+  # Labels: alertname (alert type), cluster (Kubernetes cluster), service (affected service)
+  # Benefit: Reduces notification noise and improves alert management
+  # Example: All "HighCPUUsage" alerts for "ecommerce-backend" service are grouped
+  
+  group_wait: 10s
+  # Purpose: Defines the time to wait before sending initial notification for a group
+  # Why needed: Allows time for related alerts to arrive and be grouped together
+  # Impact: Waits 10 seconds before sending the first alert in a new group
+  # Time: 10 seconds provides good balance between responsiveness and grouping
+  # Benefit: Prevents immediate notifications for transient issues
+  # Use Case: Allows multiple related alerts to be batched into single notification
+  
+  group_interval: 10s
+  # Purpose: Defines the time to wait before sending updated notification for a group
+  # Why needed: Prevents notification spam from rapidly changing alerts
+  # Impact: Waits 10 seconds before sending updated alert for existing group
+  # Time: 10 seconds prevents excessive notifications for fluctuating alerts
+  # Benefit: Reduces alert fatigue while maintaining responsiveness
+  # Use Case: Prevents spam when alert status changes frequently
+  
+  repeat_interval: 1h
+  # Purpose: Defines the time to wait before resending unresolved alerts
+  # Why needed: Ensures critical alerts are not forgotten and remain visible
+  # Impact: Resends unresolved alerts every hour to maintain awareness
+  # Time: 1 hour provides good balance between persistence and spam prevention
+  # Benefit: Keeps critical issues visible until resolved
+  # Use Case: Ensures ongoing critical alerts don't get lost in noise
+  
+  receiver: 'web.hook'
+  # Purpose: Specifies the default receiver for unmatched alerts
+  # Why needed: Ensures all alerts have a destination even if no specific route matches
+  # Impact: Unmatched alerts are sent to the web.hook receiver
+  # Receiver: web.hook is the default fallback receiver for catch-all scenarios
+  # Fallback: Provides safety net for alerts that don't match specific routing rules
+  # Integration: Enables custom webhook processing for unmatched alerts
+  
+  routes:
+  # =============================================================================
+  # ALERT ROUTING RULES
+  # =============================================================================
+  # Defines specific routing rules based on alert labels and severity.
+  # =============================================================================
+  
+  - match:
+      severity: critical
+    # Purpose: Routes critical severity alerts
+    # Why needed: Critical alerts need immediate attention
+    # Impact: Critical alerts go to critical receiver
+    # Label: severity=critical identifies critical alerts
+    
+    receiver: 'critical-alerts'
+    # Purpose: Specifies receiver for critical alerts
+    # Why needed: Critical alerts need immediate notification
+    # Impact: Critical alerts go to critical-alerts receiver
+    # Receiver: critical-alerts handles critical notifications
+  
+  - match:
+      severity: warning
+    # Purpose: Routes warning severity alerts
+    # Why needed: Warning alerts need attention but are less urgent
+    # Impact: Warning alerts go to warning receiver
+    # Label: severity=warning identifies warning alerts
+    
+    receiver: 'warning-alerts'
+    # Purpose: Specifies receiver for warning alerts
+    # Why needed: Warning alerts need notification but less urgent
+    # Impact: Warning alerts go to warning-alerts receiver
+    # Receiver: warning-alerts handles warning notifications
+  
+  - match:
+      service: 'ecommerce-backend'
+    # Purpose: Routes e-commerce backend alerts
+    # Why needed: Backend alerts need specific handling
+    # Impact: Backend alerts go to backend receiver
+    # Label: service=ecommerce-backend identifies backend alerts
+    
+    receiver: 'backend-alerts'
+    # Purpose: Specifies receiver for backend alerts
+    # Why needed: Backend alerts need specific notification
+    # Impact: Backend alerts go to backend-alerts receiver
+    # Receiver: backend-alerts handles backend notifications
+
+receivers:
+# =============================================================================
+# NOTIFICATION RECEIVERS
+# =============================================================================
+# Defines the notification channels and their configurations.
+# =============================================================================
+
+- name: 'web.hook'
+  # Purpose: Default webhook receiver
+  # Why needed: Provides fallback for unmatched alerts
+  # Impact: Unmatched alerts are sent to webhook
+  # Name: web.hook is the default receiver name
+  
+  webhook_configs:
+  # =============================================================================
+  # WEBHOOK CONFIGURATION
+  # =============================================================================
+  # Configures webhook notifications for alert delivery.
+  # =============================================================================
+  
+  - url: 'http://localhost:5001/'
+    # Purpose: Specifies the webhook endpoint URL
+    # Why needed: Defines where to send webhook notifications
+    # Impact: Alerts are sent to this webhook endpoint
+    # URL: http://localhost:5001/ is the webhook endpoint
+
+- name: 'critical-alerts'
+  # Purpose: Critical alerts receiver
+  # Why needed: Handles critical severity alerts
+  # Impact: Critical alerts are sent to this receiver
+  # Name: critical-alerts identifies critical alert receiver
+  
+  email_configs:
+  # =============================================================================
+  # EMAIL CONFIGURATION FOR CRITICAL ALERTS
+  # =============================================================================
+  # Configures email notifications for critical alerts.
+  # =============================================================================
+  
+  - to: 'admin@ecommerce.local'
+    # Purpose: Specifies the recipient email address
+    # Why needed: Critical alerts need immediate attention
+    # Impact: Critical alerts are sent to admin email
+    # Address: admin@ecommerce.local is the admin email
+    
+    subject: 'CRITICAL: {{ .GroupLabels.alertname }}'
+    # Purpose: Specifies the email subject line
+    # Why needed: Identifies critical alerts in email
+    # Impact: Critical alerts have clear subject identification
+    # Template: {{ .GroupLabels.alertname }} shows alert name
+    
+    body: |
+      {{ range .Alerts }}
+      Alert: {{ .Annotations.summary }}
+      Description: {{ .Annotations.description }}
+      {{ end }}
+    # Purpose: Specifies the email body content
+    # Why needed: Provides detailed alert information
+    # Impact: Email contains full alert details
+    # Template: Shows alert summary and description
+
+- name: 'warning-alerts'
+  # Purpose: Warning alerts receiver
+  # Why needed: Handles warning severity alerts
+  # Impact: Warning alerts are sent to this receiver
+  # Name: warning-alerts identifies warning alert receiver
+  
+  email_configs:
+  # =============================================================================
+  # EMAIL CONFIGURATION FOR WARNING ALERTS
+  # =============================================================================
+  # Configures email notifications for warning alerts.
+  # =============================================================================
+  
+  - to: 'ops@ecommerce.local'
+    # Purpose: Specifies the recipient email address
+    # Why needed: Warning alerts need attention but less urgent
+    # Impact: Warning alerts are sent to ops email
+    # Address: ops@ecommerce.local is the operations email
+    
+    subject: 'WARNING: {{ .GroupLabels.alertname }}'
+    # Purpose: Specifies the email subject line
+    # Why needed: Identifies warning alerts in email
+    # Impact: Warning alerts have clear subject identification
+    # Template: {{ .GroupLabels.alertname }} shows alert name
+    
+    body: |
+      {{ range .Alerts }}
+      Alert: {{ .Annotations.summary }}
+      Description: {{ .Annotations.description }}
+      {{ end }}
+    # Purpose: Specifies the email body content
+    # Why needed: Provides detailed alert information
+    # Impact: Email contains full alert details
+    # Template: Shows alert summary and description
+
+- name: 'backend-alerts'
+  # Purpose: Backend alerts receiver
+  # Why needed: Handles e-commerce backend specific alerts
+  # Impact: Backend alerts are sent to this receiver
+  # Name: backend-alerts identifies backend alert receiver
+  
+  email_configs:
+  # =============================================================================
+  # EMAIL CONFIGURATION FOR BACKEND ALERTS
+  # =============================================================================
+  # Configures email notifications for backend alerts.
+  # =============================================================================
+  
+  - to: 'backend-team@ecommerce.local'
+    # Purpose: Specifies the recipient email address
+    # Why needed: Backend alerts need specific team attention
+    # Impact: Backend alerts are sent to backend team email
+    # Address: backend-team@ecommerce.local is the backend team email
+    
+    subject: 'BACKEND: {{ .GroupLabels.alertname }}'
+    # Purpose: Specifies the email subject line
+    # Why needed: Identifies backend alerts in email
+    # Impact: Backend alerts have clear subject identification
+    # Template: {{ .GroupLabels.alertname }} shows alert name
+    
+    body: |
+      {{ range .Alerts }}
+      Alert: {{ .Annotations.summary }}
+      Description: {{ .Annotations.description }}
+      Service: {{ .Labels.service }}
+      {{ end }}
+    # Purpose: Specifies the email body content
+    # Why needed: Provides detailed backend alert information
+    # Impact: Email contains full backend alert details
+    # Template: Shows alert summary, description, and service
+
+inhibit_rules:
+# =============================================================================
+# ALERT INHIBITION RULES
+# =============================================================================
+# Defines rules to suppress certain alerts when other alerts are firing.
+# =============================================================================
+
+- source_match:
+    severity: 'critical'
+  # Purpose: Defines the source alert for inhibition
+  # Why needed: Critical alerts should inhibit less severe alerts
+  # Impact: Critical alerts suppress warning alerts
+  # Label: severity=critical identifies source alerts
+  
+  target_match:
+    severity: 'warning'
+  # Purpose: Defines the target alert for inhibition
+  # Why needed: Warning alerts are suppressed by critical alerts
+  # Impact: Warning alerts are hidden when critical alerts fire
+  # Label: severity=warning identifies target alerts
+  
+  equal: ['alertname', 'cluster', 'service']
+  # Purpose: Defines which labels must match for inhibition
+  # Why needed: Only related alerts should be inhibited
+  # Impact: Only alerts with same alertname, cluster, service are inhibited
+  # Labels: alertname, cluster, service must match for inhibition
+
+# =============================================================================
+# END OF ALERTMANAGER CONFIGURATION
+# =============================================================================
+# This configuration provides comprehensive alert management for the e-commerce
+# foundation infrastructure, including:
+# - Alert routing based on severity and service
+# - Email notifications for different alert types
+# - Alert grouping and inhibition rules
+# - Webhook integration for custom processing
+# =============================================================================

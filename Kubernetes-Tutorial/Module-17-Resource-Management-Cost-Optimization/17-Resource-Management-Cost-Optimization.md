@@ -4681,3 +4681,77 @@ kubectl get pods --all-namespaces -o custom-columns=NAME:.metadata.name,NAMESPAC
 ---
 
 **🎉 MODULE 17: RESOURCE MANAGEMENT - 100% GOLDEN STANDARD COMPLIANT! 🎉**
+
+---
+
+## 🤖 **AI/ML-Powered Resource Optimization**
+
+### **🎯 Machine Learning Resource Predictor**
+```yaml
+# ml-resource-predictor.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ml-resource-predictor
+  namespace: ai-ops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ml-predictor
+  template:
+    metadata:
+      labels:
+        app: ml-predictor
+    spec:
+      containers:
+      - name: predictor
+        image: resource-ml-predictor:v2.0
+        env:
+        - name: MODEL_TYPE
+          value: "lstm_resource_forecaster"
+        - name: PREDICTION_HORIZON
+          value: "24h"
+        - name: OPTIMIZATION_TARGET
+          value: "cost_performance_balance"
+        resources:
+          requests:
+            cpu: 2000m
+            memory: 4Gi
+          limits:
+            cpu: 8000m
+            memory: 16Gi
+```
+
+### **🎯 Enhanced Practice Problems**
+
+#### **Practice Problem 1: Black Friday Resource Planning**
+**Business Scenario**: Prepare infrastructure for 50x traffic spike during Black Friday
+
+**Requirements**:
+- Predict resource needs 2 weeks in advance
+- Implement auto-scaling with 30-second response time
+- Optimize costs while maintaining performance
+- Handle traffic spikes gracefully
+
+#### **Practice Problem 2: AI-Driven Cost Optimization**
+**Business Scenario**: Reduce infrastructure costs by 35% using ML
+
+**Requirements**:
+- Implement predictive scaling based on historical patterns
+- Optimize resource allocation across multiple workloads
+- Maintain SLA compliance (99.9% availability)
+- Generate cost savings reports for executives
+
+#### **Practice Problem 3: Multi-Cloud Resource Arbitrage**
+**Business Scenario**: Optimize costs across AWS, Azure, and GCP
+
+**Requirements**:
+- Implement intelligent workload placement
+- Take advantage of spot pricing across clouds
+- Ensure compliance with data residency requirements
+- Achieve 40% cost reduction through arbitrage
+
+---
+
+**🏆 AI-POWERED RESOURCE MASTERY ACHIEVED! 🏆**
