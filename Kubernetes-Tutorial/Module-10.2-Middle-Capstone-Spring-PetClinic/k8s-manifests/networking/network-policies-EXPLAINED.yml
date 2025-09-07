@@ -1,0 +1,229 @@
+# =============================================================================
+# PETCLINIC NETWORK POLICIES - COMPREHENSIVE SECURITY DOCUMENTATION
+# =============================================================================
+# This file defines network-level security policies for the PetClinic application.
+# Network Policies act as a firewall for Kubernetes pods, controlling traffic flow
+# at Layer 3/4 (IP/Port level) to implement network segmentation and micro-segmentation.
+#
+# SECURITY IMPACT: These policies create network isolation boundaries that prevent
+# unauthorized network access between pods, namespaces, and external systems.
+#
+# PRODUCTION CONSIDERATIONS:
+# - Requires CNI plugin with NetworkPolicy support (Calico, Cilium, Weave Net)
+# - Test policies in staging before production deployment
+# - Monitor network policy violations and blocked connections
+# - Coordinate with security teams for compliance requirements
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# DEFAULT NETWORK POLICY - NAMESPACE-WIDE TRAFFIC CONTROL
+# -----------------------------------------------------------------------------
+# API version for NetworkPolicy resources
+# networking.k8s.io/v1 has been stable since Kubernetes 1.7
+# This API provides declarative network security policies
+apiVersion: networking.k8s.io/v1
+
+# Resource type: NetworkPolicy defines network access rules for pods
+# NetworkPolicies are namespace-scoped and apply to pods based on selectors
+# They work at the network layer (Layer 3/4) complementing RBAC (API layer)
+kind: NetworkPolicy
+
+# Metadata section for the NetworkPolicy resource
+metadata:
+  # Name of the NetworkPolicy - should be descriptive of its purpose
+  # This policy applies default network restrictions to all pods in the namespace
+  name: petclinic-network-policy
+  
+  # Namespace where this NetworkPolicy applies
+  # NetworkPolicies are namespace-scoped and only affect pods in this namespace
+  # SECURITY: Provides namespace-level network isolation
+  namespace: petclinic
+
+# Specification section defining the network policy rules
+spec:
+  # Pod selector determines which pods this policy applies to
+  # Empty selector {} means this policy applies to ALL pods in the namespace
+  # SECURITY PRINCIPLE: Default-deny approach - restrict all traffic by default
+  podSelector: {}
+  
+  # Policy types specify which traffic directions this policy controls
+  # This determines whether the policy affects incoming, outgoing, or both traffic types
+  policyTypes:
+  - Ingress  # Controls incoming traffic TO the selected pods
+  - Egress   # Controls outgoing traffic FROM the selected pods
+  # SECURITY NOTE: Specifying both creates comprehensive traffic control
+  
+  # Ingress rules define what traffic is allowed TO reach the selected pods
+  # If no ingress rules are specified, all ingress traffic is denied
+  ingress:
+  - # From clause specifies the sources allowed to send traffic to these pods
+    from:
+    - # Namespace selector allows traffic from pods in specific namespaces
+      # This rule allows traffic from any pod within the same namespace
+      namespaceSelector:
+        matchLabels:
+          # Label selector for source namespaces
+          # Only namespaces with this label can send traffic to our pods
+          name: petclinic
+          # SECURITY: Ensures only trusted namespaces can communicate
+          # REQUIREMENT: The petclinic namespace must have this label applied
+  
+  # Egress rules define what traffic is allowed FROM the selected pods
+  # If no egress rules are specified, all egress traffic is denied
+  egress:
+  - # First egress rule: Allow traffic to other pods in the same namespace
+    to:
+    - # Allow outbound traffic to pods in namespaces with specific labels
+      namespaceSelector:
+        matchLabels:
+          # Same label requirement as ingress - enables bidirectional communication
+          name: petclinic
+          # SECURITY: Maintains namespace isolation while allowing internal communication
+  
+  - # Second egress rule: Allow DNS resolution traffic
+    # Empty 'to' clause means this rule applies to any destination
+    to: []
+    
+    # Ports section specifies which ports/protocols are allowed
+    # DNS traffic is essential for service discovery and external communication
+    ports:
+    - # TCP DNS queries (less common but sometimes used)
+      protocol: TCP
+      port: 53
+      # DNS over TCP is used for large responses or zone transfers
+      
+    - # UDP DNS queries (standard DNS protocol)
+      protocol: UDP
+      port: 53
+      # Most DNS queries use UDP for performance and efficiency
+      # CRITICAL: Without DNS access, pods cannot resolve service names
+
+---
+# Document separator for multiple NetworkPolicy resources
+
+# -----------------------------------------------------------------------------
+# API GATEWAY SPECIFIC INGRESS POLICY
+# -----------------------------------------------------------------------------
+# API version for the second NetworkPolicy
+apiVersion: networking.k8s.io/v1
+
+# Resource type: NetworkPolicy for specific application component
+kind: NetworkPolicy
+
+# Metadata for the API Gateway specific policy
+metadata:
+  # Name indicating this policy is specific to the API Gateway component
+  # This policy allows external traffic to reach the API Gateway
+  name: api-gateway-ingress
+  
+  # Same namespace as the general policy
+  # Multiple NetworkPolicies in the same namespace are additive
+  namespace: petclinic
+
+# Specification for API Gateway ingress traffic
+spec:
+  # Pod selector targeting only the API Gateway pods
+  # This policy applies ONLY to pods with the app=api-gateway label
+  podSelector:
+    matchLabels:
+      # Label selector for API Gateway pods
+      # REQUIREMENT: API Gateway pods must have this label
+      app: api-gateway
+      # SECURITY: Selective application ensures only the gateway accepts external traffic
+  
+  # Policy types - only controlling ingress traffic for this policy
+  # Egress traffic for API Gateway pods is controlled by the default policy above
+  policyTypes:
+  - Ingress  # Only controlling incoming traffic to API Gateway
+  
+  # Ingress rules for API Gateway
+  ingress:
+  - # Ports section defines which ports are accessible on API Gateway pods
+    # No 'from' clause means traffic from ANY source is allowed to these ports
+    # SECURITY CONSIDERATION: This creates an external entry point
+    ports:
+    - # TCP protocol for HTTP/HTTPS traffic
+      protocol: TCP
+      # Port 8080 is the standard port for the API Gateway service
+      port: 8080
+      # PRODUCTION NOTE: In production, this should be behind a load balancer
+      # with proper TLS termination and additional security controls
+
+# =============================================================================
+# NETWORK POLICY ANALYSIS AND SECURITY IMPLICATIONS
+# =============================================================================
+#
+# TRAFFIC FLOW ANALYSIS:
+# 
+# 1. DEFAULT POLICY (petclinic-network-policy):
+#    ✅ ALLOWS: Inter-namespace communication within petclinic namespace
+#    ✅ ALLOWS: DNS resolution (TCP/UDP port 53) to any destination
+#    ❌ BLOCKS: All other ingress traffic from external sources
+#    ❌ BLOCKS: All other egress traffic to external destinations
+#    ❌ BLOCKS: Cross-namespace communication (except DNS)
+#
+# 2. API GATEWAY POLICY (api-gateway-ingress):
+#    ✅ ALLOWS: External traffic to API Gateway on port 8080
+#    ✅ ALLOWS: Load balancer health checks
+#    ✅ ALLOWS: User traffic from internet (through ingress controller)
+#
+# SECURITY STRENGTHS:
+# - Default-deny approach (secure by default)
+# - Namespace isolation prevents lateral movement
+# - Selective external access only through API Gateway
+# - DNS resolution maintained for service discovery
+# - Layered security with both ingress and egress controls
+#
+# POTENTIAL SECURITY GAPS:
+# - API Gateway allows traffic from ANY source (no source IP restrictions)
+# - No rate limiting at network policy level
+# - No deep packet inspection (Layer 7 filtering)
+#
+# PRODUCTION RECOMMENDATIONS:
+#
+# 1. CNI Plugin Requirements:
+#    - Ensure CNI supports NetworkPolicies (Calico, Cilium, Weave Net)
+#    - Verify NetworkPolicy enforcement is enabled
+#
+# 2. Namespace Labeling:
+#    kubectl label namespace petclinic name=petclinic
+#
+# 3. Monitoring and Alerting:
+#    - Monitor NetworkPolicy violations
+#    - Set up alerts for blocked connections
+#    - Log network policy decisions for audit
+#
+# 4. Additional Security Layers:
+#    - Implement Ingress Controller with WAF capabilities
+#    - Add Service Mesh (Istio/Linkerd) for Layer 7 policies
+#    - Use Pod Security Standards for runtime security
+#
+# 5. Testing Network Policies:
+#    # Test connectivity between pods
+#    kubectl exec -n petclinic <pod-name> -- nc -zv <target-service> <port>
+#    
+#    # Verify DNS resolution works
+#    kubectl exec -n petclinic <pod-name> -- nslookup kubernetes.default
+#
+# 6. Compliance Considerations:
+#    - Meets PCI DSS network segmentation requirements
+#    - Supports SOC 2 Type II network access controls
+#    - Facilitates GDPR data protection through network isolation
+#    - Aligns with NIST Cybersecurity Framework (Protect function)
+#
+# TROUBLESHOOTING NETWORK POLICIES:
+# 
+# 1. Check if CNI supports NetworkPolicies:
+#    kubectl get networkpolicies -n petclinic
+#
+# 2. Verify namespace labels:
+#    kubectl get namespace petclinic --show-labels
+#
+# 3. Test pod-to-pod connectivity:
+#    kubectl exec -n petclinic <source-pod> -- telnet <target-service> <port>
+#
+# 4. Check NetworkPolicy logs (CNI-specific):
+#    # For Calico:
+#    kubectl logs -n kube-system -l k8s-app=calico-node
+#
+# =============================================================================

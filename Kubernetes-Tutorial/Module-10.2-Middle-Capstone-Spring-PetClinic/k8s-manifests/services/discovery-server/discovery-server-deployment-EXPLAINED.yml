@@ -1,0 +1,396 @@
+# =============================================================================
+# SPRING CLOUD DISCOVERY SERVER - COMPREHENSIVE SERVICE REGISTRY DOCUMENTATION
+# =============================================================================
+# This file defines the Spring Cloud Discovery Server (Eureka) deployment, which
+# provides service registration and discovery capabilities for the PetClinic
+# microservices ecosystem. The Discovery Server acts as the central registry
+# enabling dynamic service location and load balancing across microservices.
+#
+# SERVICE MESH FOUNDATION: Discovery Server is the cornerstone of microservice
+# communication, enabling services to find and communicate with each other
+# without hardcoded endpoints or manual configuration.
+#
+# OPERATIONAL CRITICALITY: This service is essential for microservice startup
+# and inter-service communication, making it a critical infrastructure component
+# that must be highly available and performant.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# DISCOVERY SERVER DEPLOYMENT - CENTRAL SERVICE REGISTRY
+# -----------------------------------------------------------------------------
+# API version for Deployment resources
+apiVersion: apps/v1
+
+# Resource type: Deployment for stateless service registry
+kind: Deployment
+
+# Metadata section for Deployment identification
+metadata:
+  # Deployment name following infrastructure service naming convention
+  name: discovery-server
+  # NAMING CONVENTION: Clear identification as service discovery infrastructure
+  
+  # Namespace for application boundary and resource management
+  namespace: petclinic
+  
+  # Labels for resource classification and management
+  labels:
+    # Application identifier for service grouping
+    app: discovery-server
+    # INFRASTRUCTURE SERVICE: Core service supporting microservice communication
+    
+    # Component classification for architectural organization
+    component: infrastructure
+    # INFRASTRUCTURE LAYER: Foundational service for microservice architecture
+    
+    # Tier classification for network policies and resource allocation
+    tier: discovery
+    # DISCOVERY TIER: Specialized tier for service discovery operations
+
+# Deployment specification
+spec:
+  # Replica count for service registry availability
+  replicas: 1
+  # SINGLE INSTANCE: Eureka can run as single instance for development
+  # PRODUCTION CONSIDERATION: Use 3+ replicas for high availability
+  
+  # Selector for pod targeting and management
+  selector:
+    matchLabels:
+      app: discovery-server
+      # TARGETING: Must match pod template labels exactly
+  
+  # Pod template defining the Discovery Server container
+  template:
+    metadata:
+      # Labels applied to each pod instance
+      labels:
+        app: discovery-server
+        component: infrastructure
+        tier: discovery
+        # CONSISTENCY: Labels match Deployment and selector requirements
+    
+    # Pod specification
+    spec:
+      # Container array for Discovery Server deployment
+      containers:
+      - # Container name for identification and logging
+        name: discovery-server
+        
+        # Spring Cloud Discovery Server (Eureka) container image
+        image: springcommunity/spring-petclinic-discovery-server:3.2.0
+        # VERSION PINNING: Specific version ensures consistent service discovery behavior
+        # SPRING COMMUNITY: Official PetClinic Discovery Server image
+        # VERSION 3.2.0: Matches PetClinic application version for compatibility
+        
+        # Container port configuration
+        ports:
+        - # Eureka server default port
+          containerPort: 8761
+          # Port name for service targeting and monitoring
+          name: http
+          # EUREKA PORT: Standard port for Eureka service registry
+          # HTTP PROTOCOL: RESTful API for service registration and discovery
+        
+        # Environment variables for Discovery Server configuration
+        env:
+        # Spring profile activation for Kubernetes environment
+        - name: SPRING_PROFILES_ACTIVE
+          value: "kubernetes"
+          # ENVIRONMENT SPECIFIC: Activates Kubernetes-specific discovery configuration
+          # PROFILE STRATEGY: Enables Kubernetes service discovery integration
+        
+        # Config Server URL for centralized configuration
+        - name: CONFIG_SERVER_URL
+          value: "http://config-server:8888"
+          # CONFIGURATION DEPENDENCY: Retrieves discovery configuration from Config Server
+          # BOOTSTRAP DEPENDENCY: Config Server must be available before Discovery Server
+        
+        # Actuator endpoints exposure for monitoring and management
+        - name: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
+          value: "*"
+          # FULL OBSERVABILITY: Exposes all actuator endpoints for service monitoring
+          # EUREKA MONITORING: Enables monitoring of service registry health and metrics
+          # SECURITY CONSIDERATION: In production, limit to specific endpoints
+        
+        # Resource allocation for Discovery Server workload
+        resources:
+          # Guaranteed resources for baseline service registry operations
+          requests:
+            # Memory allocation for Eureka server and service registry
+            memory: "512Mi"
+            # BASELINE MEMORY: Sufficient for service registry and metadata storage
+            
+            # CPU allocation for service registration and discovery operations
+            cpu: "250m"
+            # BASELINE CPU: Quarter core adequate for service registry operations
+          
+          # Resource limits to prevent resource monopolization
+          limits:
+            # Maximum memory to prevent node pressure
+            memory: "1Gi"
+            # BURST CAPACITY: Double baseline for peak service registration activity
+            
+            # Maximum CPU for fair resource sharing
+            cpu: "500m"
+            # BURST CAPACITY: Half core for intensive service discovery operations
+        
+        # Liveness probe for container health monitoring
+        livenessProbe:
+          # HTTP GET request for health verification
+          httpGet:
+            # Spring Boot Actuator health endpoint
+            path: /actuator/health
+            # Discovery Server port
+            port: 8761
+          # HEALTH ENDPOINT: Spring Boot provides comprehensive health information
+          
+          # Initial delay for application startup completion
+          initialDelaySeconds: 90
+          # EXTENDED STARTUP: Discovery Server needs time to initialize registry
+          # DEPENDENCY WAIT: Allows time for Config Server availability
+          
+          # Probe execution frequency
+          periodSeconds: 30
+          # MONITORING FREQUENCY: Regular health checks for service registry
+          
+          # Timeout for each probe execution
+          timeoutSeconds: 10
+          # RESPONSIVENESS: Generous timeout for health check processing
+          
+          # Failure threshold before pod restart
+          failureThreshold: 3
+          # STABILITY: Multiple failures required before restart
+        
+        # Readiness probe for traffic routing decisions
+        readinessProbe:
+          # HTTP GET request for readiness verification
+          httpGet:
+            # Same health endpoint for readiness
+            path: /actuator/health
+            # Discovery Server port
+            port: 8761
+          # READINESS VERIFICATION: Ensures Discovery Server can accept service registrations
+          
+          # Initial delay for readiness checking
+          initialDelaySeconds: 60
+          # STARTUP OPTIMIZATION: Shorter delay than liveness but allows initialization
+          # SERVICE READINESS: Ensures service registry is ready for registrations
+          
+          # Readiness check frequency
+          periodSeconds: 10
+          # TRAFFIC ROUTING: Frequent checks for responsive service discovery
+          
+          # Timeout for readiness verification
+          timeoutSeconds: 5
+          # QUICK RESPONSE: Fast timeout for traffic routing decisions
+          
+          # Failure threshold before removing from service
+          failureThreshold: 3
+          # SERVICE AVAILABILITY: Multiple failures before traffic removal
+
+---
+# Document separator for Service resource
+
+# -----------------------------------------------------------------------------
+# DISCOVERY SERVER SERVICE - NETWORK ACCESS FOR SERVICE REGISTRY
+# -----------------------------------------------------------------------------
+# API version for Service resources
+apiVersion: v1
+
+# Resource type: Service for network access to Discovery Server
+kind: Service
+
+# Service metadata
+metadata:
+  # Service name for DNS resolution and service registration access
+  name: discovery-server
+  # SERVICE REGISTRY ACCESS: Microservices connect using this service name
+  
+  # Namespace consistency with Deployment
+  namespace: petclinic
+  
+  # Labels for service identification and management
+  labels:
+    app: discovery-server
+    component: infrastructure
+    # CONSISTENCY: Matches Deployment labels for unified management
+
+# Service specification
+spec:
+  # Selector for targeting Discovery Server pods
+  selector:
+    app: discovery-server
+    # POD TARGETING: Routes traffic to Discovery Server pods
+  
+  # Port configuration for service registry access
+  ports:
+  - # Service port for service registration and discovery
+    port: 8761
+    # Target port on Discovery Server pods
+    targetPort: 8761
+    # Port name for identification
+    name: http
+    # EUREKA PROTOCOL: HTTP REST API for service registry operations
+  
+  # Service type for cluster-internal access
+  type: ClusterIP
+  # INTERNAL ACCESS: Discovery Server accessible within cluster
+  # MICROSERVICE PATTERN: Internal service registry for microservice communication
+
+# =============================================================================
+# SPRING CLOUD DISCOVERY SERVER ARCHITECTURE ANALYSIS
+# =============================================================================
+#
+# EUREKA SERVER CAPABILITIES:
+# ✅ SERVICE REGISTRATION: Microservices register themselves with the registry
+# ✅ SERVICE DISCOVERY: Clients can discover and locate other services
+# ✅ HEALTH MONITORING: Tracks health status of registered services
+# ✅ LOAD BALANCING: Provides service instance information for client-side load balancing
+# ✅ FAILOVER SUPPORT: Removes unhealthy service instances from registry
+# ✅ SELF-PRESERVATION: Protects registry during network partitions
+#
+# MICROSERVICE INTEGRATION PATTERNS:
+# ✅ SERVICE REGISTRATION: Microservices auto-register on startup
+# ✅ HEARTBEAT MECHANISM: Regular health checks maintain service status
+# ✅ CLIENT-SIDE DISCOVERY: Services query registry for target service locations
+# ✅ RIBBON INTEGRATION: Client-side load balancing using service registry data
+# ✅ CIRCUIT BREAKER: Integration with Hystrix for resilience patterns
+#
+# SERVICE DISCOVERY WORKFLOW:
+# 1. Microservice starts up and registers with Discovery Server
+# 2. Discovery Server maintains registry of available services
+# 3. Client services query Discovery Server for target service locations
+# 4. Client receives list of available service instances
+# 5. Client performs load balancing and makes service calls
+# 6. Services send periodic heartbeats to maintain registration
+#
+# PRODUCTION ENHANCEMENTS NEEDED:
+#
+# 1. HIGH AVAILABILITY CONFIGURATION:
+#    spec:
+#      replicas: 3  # Multiple instances for availability
+#      strategy:
+#        type: RollingUpdate
+#        rollingUpdate:
+#          maxUnavailable: 1
+#          maxSurge: 1
+#    
+#    # Eureka clustering configuration
+#    env:
+#    - name: EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE
+#      value: "http://discovery-server-0:8761/eureka,http://discovery-server-1:8761/eureka,http://discovery-server-2:8761/eureka"
+#
+# 2. SECURITY CONFIGURATION:
+#    # Authentication for service registration
+#    env:
+#    - name: SPRING_SECURITY_USER_NAME
+#      valueFrom:
+#        secretKeyRef:
+#          name: discovery-server-secrets
+#          key: username
+#    - name: SPRING_SECURITY_USER_PASSWORD
+#      valueFrom:
+#        secretKeyRef:
+#          name: discovery-server-secrets
+#          key: password
+#
+# 3. PERSISTENCE CONFIGURATION:
+#    # Optional: Persist service registry data
+#    volumeMounts:
+#    - name: eureka-data
+#      mountPath: /var/lib/eureka
+#    volumes:
+#    - name: eureka-data
+#      persistentVolumeClaim:
+#        claimName: eureka-storage
+#
+# 4. MONITORING INTEGRATION:
+#    # Eureka metrics for Prometheus
+#    env:
+#    - name: MANAGEMENT_METRICS_EXPORT_PROMETHEUS_ENABLED
+#      value: "true"
+#    - name: MANAGEMENT_ENDPOINT_PROMETHEUS_ENABLED
+#      value: "true"
+#
+# CLIENT CONFIGURATION PATTERN:
+#
+# 1. MICROSERVICE EUREKA CLIENT SETUP:
+#    # application.yml in microservices
+#    eureka:
+#      client:
+#        service-url:
+#          defaultZone: http://discovery-server:8761/eureka
+#        register-with-eureka: true
+#        fetch-registry: true
+#      instance:
+#        prefer-ip-address: true
+#        lease-renewal-interval-in-seconds: 30
+#        lease-expiration-duration-in-seconds: 90
+#
+# 2. SERVICE DISCOVERY USAGE:
+#    # Java code example
+#    @Autowired
+#    private DiscoveryClient discoveryClient;
+#    
+#    public List<ServiceInstance> getServiceInstances(String serviceName) {
+#        return discoveryClient.getInstances(serviceName);
+#    }
+#
+# 3. LOAD BALANCING INTEGRATION:
+#    # RestTemplate with Ribbon load balancing
+#    @LoadBalanced
+#    @Bean
+#    public RestTemplate restTemplate() {
+#        return new RestTemplate();
+#    }
+#
+# OPERATIONAL PROCEDURES:
+#
+# 1. SERVICE REGISTRY MONITORING:
+#    # Check registered services
+#    curl http://discovery-server:8761/eureka/apps
+#    
+#    # Monitor service health
+#    curl http://discovery-server:8761/actuator/health
+#    
+#    # View Eureka dashboard
+#    http://discovery-server:8761/
+#
+# 2. TROUBLESHOOTING PROCEDURES:
+#    # Check service registration issues
+#    kubectl logs deployment/discovery-server -n petclinic
+#    
+#    # Verify network connectivity
+#    kubectl exec -it <microservice-pod> -- curl http://discovery-server:8761/eureka/apps
+#    
+#    # Check Eureka self-preservation mode
+#    # Monitor renewal threshold and actual renewals
+#
+# 3. MAINTENANCE PROCEDURES:
+#    # Graceful shutdown for maintenance
+#    kubectl scale deployment discovery-server --replicas=0 -n petclinic
+#    
+#    # Restart Discovery Server
+#    kubectl rollout restart deployment/discovery-server -n petclinic
+#
+# DISASTER RECOVERY:
+#
+# 1. SERVICE REGISTRY RECOVERY:
+#    # Services will re-register automatically on Discovery Server restart
+#    # No persistent data loss as registry is rebuilt from service registrations
+#    # Self-healing through microservice re-registration
+#
+# 2. NETWORK PARTITION HANDLING:
+#    # Eureka self-preservation mode prevents service eviction
+#    # Services maintain local cache of registry data
+#    # Automatic recovery when network connectivity restored
+#
+# COMPLIANCE AND GOVERNANCE:
+# - Service registry access logging for audit trails
+# - Network policies for Discovery Server access control
+# - Regular security updates and vulnerability scanning
+# - Monitoring and alerting for service registry health
+# - Documentation of service dependencies and communication patterns
+#
+# =============================================================================

@@ -1,0 +1,467 @@
+# =============================================================================
+# VETS MICROSERVICE - COMPREHENSIVE VETERINARY DOMAIN DOCUMENTATION
+# =============================================================================
+# This file defines the Vets microservice deployment, which manages veterinarian
+# information and specialties in the PetClinic application. This service represents
+# the veterinary professional domain, implementing specialized business logic for
+# veterinary staff management, expertise tracking, and professional credentials.
+#
+# BUSINESS DOMAIN: Veterinary management is a specialized business capability that
+# handles veterinarian profiles, specializations, availability, and professional
+# qualifications essential for veterinary clinic operations.
+#
+# DOMAIN EXPERTISE: This microservice encapsulates veterinary-specific business
+# rules, professional standards, and regulatory compliance requirements unique
+# to veterinary practice management.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# VETS SERVICE DEPLOYMENT - VETERINARY DOMAIN MICROSERVICE
+# -----------------------------------------------------------------------------
+# API version for Deployment resources
+apiVersion: apps/v1
+
+# Resource type: Deployment for stateless veterinary business service
+kind: Deployment
+
+# Metadata section for Deployment identification
+metadata:
+  # Deployment name following veterinary domain naming convention
+  name: vets-service
+  # NAMING CONVENTION: <domain>-service pattern for veterinary business microservice
+  
+  # Namespace for application boundary and resource management
+  namespace: petclinic
+  
+  # Labels for resource classification and management
+  labels:
+    # Application identifier for service grouping
+    app: vets-service
+    # VETERINARY DOMAIN: Unique identifier for veterinary professional service
+    
+    # Component classification for architectural organization
+    component: microservice
+    # BUSINESS LAYER: Core veterinary business logic service
+    
+    # Tier classification for network policies and resource allocation
+    tier: business
+    # BUSINESS TIER: Professional domain service tier
+
+# Deployment specification
+spec:
+  # Replica count for veterinary service availability
+  replicas: 2
+  # HIGH AVAILABILITY: Multiple instances ensure veterinary service availability
+  # LOAD DISTRIBUTION: Distributes veterinary queries across instances
+  # PROFESSIONAL SERVICES: Critical for clinic operations requiring high availability
+  
+  # Selector for pod targeting and management
+  selector:
+    matchLabels:
+      app: vets-service
+      # TARGETING: Must match pod template labels exactly
+  
+  # Pod template defining the Vets service container
+  template:
+    metadata:
+      # Labels applied to each pod instance
+      labels:
+        app: vets-service
+        component: microservice
+        tier: business
+        # CONSISTENCY: Labels match Deployment and selector requirements
+    
+    # Pod specification
+    spec:
+      # Container array for Vets service deployment
+      containers:
+      - # Container name for identification and logging
+        name: vets-service
+        
+        # Vets microservice container image
+        image: springcommunity/spring-petclinic-vets-service:3.2.0
+        # VERSION PINNING: Specific version ensures consistent veterinary business logic
+        # SPRING COMMUNITY: Official PetClinic Vets service image
+        # VERSION 3.2.0: Matches PetClinic application version for compatibility
+        
+        # Container port configuration
+        ports:
+        - # Vets service port
+          containerPort: 8083
+          # Port name for service targeting and monitoring
+          name: http
+          # VETERINARY PORT: Unique port for vets service (8083)
+          # HTTP PROTOCOL: RESTful API for veterinary operations
+        
+        # Environment variables for veterinary service configuration
+        env:
+        # Spring profile activation for Kubernetes environment
+        - name: SPRING_PROFILES_ACTIVE
+          value: "kubernetes"
+          # ENVIRONMENT SPECIFIC: Activates Kubernetes-specific configuration
+          # PROFILE STRATEGY: Enables service discovery and cloud-native features
+        
+        # Config Server URL for centralized veterinary configuration
+        - name: CONFIG_SERVER_URL
+          value: "http://config-server:8888"
+          # CONFIGURATION DEPENDENCY: Retrieves veterinary business configuration
+          # EXTERNALIZED CONFIG: Separates veterinary rules from application code
+        
+        # Discovery Server URL for service registration and discovery
+        - name: DISCOVERY_SERVER_URL
+          value: "http://discovery-server:8761/eureka"
+          # SERVICE DISCOVERY: Registers with Eureka for veterinary service mesh
+          # MICROSERVICE COMMUNICATION: Enables discovery by other services
+        
+        # Database connection URL for veterinary data
+        - name: SPRING_DATASOURCE_URL
+          value: "jdbc:mysql://mysql-vets:3306/petclinic?useSSL=false&serverTimezone=UTC"
+          # DATABASE CONNECTION: Connects to dedicated veterinary database
+          # MICROSERVICE PATTERN: Database-per-service for veterinary domain
+          # CONNECTION PARAMETERS: SSL disabled for internal cluster communication
+          # TIMEZONE: UTC for consistent veterinary scheduling
+        
+        # Database username from Kubernetes Secret
+        - name: SPRING_DATASOURCE_USERNAME
+          valueFrom:
+            secretKeyRef:
+              # Shared database credentials secret
+              name: mysql-credentials
+              # Username key within the secret
+              key: username
+          # SECURITY: Database credentials managed through Kubernetes Secrets
+        
+        # Database password from Kubernetes Secret
+        - name: SPRING_DATASOURCE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              # Same credentials secret as username
+              name: mysql-credentials
+              # Password key within the secret
+              key: password
+          # SECURITY: Sensitive credentials stored securely in Secrets
+        
+        # Actuator endpoints exposure for veterinary service monitoring
+        - name: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
+          value: "*"
+          # FULL OBSERVABILITY: Exposes all actuator endpoints for monitoring
+          # VETERINARY MONITORING: Enables veterinary business metrics monitoring
+          # SECURITY CONSIDERATION: In production, limit to specific endpoints
+        
+        # Resource allocation for veterinary service workload
+        resources:
+          # Guaranteed resources for baseline veterinary operations
+          requests:
+            # Memory allocation for Spring Boot application and veterinary logic
+            memory: "512Mi"
+            # BASELINE MEMORY: Sufficient for veterinary service and data processing
+            
+            # CPU allocation for veterinary business logic processing
+            cpu: "250m"
+            # BASELINE CPU: Quarter core adequate for veterinary operations
+          
+          # Resource limits to prevent resource monopolization
+          limits:
+            # Maximum memory to prevent node pressure
+            memory: "1Gi"
+            # BURST CAPACITY: Double baseline for peak veterinary operations
+            
+            # Maximum CPU for fair resource sharing
+            cpu: "500m"
+            # BURST CAPACITY: Half core for intensive veterinary processing
+        
+        # Liveness probe for container health monitoring
+        livenessProbe:
+          # HTTP GET request for health verification
+          httpGet:
+            # Spring Boot Actuator health endpoint
+            path: /actuator/health
+            # Vets service port
+            port: 8083
+          # HEALTH ENDPOINT: Spring Boot provides comprehensive health information
+          
+          # Initial delay for application startup completion
+          initialDelaySeconds: 120
+          # EXTENDED STARTUP: Veterinary service needs time for service discovery and database
+          # DEPENDENCY WAIT: Allows time for Config Server, Discovery Server, and database
+          
+          # Probe execution frequency
+          periodSeconds: 30
+          # MONITORING FREQUENCY: Regular health checks for veterinary service
+          
+          # Timeout for each probe execution
+          timeoutSeconds: 10
+          # RESPONSIVENESS: Generous timeout for veterinary business logic health checks
+          
+          # Failure threshold before pod restart
+          failureThreshold: 3
+          # STABILITY: Multiple failures required before restart
+        
+        # Readiness probe for traffic routing decisions
+        readinessProbe:
+          # HTTP GET request for readiness verification
+          httpGet:
+            # Same health endpoint for readiness
+            path: /actuator/health
+            # Vets service port
+            port: 8083
+          # READINESS VERIFICATION: Ensures service can handle veterinary requests
+          
+          # Initial delay for readiness checking
+          initialDelaySeconds: 90
+          # STARTUP OPTIMIZATION: Shorter delay than liveness but allows service initialization
+          # VETERINARY READINESS: Ensures database connections and service discovery completion
+          
+          # Readiness check frequency
+          periodSeconds: 10
+          # TRAFFIC ROUTING: Frequent checks for responsive veterinary service
+          
+          # Timeout for readiness verification
+          timeoutSeconds: 5
+          # QUICK RESPONSE: Fast timeout for traffic routing decisions
+          
+          # Failure threshold before removing from service
+          failureThreshold: 3
+          # SERVICE AVAILABILITY: Multiple failures before traffic removal
+
+---
+# Document separator for Service resource
+
+# -----------------------------------------------------------------------------
+# VETS SERVICE - NETWORK ACCESS FOR VETERINARY OPERATIONS
+# -----------------------------------------------------------------------------
+# API version for Service resources
+apiVersion: v1
+
+# Resource type: Service for network access to Vets microservice
+kind: Service
+
+# Service metadata
+metadata:
+  # Service name for DNS resolution and client access
+  name: vets-service
+  # CLIENT ACCESS: Other microservices and API Gateway connect using this name
+  
+  # Namespace consistency with Deployment
+  namespace: petclinic
+  
+  # Labels for service identification and management
+  labels:
+    app: vets-service
+    component: microservice
+    # CONSISTENCY: Matches Deployment labels for unified management
+
+# Service specification
+spec:
+  # Selector for targeting Vets service pods
+  selector:
+    app: vets-service
+    # POD TARGETING: Routes traffic to veterinary service pods
+  
+  # Port configuration for veterinary API access
+  ports:
+  - # Service port for client connections
+    port: 8083
+    # Target port on vets service pods
+    targetPort: 8083
+    # Port name for identification
+    name: http
+    # VETERINARY API: HTTP REST API for veterinary operations
+  
+  # Service type for cluster-internal access
+  type: ClusterIP
+  # INTERNAL ACCESS: Service accessible within cluster through API Gateway
+  # MICROSERVICE PATTERN: Internal services accessed through API Gateway
+
+# =============================================================================
+# VETS MICROSERVICE ARCHITECTURE ANALYSIS
+# =============================================================================
+#
+# VETERINARY BUSINESS CAPABILITIES:
+# ✅ VETERINARIAN MANAGEMENT: Create, read, update, delete veterinarian profiles
+# ✅ SPECIALTY MANAGEMENT: Manage veterinary specializations and certifications
+# ✅ PROFESSIONAL CREDENTIALS: Track licenses, certifications, and qualifications
+# ✅ AVAILABILITY MANAGEMENT: Manage veterinarian schedules and availability
+# ✅ EXPERTISE MATCHING: Match veterinarians to specific medical cases
+# ✅ PROFESSIONAL DIRECTORY: Searchable directory of veterinary professionals
+#
+# VETERINARY DOMAIN MODEL:
+#
+# 1. VETERINARIAN ENTITY:
+#    # Core veterinarian information
+#    - Veterinarian ID (primary key)
+#    - First Name, Last Name
+#    - Professional License Number
+#    - Years of Experience
+#    - Contact Information
+#    - Employment Status
+#
+# 2. SPECIALTY ENTITY:
+#    # Veterinary specialization information
+#    - Specialty ID (primary key)
+#    - Specialty Name (Cardiology, Surgery, Dermatology, etc.)
+#    - Description
+#    - Certification Requirements
+#
+# 3. VET_SPECIALTIES RELATIONSHIP:
+#    # Many-to-many relationship between vets and specialties
+#    - Veterinarian ID (foreign key)
+#    - Specialty ID (foreign key)
+#    - Certification Date
+#    - Certification Level
+#
+# VETERINARY BUSINESS LOGIC:
+#
+# 1. VETERINARIAN OPERATIONS:
+#    # RESTful API endpoints for veterinary management
+#    GET /vets - List all veterinarians
+#    GET /vets/{id} - Get veterinarian by ID
+#    POST /vets - Create new veterinarian profile
+#    PUT /vets/{id} - Update veterinarian information
+#    DELETE /vets/{id} - Remove veterinarian (soft delete)
+#
+# 2. SPECIALTY OPERATIONS:
+#    # Veterinary specialization management
+#    GET /vets/{id}/specialties - Get veterinarian's specialties
+#    POST /vets/{id}/specialties - Add specialty to veterinarian
+#    DELETE /vets/{id}/specialties/{specialtyId} - Remove specialty
+#
+# 3. SEARCH AND FILTERING:
+#    # Advanced veterinary search capabilities
+#    GET /vets?specialty=Surgery - Find vets by specialty
+#    GET /vets?experience=5+ - Find experienced veterinarians
+#    GET /vets?available=true - Find available veterinarians
+#
+# PRODUCTION ENHANCEMENTS NEEDED:
+#
+# 1. PROFESSIONAL CREDENTIAL VALIDATION:
+#    # Integration with veterinary licensing boards
+#    @Service
+#    public class LicenseValidationService {
+#        public boolean validateLicense(String licenseNumber, String state) {
+#            // Integration with state veterinary boards
+#            return licenseValidationClient.validate(licenseNumber, state);
+#        }
+#    }
+#
+# 2. SCHEDULING INTEGRATION:
+#    # Veterinarian availability and scheduling
+#    @Entity
+#    public class VetSchedule {
+#        private Long vetId;
+#        private LocalDateTime startTime;
+#        private LocalDateTime endTime;
+#        private ScheduleStatus status;
+#        private String appointmentType;
+#    }
+#
+# 3. PERFORMANCE METRICS:
+#    # Veterinary performance tracking
+#    @Entity
+#    public class VetPerformanceMetrics {
+#        private Long vetId;
+#        private Integer casesHandled;
+#        private Double averageRating;
+#        private Integer successfulTreatments;
+#        private LocalDate reportingPeriod;
+#    }
+#
+# 4. CONTINUING EDUCATION TRACKING:
+#    # Professional development and certification maintenance
+#    @Entity
+#    public class ContinuingEducation {
+#        private Long vetId;
+#        private String courseName;
+#        private LocalDate completionDate;
+#        private Integer creditHours;
+#        private String certifyingBody;
+#    }
+#
+# INTEGRATION PATTERNS:
+#
+# 1. VISIT SERVICE INTEGRATION:
+#    # Veterinarian assignment to visits
+#    @FeignClient("visits-service")
+#    public interface VisitsServiceClient {
+#        @GetMapping("/visits/vet/{vetId}")
+#        List<Visit> getVisitsByVet(@PathVariable Long vetId);
+#    }
+#
+# 2. CUSTOMER SERVICE INTEGRATION:
+#    # Customer preferences for specific veterinarians
+#    @FeignClient("customers-service")
+#    public interface CustomersServiceClient {
+#        @GetMapping("/customers/{id}/preferred-vets")
+#        List<Long> getPreferredVets(@PathVariable Long customerId);
+#    }
+#
+# 3. NOTIFICATION SERVICE INTEGRATION:
+#    # Veterinarian notifications and alerts
+#    @EventListener
+#    public void handleEmergencyCase(EmergencyVisitEvent event) {
+#        List<Vet> emergencyVets = vetService.findEmergencyVets();
+#        notificationService.notifyVets(emergencyVets, event);
+#    }
+#
+# VETERINARY COMPLIANCE REQUIREMENTS:
+#
+# 1. PROFESSIONAL LICENSING:
+#    # State veterinary board compliance
+#    # License renewal tracking
+#    # Disciplinary action monitoring
+#    # Continuing education requirements
+#
+# 2. MEDICAL RECORD COMPLIANCE:
+#    # HIPAA compliance for animal medical records
+#    # Veterinary-client-patient relationship documentation
+#    # Treatment record retention requirements
+#    # Prescription tracking and DEA compliance
+#
+# 3. PROFESSIONAL STANDARDS:
+#    # American Veterinary Medical Association (AVMA) guidelines
+#    # State veterinary practice acts compliance
+#    # Professional liability insurance requirements
+#    # Ethical standards and professional conduct
+#
+# MONITORING AND OBSERVABILITY:
+#
+# 1. VETERINARY BUSINESS METRICS:
+#    # Veterinarian utilization rates
+#    # Specialty distribution and demand
+#    # Professional development tracking
+#    # Client satisfaction by veterinarian
+#
+# 2. OPERATIONAL METRICS:
+#    # API response times for veterinary queries
+#    # Database performance for vet searches
+#    # Service availability and error rates
+#    # Integration health with other services
+#
+# 3. COMPLIANCE MONITORING:
+#    # License expiration alerts
+#    # Continuing education compliance tracking
+#    # Professional standard adherence monitoring
+#    # Audit trail for veterinary record access
+#
+# DISASTER RECOVERY AND BACKUP:
+#
+# 1. VETERINARY DATA PROTECTION:
+#    # Professional credential backup
+#    # Specialty certification preservation
+#    # Schedule and availability data backup
+#    # Performance history protection
+#
+# 2. BUSINESS CONTINUITY:
+#    # Emergency veterinarian contact procedures
+#    # Backup veterinary service providers
+#    # Critical case escalation procedures
+#    # Professional liability considerations
+#
+# SECURITY CONSIDERATIONS:
+# - Professional credential data protection
+# - Veterinary license information security
+# - Access controls for sensitive professional data
+# - Audit logging for veterinary record access
+# - Compliance with veterinary privacy regulations
+#
+# =============================================================================

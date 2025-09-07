@@ -1,0 +1,420 @@
+# =============================================================================
+# GRAFANA DEPLOYMENT
+# =============================================================================
+# Purpose: Deploys Grafana for visualizing e-commerce application metrics
+# Why needed: Provides dashboards and visualization for monitoring data
+# Kubernetes concept: Deployment manages Grafana pods and ensures availability
+
+apiVersion: apps/v1
+# API Version: apps/v1 is the stable version for Deployment resources
+# This is the most commonly used API version for application deployments
+
+kind: Deployment
+# Resource Type: Deployment manages ReplicaSets and provides declarative updates
+# This enables rolling updates, rollbacks, and scaling of Grafana pods
+
+metadata:
+  # Metadata section contains identifying information about the resource
+  name: grafana-deployment
+  # Name: Unique identifier for this Deployment within the namespace
+  # This name will be used to reference the Deployment in services and other resources
+  
+  namespace: ecommerce
+  # Namespace: Specifies which namespace this Deployment belongs to
+  # Must match the namespace created in the namespace.yaml file
+  
+  labels:
+    # Labels: Key-value pairs for organizing and selecting resources
+    app: grafana
+    # app: grafana - Identifies this Deployment as belonging to Grafana
+    component: monitoring
+    # component: monitoring - Identifies this as a monitoring component
+    tier: observability
+    # tier: observability - Identifies this as observability tier
+    environment: production
+    # environment: production - Indicates this is for production environment
+    managed-by: kubernetes
+    # managed-by: kubernetes - Indicates this resource is managed by Kubernetes
+  
+  annotations:
+    # Annotations: Additional metadata that doesn't affect resource behavior
+    description: "Grafana visualization deployment for e-commerce application monitoring"
+    # description: Human-readable description of the Deployment purpose
+    # Used for documentation and operational understanding
+    
+    contact: "platform-engineering@company.com"
+    # contact: Email address for the team responsible for this Deployment
+    # Used for incident response and maintenance coordination
+    
+    last-updated: "2024-12-01T00:00:00Z"
+    # last-updated: Timestamp of last deployment update
+    # Used for change tracking and audit trails
+    
+    version: "1.0.0"
+    # version: Version of the deployment configuration
+    # Used for deployment versioning and rollback
+
+spec:
+  # Specification section defines the actual deployment configuration
+  
+  # =============================================================================
+  # REPLICA CONFIGURATION
+  # =============================================================================
+  replicas: 1
+  # replicas: 1 - Number of pod replicas to maintain
+  # Value: 1 - One Grafana pod (single instance for data consistency)
+  # Purpose: Ensures data consistency and avoids split-brain scenarios
+  # Impact: One Grafana pod will be running
+  # Production consideration: Grafana is stateful and should run as single instance
+  
+  # =============================================================================
+  # SELECTOR CONFIGURATION
+  # =============================================================================
+  selector:
+    # selector: Defines which pods this Deployment manages
+    matchLabels:
+      # matchLabels: Pods must have all these labels to be managed
+      app: grafana
+      # app: grafana - Pods must have this label
+      component: monitoring
+      # component: monitoring - Pods must have this label
+      tier: observability
+      # tier: observability - Pods must have this label
+      # Purpose: Ensures only Grafana pods are managed by this Deployment
+      # Impact: Only pods with these labels will be managed
+      # Production consideration: Prevents management of wrong pods
+  
+  # =============================================================================
+  # DEPLOYMENT STRATEGY
+  # =============================================================================
+  strategy:
+    # strategy: Defines how pods are updated
+    type: Recreate
+    # type: Recreate - Use recreate strategy for Grafana
+    # Purpose: Ensures data consistency during updates
+    # Impact: Old pod is terminated before new pod is created
+    # Production consideration: Prevents data corruption from concurrent instances
+  
+  # =============================================================================
+  # POD TEMPLATE CONFIGURATION
+  # =============================================================================
+  template:
+    # template: Defines the pod template for this Deployment
+    # This template is used to create new pods when needed
+    
+    metadata:
+      # Metadata section for the pod template
+      labels:
+        # Labels: Key-value pairs for organizing and selecting pods
+        app: grafana
+        # app: grafana - Identifies this pod as belonging to Grafana
+        component: monitoring
+        # component: monitoring - Identifies this as a monitoring pod
+        tier: observability
+        # tier: observability - Identifies this as observability tier
+        environment: production
+        # environment: production - Indicates this is for production environment
+        version: "1.0.0"
+        # version: 1.0.0 - Pod version for tracking
+        # Purpose: Enables version-specific pod management
+        # Impact: Pods are tagged with specific version
+        # Production consideration: Enables version tracking and rollback
+      
+      annotations:
+        # Annotations: Additional metadata for the pod template
+        prometheus.io/scrape: "false"
+        # prometheus.io/scrape: Disable scraping
+        # Value: false - Prometheus will not scrape this pod
+        # Purpose: Prevents Grafana from being scraped by Prometheus
+        # Impact: Grafana is not monitored by Prometheus
+        # Production consideration: Grafana is a monitoring tool, not a monitored target
+    
+    spec:
+      # Specification section defines the pod configuration
+      
+      # =============================================================================
+      # CONTAINER CONFIGURATION
+      # =============================================================================
+      containers:
+        # containers: Array of containers in this pod
+        - name: grafana
+          # name: grafana - Container name
+          # Purpose: Identifies this container within the pod
+          # Impact: Container is referenced by this name
+          # Production consideration: Clear naming for operational management
+          
+          image: grafana/grafana:10.1.0
+          # image: grafana/grafana:10.1.0 - Container image
+          # Value: grafana/grafana:10.1.0 - Grafana image with version tag
+          # Purpose: Specifies which container image to run
+          # Impact: Pod runs the specified Grafana image
+          # Production consideration: Versioned images enable rollback and tracking
+          
+          imagePullPolicy: IfNotPresent
+          # imagePullPolicy: IfNotPresent - Image pull policy
+          # Value: IfNotPresent - Pull image only if not present locally
+          # Purpose: Controls when to pull the container image
+          # Impact: Reduces image pull overhead for existing images
+          # Production consideration: Balances image freshness with performance
+          
+          ports:
+            # ports: Array of ports exposed by this container
+            - name: http
+              # name: http - Port name
+              # Purpose: Identifies this port for service discovery
+              # Impact: Port can be referenced by name in services
+              # Production consideration: Enables clear port identification
+              
+              containerPort: 3000
+              # containerPort: 3000 - Port number
+              # Value: 3000 - Grafana web interface port
+              # Purpose: Exposes the Grafana web interface
+              # Impact: Grafana web UI is accessible on port 3000
+              # Production consideration: Standard port for Grafana web interface
+              
+              protocol: TCP
+              # protocol: TCP - Port protocol
+              # Value: TCP - Transmission Control Protocol
+              # Purpose: Specifies the network protocol
+              # Impact: Port uses TCP protocol
+              # Production consideration: Standard protocol for web services
+          
+          # =============================================================================
+          # ENVIRONMENT VARIABLES
+          # =============================================================================
+          env:
+            # env: Array of environment variables for this container
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              # name: GF_SECURITY_ADMIN_PASSWORD - Environment variable name
+              # Purpose: Sets the admin password for Grafana
+              valueFrom:
+                # valueFrom: Get value from another source
+                secretKeyRef:
+                  # secretKeyRef: Reference to a secret key
+                  name: grafana-secrets
+                  # name: grafana-secrets - Secret name
+                  # Purpose: References the Grafana secrets
+                  # Impact: Uses admin password from secrets
+                  # Security benefit: Admin password is encrypted
+                  key: admin-password
+                  # key: admin-password - Secret key name
+                  # Purpose: Gets the admin password from secrets
+                  # Impact: Grafana uses password from secret
+                  # Production consideration: Secure credential management
+            
+            - name: GF_SECURITY_ADMIN_USER
+              # name: GF_SECURITY_ADMIN_USER - Environment variable name
+              # Purpose: Sets the admin username for Grafana
+              value: "admin"
+              # value: admin - Admin username
+              # Purpose: Configures the admin username
+              # Impact: Grafana admin user is set to admin
+              # Production consideration: Standard admin username
+            
+            - name: GF_INSTALL_PLUGINS
+              # name: GF_INSTALL_PLUGINS - Environment variable name
+              # Purpose: Specifies plugins to install
+              value: "grafana-piechart-panel,grafana-worldmap-panel"
+              # value: Plugin list - Comma-separated list of plugins
+              # Purpose: Installs additional Grafana plugins
+              # Impact: Additional visualization plugins are available
+              # Production consideration: Enhances visualization capabilities
+            
+            - name: GF_DATABASE_TYPE
+              # name: GF_DATABASE_TYPE - Environment variable name
+              # Purpose: Sets the database type for Grafana
+              value: "sqlite3"
+              # value: sqlite3 - Database type
+              # Purpose: Uses SQLite for Grafana database
+              # Impact: Grafana uses SQLite for its database
+              # Production consideration: Simple database for single-instance deployment
+            
+            - name: GF_DATABASE_PATH
+              # name: GF_DATABASE_PATH - Environment variable name
+              # Purpose: Sets the database file path
+              value: "/var/lib/grafana/grafana.db"
+              # value: /var/lib/grafana/grafana.db - Database file path
+              # Purpose: Specifies where to store the database file
+              # Impact: Grafana database is stored at specified path
+              # Production consideration: Persistent storage for database file
+          
+          # =============================================================================
+          # RESOURCE CONFIGURATION
+          # =============================================================================
+          resources:
+            # resources: Resource requests and limits for this container
+            requests:
+              # requests: Minimum resources required by this container
+              cpu: "200m"
+              # cpu: 200m - CPU request
+              # Value: 200 millicores (0.2 CPU cores)
+              # Purpose: Guarantees minimum CPU allocation
+              # Impact: Container is guaranteed 200m CPU
+              # Production consideration: Ensures consistent performance
+              
+              memory: "256Mi"
+              # memory: 256Mi - Memory request
+              # Value: 256 Mebibytes
+              # Purpose: Guarantees minimum memory allocation
+              # Impact: Container is guaranteed 256Mi memory
+              # Production consideration: Ensures consistent performance
+            
+            limits:
+              # limits: Maximum resources this container can use
+              cpu: "1000m"
+              # cpu: 1000m - CPU limit
+              # Value: 1000 millicores (1 CPU core)
+              # Purpose: Prevents container from using too much CPU
+              # Impact: Container cannot use more than 1000m CPU
+              # Production consideration: Prevents resource starvation
+              
+              memory: "1Gi"
+              # memory: 1Gi - Memory limit
+              # Value: 1 Gibibyte
+              # Purpose: Prevents container from using too much memory
+              # Impact: Container cannot use more than 1Gi memory
+              # Production consideration: Prevents memory exhaustion
+          
+          # =============================================================================
+          # HEALTH CHECKS
+          # =============================================================================
+          livenessProbe:
+            # livenessProbe: Checks if the container is alive
+            # Purpose: Determines if the container should be restarted
+            httpGet:
+              # httpGet: HTTP GET request for health check
+              path: /api/health
+              # path: /api/health - Health check endpoint
+              # Purpose: Grafana health check endpoint
+              # Impact: Kubernetes checks this endpoint for liveness
+              # Production consideration: Standard Grafana health check endpoint
+              
+              port: 3000
+              # port: 3000 - Health check port
+              # Purpose: Port to check for health
+              # Impact: Health check is performed on port 3000
+              # Production consideration: Matches application port
+              
+              scheme: HTTP
+              # scheme: HTTP - Protocol scheme
+              # Purpose: Use HTTP protocol for health check
+              # Impact: Health check uses HTTP protocol
+              # Production consideration: Standard protocol for health checks
+            
+            initialDelaySeconds: 60
+            # initialDelaySeconds: 60 - Initial delay before first check
+            # Value: 60 - Wait 60 seconds before first check
+            # Purpose: Allows Grafana time to start up
+            # Impact: First health check happens after 60 seconds
+            # Production consideration: Grafana needs time to initialize
+            
+            periodSeconds: 30
+            # periodSeconds: 30 - Check interval
+            # Value: 30 - Check every 30 seconds
+            # Purpose: Controls frequency of health checks
+            # Impact: Health check runs every 30 seconds
+            # Production consideration: Reasonable interval for monitoring tool
+            
+            timeoutSeconds: 10
+            # timeoutSeconds: 10 - Check timeout
+            # Value: 10 - Timeout after 10 seconds
+            # Purpose: Prevents hanging health checks
+            # Impact: Health check times out after 10 seconds
+            # Production consideration: Prevents resource waste from hanging checks
+            
+            failureThreshold: 3
+            # failureThreshold: 3 - Consecutive failures before restart
+            # Value: 3 - Restart after 3 consecutive failures
+            # Purpose: Prevents restarts from temporary issues
+            # Impact: Container restarts after 3 failed health checks
+            # Production consideration: Balances availability with stability
+          
+          readinessProbe:
+            # readinessProbe: Checks if the container is ready to serve traffic
+            # Purpose: Determines if the container should receive traffic
+            httpGet:
+              # httpGet: HTTP GET request for readiness check
+              path: /api/health
+              # path: /api/health - Readiness check endpoint
+              # Purpose: Grafana readiness check endpoint
+              # Impact: Kubernetes checks this endpoint for readiness
+              # Production consideration: Standard Grafana readiness check endpoint
+              
+              port: 3000
+              # port: 3000 - Readiness check port
+              # Purpose: Port to check for readiness
+              # Impact: Readiness check is performed on port 3000
+              # Production consideration: Matches application port
+              
+              scheme: HTTP
+              # scheme: HTTP - Protocol scheme
+              # Purpose: Use HTTP protocol for readiness check
+              # Impact: Readiness check uses HTTP protocol
+              # Production consideration: Standard protocol for readiness checks
+            
+            initialDelaySeconds: 30
+            # initialDelaySeconds: 30 - Initial delay before first check
+            # Value: 30 - Wait 30 seconds before first check
+            # Purpose: Allows Grafana time to initialize
+            # Impact: First readiness check happens after 30 seconds
+            # Production consideration: Quick readiness detection
+            
+            periodSeconds: 10
+            # periodSeconds: 10 - Check interval
+            # Value: 10 - Check every 10 seconds
+            # Purpose: Controls frequency of readiness checks
+            # Impact: Readiness check runs every 10 seconds
+            # Production consideration: Responsive readiness detection
+            
+            timeoutSeconds: 5
+            # timeoutSeconds: 5 - Check timeout
+            # Value: 5 - Timeout after 5 seconds
+            # Purpose: Prevents hanging readiness checks
+            # Impact: Readiness check times out after 5 seconds
+            # Production consideration: Prevents resource waste from hanging checks
+            
+            failureThreshold: 3
+            # failureThreshold: 3 - Consecutive failures before marking not ready
+            # Value: 3 - Mark not ready after 3 consecutive failures
+            # Purpose: Prevents traffic removal from temporary issues
+            # Impact: Container marked not ready after 3 failed checks
+            # Production consideration: Balances availability with stability
+          
+          # =============================================================================
+          # VOLUME MOUNTS
+          # =============================================================================
+          volumeMounts:
+            # volumeMounts: Array of volumes to mount in this container
+            - name: grafana-storage
+              # name: grafana-storage - Volume name
+              # Purpose: References the grafana-storage volume
+              # Impact: Mounts persistent storage for Grafana data
+              # Production consideration: Enables data persistence
+              
+              mountPath: /var/lib/grafana
+              # mountPath: /var/lib/grafana - Mount path
+              # Purpose: Directory where Grafana data is stored
+              # Impact: Grafana data is persisted at this location
+              # Production consideration: Standard Grafana data directory
+      
+      # =============================================================================
+      # VOLUMES
+      # =============================================================================
+      volumes:
+        # volumes: Array of volumes available to this pod
+        - name: grafana-storage
+          # name: grafana-storage - Volume name
+          # Purpose: Identifies this volume for mounting
+          # Impact: Volume can be referenced by name
+          # Production consideration: Clear naming for operational management
+          
+          persistentVolumeClaim:
+            # persistentVolumeClaim: Volume source type
+            # Purpose: Creates volume from PersistentVolumeClaim
+            # Impact: Data persists across pod restarts
+            # Production consideration: Enables data persistence
+            claimName: grafana-pvc
+            # claimName: grafana-pvc - PVC name
+            # Purpose: References the Grafana PersistentVolumeClaim
+            # Impact: Mounts persistent storage for Grafana
+            # Production consideration: Uses dedicated storage for Grafana data

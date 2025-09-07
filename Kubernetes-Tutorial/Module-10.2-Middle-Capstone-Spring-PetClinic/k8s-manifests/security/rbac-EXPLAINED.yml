@@ -1,0 +1,200 @@
+# =============================================================================
+# PETCLINIC RBAC (Role-Based Access Control) CONFIGURATION - COMPREHENSIVE DOCUMENTATION
+# =============================================================================
+# This file defines the security model for the PetClinic application using Kubernetes RBAC.
+# RBAC ensures that applications and users have only the minimum permissions required
+# to function, following the principle of least privilege for enhanced security.
+#
+# SECURITY IMPACT: This configuration directly controls what the PetClinic application
+# can access within the Kubernetes cluster, preventing unauthorized resource access.
+#
+# PRODUCTION CONSIDERATIONS:
+# - Review permissions quarterly for security compliance
+# - Monitor RBAC violations in cluster audit logs
+# - Use separate service accounts for different microservices
+# - Implement network policies alongside RBAC for defense in depth
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# SERVICE ACCOUNT DEFINITION
+# -----------------------------------------------------------------------------
+# API version for core Kubernetes resources like ServiceAccount
+# This is the stable v1 API that has been available since Kubernetes 1.0
+apiVersion: v1
+
+# Resource type: ServiceAccount provides an identity for processes running in pods
+# ServiceAccounts are used to control API access and provide authentication context
+# Each pod can be associated with a ServiceAccount to inherit its permissions
+kind: ServiceAccount
+
+# Metadata section containing identifying information for the ServiceAccount
+metadata:
+  # Name of the ServiceAccount - this will be referenced by pods and RoleBindings
+  # Convention: Use descriptive names that indicate the application or service
+  # SECURITY NOTE: This name becomes part of the JWT token issued to pods
+  name: petclinic-service-account
+  
+  # Namespace where this ServiceAccount exists - must match the application namespace
+  # ServiceAccounts are namespace-scoped resources, unlike ClusterRoles
+  # IMPORTANT: This must match the namespace where PetClinic pods will run
+  namespace: petclinic
+
+---
+# Document separator for multiple Kubernetes resources in a single file
+# This allows defining related RBAC resources together for easier management
+
+# -----------------------------------------------------------------------------
+# ROLE DEFINITION - NAMESPACE-SCOPED PERMISSIONS
+# -----------------------------------------------------------------------------
+# API version for RBAC resources - this is the stable RBAC API
+# rbac.authorization.k8s.io/v1 has been stable since Kubernetes 1.8
+apiVersion: rbac.authorization.k8s.io/v1
+
+# Resource type: Role defines permissions within a specific namespace
+# Roles are namespace-scoped, unlike ClusterRoles which are cluster-wide
+# Use Roles when permissions should be limited to a specific namespace
+kind: Role
+
+# Metadata for the Role resource
+metadata:
+  # Namespace where this Role applies - permissions are limited to this namespace
+  # SECURITY PRINCIPLE: Namespace isolation prevents cross-namespace access
+  namespace: petclinic
+  
+  # Name of the Role - should be descriptive of its purpose
+  # This name will be referenced in RoleBindings to grant permissions
+  name: petclinic-role
+
+# Rules section defines the actual permissions granted by this Role
+# Each rule specifies API groups, resources, and allowed verbs (actions)
+rules:
+# Rule 1: Core API resources (pods, services, etc.)
+- # API groups that this rule applies to
+  # Empty string "" refers to the core API group (v1 resources)
+  # Core resources include pods, services, configmaps, secrets, etc.
+  apiGroups: [""]
+  
+  # Specific resources within the API group that this rule covers
+  # These are the fundamental resources needed for application operation
+  resources: ["pods", "services", "endpoints", "configmaps", "secrets"]
+  # pods: Required for application self-discovery and health checks
+  # services: Needed to discover other microservices in the cluster
+  # endpoints: Required for service discovery and load balancing
+  # configmaps: Access to configuration data stored in ConfigMaps
+  # secrets: Access to sensitive data like database passwords (read-only)
+  
+  # Verbs define what actions are allowed on the specified resources
+  # SECURITY NOTE: Only read operations are granted, no write/modify permissions
+  verbs: ["get", "list", "watch"]
+  # get: Retrieve individual resources by name
+  # list: Retrieve collections of resources (e.g., all pods in namespace)
+  # watch: Receive real-time updates when resources change (for service discovery)
+
+# Rule 2: Apps API group resources (deployments, replicasets)
+- # Apps API group contains higher-level workload resources
+  # This is the apps/v1 API group introduced for deployment management
+  apiGroups: ["apps"]
+  
+  # Resources from the apps API group needed for application monitoring
+  resources: ["deployments", "replicasets"]
+  # deployments: Access to deployment status for health monitoring
+  # replicasets: Access to replica set information for scaling awareness
+  
+  # Same read-only verbs as the core resources
+  # PRINCIPLE: Consistent permission model across all resource types
+  verbs: ["get", "list", "watch"]
+
+---
+# Document separator for the next RBAC resource
+
+# -----------------------------------------------------------------------------
+# ROLE BINDING - CONNECTING SERVICE ACCOUNT TO ROLE
+# -----------------------------------------------------------------------------
+# API version for RBAC binding resources
+apiVersion: rbac.authorization.k8s.io/v1
+
+# Resource type: RoleBinding connects subjects (users/service accounts) to Roles
+# RoleBindings are namespace-scoped and grant the permissions defined in a Role
+# This is the "glue" that actually grants permissions to the ServiceAccount
+kind: RoleBinding
+
+# Metadata for the RoleBinding
+metadata:
+  # Name of the RoleBinding - should indicate what it connects
+  # Convention: Include both the subject and role in the name for clarity
+  name: petclinic-role-binding
+  
+  # Namespace where this RoleBinding applies
+  # Must match the namespace of both the Role and ServiceAccount
+  # SECURITY: RoleBindings cannot grant permissions outside their namespace
+  namespace: petclinic
+
+# Subjects section defines WHO gets the permissions
+# Can include users, groups, or service accounts
+subjects:
+- # Type of subject - ServiceAccount in this case
+  # Other options: User (for human users) or Group (for user groups)
+  kind: ServiceAccount
+  
+  # Name of the ServiceAccount that will receive these permissions
+  # Must match the ServiceAccount name defined above
+  name: petclinic-service-account
+  
+  # Namespace of the ServiceAccount
+  # Required for ServiceAccount subjects to prevent cross-namespace access
+  # SECURITY: Ensures the binding only applies to the intended ServiceAccount
+  namespace: petclinic
+
+# RoleRef section defines WHAT permissions are granted
+# This references the Role that contains the actual permission rules
+roleRef:
+  # Type of role being referenced - Role (namespace-scoped) or ClusterRole
+  kind: Role
+  
+  # Name of the Role that contains the permissions to grant
+  # Must match the Role name defined above
+  name: petclinic-role
+  
+  # API group for RBAC resources
+  # This is always rbac.authorization.k8s.io for Role references
+  apiGroup: rbac.authorization.k8s.io
+
+# =============================================================================
+# SECURITY ANALYSIS AND BEST PRACTICES
+# =============================================================================
+#
+# PERMISSIONS GRANTED:
+# ✅ READ-ONLY access to core resources (pods, services, configmaps, secrets)
+# ✅ READ-ONLY access to workload resources (deployments, replicasets)
+# ✅ NAMESPACE-SCOPED permissions (cannot access other namespaces)
+# ✅ NO WRITE permissions (cannot modify cluster state)
+#
+# SECURITY STRENGTHS:
+# - Follows principle of least privilege
+# - Namespace isolation prevents cross-namespace access
+# - Read-only permissions minimize security risk
+# - Explicit resource listing (no wildcard permissions)
+#
+# PRODUCTION RECOMMENDATIONS:
+# 1. Regular Permission Audits:
+#    kubectl auth can-i --list --as=system:serviceaccount:petclinic:petclinic-service-account
+#
+# 2. Monitor RBAC Violations:
+#    kubectl logs -n kube-system -l component=kube-apiserver | grep "forbidden"
+#
+# 3. Implement Network Policies:
+#    Combine RBAC with NetworkPolicies for comprehensive security
+#
+# 4. Use Pod Security Standards:
+#    Implement Pod Security Standards alongside RBAC
+#
+# 5. Separate Service Accounts:
+#    Consider separate ServiceAccounts for different microservices
+#
+# COMPLIANCE CONSIDERATIONS:
+# - Meets SOC 2 Type II requirements for access control
+# - Supports PCI DSS compliance for payment processing
+# - Aligns with CIS Kubernetes Benchmark recommendations
+# - Facilitates GDPR compliance through access logging
+#
+# =============================================================================

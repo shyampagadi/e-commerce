@@ -1,0 +1,482 @@
+# =============================================================================
+# ALERTMANAGER DEPLOYMENT
+# =============================================================================
+# Purpose: Deploys AlertManager for centralized alert management
+# Why needed: Provides alert routing, grouping, and notification capabilities
+# Kubernetes concept: Deployment manages AlertManager pods and ensures availability
+# This deployment enables comprehensive alerting for the e-commerce application
+
+apiVersion: apps/v1
+# API Version: apps/v1 is the stable version for Deployment resources
+# This is the most commonly used API version for application deployments
+
+kind: Deployment
+# Resource Type: Deployment manages the desired state of a set of pods
+# This enables declarative management of AlertManager pods
+
+metadata:
+  # Metadata section contains identifying information about the resource
+  name: alertmanager-deployment
+  # Name: Unique identifier for this Deployment within the namespace
+  # This name will be used to reference the deployment in other resources
+  
+  namespace: ecommerce
+  # Namespace: Specifies which namespace this Deployment belongs to
+  # Must match the namespace created in the namespace.yaml file
+  
+  labels:
+    # Labels: Key-value pairs for organizing and selecting resources
+    app: alertmanager
+    # app: alertmanager - Identifies this Deployment as belonging to AlertManager
+    component: monitoring
+    # component: monitoring - Identifies this as a monitoring component
+    tier: observability
+    # tier: observability - Identifies this as observability tier
+    environment: production
+    # environment: production - Indicates this is for production environment
+    managed-by: kubernetes
+    # managed-by: kubernetes - Indicates this resource is managed by Kubernetes
+  
+  annotations:
+    # Annotations: Additional metadata that doesn't affect resource behavior
+    description: "AlertManager deployment for e-commerce application alerting"
+    # description: Human-readable description of the Deployment purpose
+    # Used for documentation and operational understanding
+    
+    contact: "platform-engineering@company.com"
+    # contact: Email address for the team responsible for this Deployment
+    # Used for incident response and maintenance coordination
+    
+    last-updated: "2024-12-01T00:00:00Z"
+    # last-updated: Timestamp of last modification
+    # Used for change tracking and audit purposes
+    
+    version: "1.0.0"
+    # version: Version identifier for this Deployment configuration
+    # Used for version control and rollback purposes
+
+spec:
+  # Spec section defines the desired state of the Deployment
+  replicas: 1
+  # replicas: 1 - Number of desired pod replicas
+  # Purpose: Ensures exactly one AlertManager pod is running
+  # Impact: Provides high availability for alert management
+  # Production consideration: Single replica for data consistency in alerting
+  
+  selector:
+    # selector: Label selector for target pods
+    # Purpose: Identifies which pods this deployment manages
+    # Impact: Deployment manages pods with matching labels
+    # Production consideration: Must match pod template labels exactly
+    
+    matchLabels:
+      # matchLabels: Label matching conditions
+      # Purpose: Defines which pods are managed by this deployment
+      # Impact: Only pods with these labels are managed
+      # Production consideration: Enables precise pod selection
+      
+      app: alertmanager
+      # app: alertmanager - Application label selector
+      # Purpose: Targets pods with app=alertmanager label
+      # Impact: Deployment manages AlertManager pods
+      # Production consideration: Enables proper pod management
+      
+      component: monitoring
+      # component: monitoring - Component label selector
+      # Purpose: Targets pods with component=monitoring label
+      # Impact: Further refines pod selection
+      # Production consideration: Provides additional filtering for precise targeting
+      
+      tier: observability
+      # tier: observability - Tier label selector
+      # Purpose: Targets pods with tier=observability label
+      # Impact: Ensures only observability tier pods are managed
+      # Production consideration: Maintains proper service isolation
+  
+  strategy:
+    # strategy: Deployment strategy configuration
+    # Purpose: Defines how pod updates are handled
+    # Impact: Determines the update behavior during deployments
+    # Production consideration: Critical for zero-downtime deployments
+    
+    type: Recreate
+    # type: Recreate - Deployment strategy type
+    # Purpose: Recreates all pods during updates
+    # Impact: Ensures clean state during updates
+    # Production consideration: Single replica deployments should use Recreate strategy
+    
+    rollingUpdate: null
+    # rollingUpdate: null - Rolling update configuration
+    # Purpose: Disables rolling updates for Recreate strategy
+    # Impact: Uses Recreate strategy instead of rolling updates
+    # Production consideration: Not applicable for Recreate strategy
+  
+  template:
+    # template: Pod template specification
+    # Purpose: Defines the desired state of pods created by this deployment
+    # Impact: All pods created will match this template
+    # Production consideration: Must be carefully configured for production use
+    
+    metadata:
+      # Metadata section for pod template
+      labels:
+        # Labels: Key-value pairs for organizing and selecting resources
+        app: alertmanager
+        # app: alertmanager - Identifies pods as belonging to AlertManager
+        component: monitoring
+        # component: monitoring - Identifies pods as monitoring component
+        tier: observability
+        # tier: observability - Identifies pods as observability tier
+        environment: production
+        # environment: production - Indicates pods are for production environment
+        version: "1.0.0"
+        # version: 1.0.0 - Version identifier for pods
+        # Used for version control and rollback purposes
+        managed-by: kubernetes
+        # managed-by: kubernetes - Indicates pods are managed by Kubernetes
+      
+      annotations:
+        # Annotations: Additional metadata that doesn't affect pod behavior
+        prometheus.io/scrape: "true"
+        # prometheus.io/scrape: true - Prometheus scraping annotation
+        # Purpose: Indicates that Prometheus should scrape this pod
+        # Impact: Prometheus will collect metrics from this pod
+        # Production consideration: Enables monitoring of AlertManager itself
+        
+        prometheus.io/port: "9093"
+        # prometheus.io/port: 9093 - Prometheus scraping port
+        # Purpose: Specifies which port Prometheus should scrape
+        # Impact: Prometheus scrapes metrics from port 9093
+        # Production consideration: Must match AlertManager metrics port
+        
+        prometheus.io/path: "/metrics"
+        # prometheus.io/path: /metrics - Prometheus scraping path
+        # Purpose: Specifies which path Prometheus should scrape
+        # Impact: Prometheus scrapes metrics from /metrics endpoint
+        # Production consideration: Standard Prometheus metrics path
+    
+    spec:
+      # Spec section defines the desired state of the pod
+      containers:
+        # containers: List of containers in the pod
+        # Purpose: Defines which containers run in the pod
+        # Impact: All specified containers are started in the pod
+        # Production consideration: Must be carefully configured for production use
+        
+        - name: alertmanager
+          # name: alertmanager - Container name
+          # Purpose: Identifies this container within the pod
+          # Impact: Used for container-specific operations
+          # Production consideration: Should be descriptive and unique
+          
+          image: prom/alertmanager:v0.25.0
+          # image: prom/alertmanager:v0.25.0 - Container image
+          # Purpose: Specifies which image to use for the container
+          # Impact: Container runs this specific AlertManager version
+          # Production consideration: Use stable, tested versions in production
+          
+          imagePullPolicy: IfNotPresent
+          # imagePullPolicy: IfNotPresent - Image pull policy
+          # Purpose: Controls when to pull the image
+          # Impact: Only pulls image if not present locally
+          # Production consideration: Balances security with performance
+          
+          ports:
+            # ports: List of ports exposed by the container
+            # Purpose: Defines which ports are accessible
+            # Impact: Enables network communication on specified ports
+            # Production consideration: Only expose necessary ports for security
+            
+            - name: web
+              # name: web - Port name identifier
+              # Purpose: Identifies this port for service discovery
+              # Impact: Enables named port references in other resources
+              # Production consideration: Descriptive names improve maintainability
+              
+              containerPort: 9093
+              # containerPort: 9093 - Container port number
+              # Purpose: Port number on which the container listens
+              # Impact: Container accepts connections on this port
+              # Production consideration: Standard AlertManager web interface port
+              
+              protocol: TCP
+              # protocol: TCP - Network protocol
+              # Purpose: Specifies the network protocol to use
+              # Impact: Container uses TCP for reliable communication
+              # Production consideration: TCP is standard for web applications
+            
+            - name: metrics
+              # name: metrics - Port name identifier
+              # Purpose: Identifies this port for metrics collection
+              # Impact: Enables named port references for monitoring
+              # Production consideration: Descriptive names improve maintainability
+              
+              containerPort: 9093
+              # containerPort: 9093 - Container port number
+              # Purpose: Port number for metrics endpoint
+              # Impact: Container exposes metrics on this port
+              # Production consideration: Same port as web interface for simplicity
+              
+              protocol: TCP
+              # protocol: TCP - Network protocol
+              # Purpose: Specifies the network protocol to use
+              # Impact: Container uses TCP for reliable communication
+              # Production consideration: TCP is standard for metrics collection
+          
+          env:
+            # env: List of environment variables for the container
+            # Purpose: Provides configuration data to the container
+            # Impact: Container can access these environment variables
+            # Production consideration: Use ConfigMaps and Secrets for sensitive data
+            
+            - name: ALERTMANAGER_CONFIG_FILE
+              # name: ALERTMANAGER_CONFIG_FILE - Environment variable name
+              # Purpose: Specifies the AlertManager configuration file path
+              # Impact: AlertManager uses this file for configuration
+              # Production consideration: Should point to mounted configuration file
+              
+              value: "/etc/alertmanager/alertmanager.yml"
+              # value: /etc/alertmanager/alertmanager.yml - Configuration file path
+              # Purpose: Path to AlertManager configuration file
+              # Impact: AlertManager loads configuration from this file
+              # Production consideration: Must match mounted configuration path
+            
+            - name: ALERTMANAGER_STORAGE_PATH
+              # name: ALERTMANAGER_STORAGE_PATH - Environment variable name
+              # Purpose: Specifies the AlertManager storage directory
+              # Impact: AlertManager stores data in this directory
+              # Production consideration: Should be mounted persistent volume
+            
+              value: "/alertmanager"
+              # value: /alertmanager - Storage directory path
+              # Purpose: Directory for AlertManager data storage
+              # Impact: AlertManager stores data in this directory
+              # Production consideration: Must match mounted volume path
+          
+          resources:
+            # resources: Resource requirements and limits
+            # Purpose: Specifies CPU and memory requirements
+            # Impact: Kubernetes schedules pods based on these requirements
+            # Production consideration: Critical for proper resource management
+            
+            requests:
+              # requests: Minimum resource requirements
+              # Purpose: Specifies minimum resources needed for the container
+              # Impact: Kubernetes ensures these resources are available
+              # Production consideration: Should be based on actual usage patterns
+              
+              cpu: "100m"
+              # cpu: 100m - CPU request
+              # Purpose: Minimum CPU allocation (0.1 cores)
+              # Impact: Container is guaranteed at least this CPU
+              # Production consideration: Based on AlertManager resource usage
+              
+              memory: "128Mi"
+              # memory: 128Mi - Memory request
+              # Purpose: Minimum memory allocation (128 megabytes)
+              # Impact: Container is guaranteed at least this memory
+              # Production consideration: Based on AlertManager memory usage
+            
+            limits:
+              # limits: Maximum resource usage
+              # Purpose: Specifies maximum resources the container can use
+              # Impact: Container cannot exceed these limits
+              # Production consideration: Prevents resource exhaustion
+            
+              cpu: "500m"
+              # cpu: 500m - CPU limit
+              # Purpose: Maximum CPU allocation (0.5 cores)
+              # Impact: Container cannot use more than this CPU
+              # Production consideration: Prevents CPU exhaustion
+            
+              memory: "512Mi"
+              # memory: 512Mi - Memory limit
+              # Purpose: Maximum memory allocation (512 megabytes)
+              # Impact: Container cannot use more than this memory
+              # Production consideration: Prevents memory exhaustion
+          
+          livenessProbe:
+            # livenessProbe: Health check for container liveness
+            # Purpose: Determines if the container is running properly
+            # Impact: Kubernetes restarts container if probe fails
+            # Production consideration: Critical for maintaining service availability
+            
+            httpGet:
+              # httpGet: HTTP health check configuration
+              # Purpose: Uses HTTP GET request for health checking
+              # Impact: Sends HTTP request to check container health
+              # Production consideration: Most common health check method
+              
+              path: /-/healthy
+              # path: /-/healthy - Health check endpoint
+              # Purpose: Specifies which endpoint to check
+              # Impact: Sends GET request to this endpoint
+              # Production consideration: Standard AlertManager health endpoint
+              
+              port: 9093
+              # port: 9093 - Health check port
+              # Purpose: Specifies which port to check
+              # Impact: Sends request to this port
+              # Production consideration: Must match container port
+              
+              scheme: HTTP
+              # scheme: HTTP - URL scheme
+              # Purpose: Specifies the protocol to use
+              # Impact: Uses HTTP for health check
+              # Production consideration: HTTP is standard for health checks
+            
+            initialDelaySeconds: 30
+            # initialDelaySeconds: 30 - Initial delay before first probe
+            # Purpose: Waits before starting health checks
+            # Impact: Allows container time to start up
+            # Production consideration: Should be based on container startup time
+            
+            periodSeconds: 10
+            # periodSeconds: 10 - Probe interval
+            # Purpose: How often to perform health checks
+            # Impact: Checks health every 10 seconds
+            # Production consideration: Balances responsiveness with resource usage
+            
+            timeoutSeconds: 5
+            # timeoutSeconds: 5 - Probe timeout
+            # Purpose: Maximum time to wait for response
+            # Impact: Fails probe if no response within 5 seconds
+            # Production consideration: Should be based on expected response time
+            
+            failureThreshold: 3
+            # failureThreshold: 3 - Failure threshold
+            # Purpose: Number of consecutive failures before restart
+            # Impact: Restarts container after 3 consecutive failures
+            # Production consideration: Prevents premature restarts from temporary issues
+          
+          readinessProbe:
+            # readinessProbe: Health check for container readiness
+            # Purpose: Determines if the container is ready to serve traffic
+            # Impact: Kubernetes only sends traffic to ready containers
+            # Production consideration: Critical for proper load balancing
+            
+            httpGet:
+              # httpGet: HTTP health check configuration
+              # Purpose: Uses HTTP GET request for readiness checking
+              # Impact: Sends HTTP request to check container readiness
+              # Production consideration: Most common readiness check method
+              
+              path: /-/ready
+              # path: /-/ready - Readiness check endpoint
+              # Purpose: Specifies which endpoint to check
+              # Impact: Sends GET request to this endpoint
+              # Production consideration: Standard AlertManager readiness endpoint
+              
+              port: 9093
+              # port: 9093 - Readiness check port
+              # Purpose: Specifies which port to check
+              # Impact: Sends request to this port
+              # Production consideration: Must match container port
+              
+              scheme: HTTP
+              # scheme: HTTP - URL scheme
+              # Purpose: Specifies the protocol to use
+              # Impact: Uses HTTP for readiness check
+              # Production consideration: HTTP is standard for readiness checks
+            
+            initialDelaySeconds: 5
+            # initialDelaySeconds: 5 - Initial delay before first probe
+            # Purpose: Waits before starting readiness checks
+            # Impact: Allows container time to start up
+            # Production consideration: Shorter than liveness probe for faster startup
+            
+            periodSeconds: 5
+            # periodSeconds: 5 - Probe interval
+            # Purpose: How often to perform readiness checks
+            # Impact: Checks readiness every 5 seconds
+            # Production consideration: More frequent than liveness probe
+            
+            timeoutSeconds: 3
+            # timeoutSeconds: 3 - Probe timeout
+            # Purpose: Maximum time to wait for response
+            # Impact: Fails probe if no response within 3 seconds
+            # Production consideration: Should be based on expected response time
+            
+            failureThreshold: 3
+            # failureThreshold: 3 - Failure threshold
+            # Purpose: Number of consecutive failures before marking not ready
+            # Impact: Marks container not ready after 3 consecutive failures
+            # Production consideration: Prevents premature marking as not ready
+          
+          volumeMounts:
+            # volumeMounts: List of volume mounts for the container
+            # Purpose: Mounts volumes into the container filesystem
+            # Impact: Container can access data from mounted volumes
+            # Production consideration: Essential for persistent data and configuration
+            
+            - name: alertmanager-config
+              # name: alertmanager-config - Volume name
+              # Purpose: References the configuration volume
+              # Impact: Mounts configuration data into container
+              # Production consideration: Must match volume name in volumes section
+              
+              mountPath: /etc/alertmanager
+              # mountPath: /etc/alertmanager - Mount path in container
+              # Purpose: Directory where configuration is mounted
+              # Impact: Configuration files are available at this path
+              # Production consideration: Should be standard configuration directory
+              
+              readOnly: true
+              # readOnly: true - Read-only mount
+              # Purpose: Prevents container from modifying configuration
+              # Impact: Configuration is immutable from container perspective
+              # Production consideration: Security best practice for configuration
+            
+            - name: alertmanager-storage
+              # name: alertmanager-storage - Volume name
+              # Purpose: References the storage volume
+              # Impact: Mounts persistent storage into container
+              # Production consideration: Must match volume name in volumes section
+              
+              mountPath: /alertmanager
+              # mountPath: /alertmanager - Mount path in container
+              # Purpose: Directory where data is stored
+              # Impact: AlertManager data is persisted at this path
+              # Production consideration: Should be standard data directory
+      
+      volumes:
+        # volumes: List of volumes available to the pod
+        # Purpose: Defines storage and configuration sources
+        # Impact: Pod can access data from these volumes
+        # Production consideration: Essential for persistent data and configuration
+        
+        - name: alertmanager-config
+          # name: alertmanager-config - Volume name
+          # Purpose: Identifies this volume for mounting
+          # Impact: Referenced by volumeMounts
+          # Production consideration: Should be descriptive and unique
+          
+          configMap:
+            # configMap: ConfigMap volume source
+            # Purpose: Mounts configuration from ConfigMap
+            # Impact: Configuration data is available in the pod
+            # Production consideration: Enables externalized configuration management
+            
+            name: alertmanager-config
+            # name: alertmanager-config - ConfigMap name
+            # Purpose: References the AlertManager ConfigMap
+            # Impact: Mounts configuration from this ConfigMap
+            # Production consideration: Must match existing ConfigMap name
+        
+        - name: alertmanager-storage
+          # name: alertmanager-storage - Volume name
+          # Purpose: Identifies this volume for mounting
+          # Impact: Referenced by volumeMounts
+          # Production consideration: Should be descriptive and unique
+          
+          persistentVolumeClaim:
+            # persistentVolumeClaim: PVC volume source
+            # Purpose: Mounts persistent storage from PVC
+            # Impact: Data is persisted across pod restarts
+            # Production consideration: Essential for data persistence
+            
+            claimName: alertmanager-pvc
+            # claimName: alertmanager-pvc - PVC name
+            # Purpose: References the AlertManager PVC
+            # Impact: Mounts storage from this PVC
+            # Production consideration: Must match existing PVC name

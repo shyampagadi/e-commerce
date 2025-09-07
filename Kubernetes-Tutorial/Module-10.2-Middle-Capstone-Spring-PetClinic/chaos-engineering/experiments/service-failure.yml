@@ -1,0 +1,16 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: customers-service-failure
+  namespace: petclinic
+spec:
+  action: pod-kill
+  mode: one
+  duration: "30s"
+  selector:
+    namespaces:
+      - petclinic
+    labelSelectors:
+      "app": "customers-service"
+  scheduler:
+    cron: "@every 5m"

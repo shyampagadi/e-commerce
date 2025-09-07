@@ -1,0 +1,508 @@
+# =============================================================================
+# VISITS MICROSERVICE - COMPREHENSIVE MEDICAL APPOINTMENT DOMAIN DOCUMENTATION
+# =============================================================================
+# This file defines the Visits microservice deployment, which manages veterinary
+# appointments, medical visits, and treatment records in the PetClinic application.
+# This service represents the core medical appointment domain, implementing complex
+# business logic for scheduling, medical record management, and treatment tracking.
+#
+# BUSINESS DOMAIN: Medical visit management is the central business capability that
+# orchestrates veterinary appointments, treatment documentation, medical history,
+# and billing integration essential for veterinary clinic operations.
+#
+# CLINICAL SIGNIFICANCE: This microservice handles sensitive medical data and
+# critical business processes that directly impact patient care, regulatory
+# compliance, and clinic revenue generation.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# VISITS SERVICE DEPLOYMENT - MEDICAL APPOINTMENT DOMAIN MICROSERVICE
+# -----------------------------------------------------------------------------
+# API version for Deployment resources
+apiVersion: apps/v1
+
+# Resource type: Deployment for stateless medical appointment service
+kind: Deployment
+
+# Metadata section for Deployment identification
+metadata:
+  # Deployment name following medical domain naming convention
+  name: visits-service
+  # NAMING CONVENTION: <domain>-service pattern for medical appointment microservice
+  
+  # Namespace for application boundary and resource management
+  namespace: petclinic
+  
+  # Labels for resource classification and management
+  labels:
+    # Application identifier for service grouping
+    app: visits-service
+    # MEDICAL DOMAIN: Unique identifier for medical appointment service
+    
+    # Component classification for architectural organization
+    component: microservice
+    # BUSINESS LAYER: Core medical appointment business logic service
+    
+    # Tier classification for network policies and resource allocation
+    tier: business
+    # BUSINESS TIER: Critical medical domain service tier
+
+# Deployment specification
+spec:
+  # Replica count for medical appointment service availability
+  replicas: 2
+  # HIGH AVAILABILITY: Multiple instances ensure medical appointment service availability
+  # LOAD DISTRIBUTION: Distributes medical appointment requests across instances
+  # CRITICAL OPERATIONS: Medical appointments require high availability for patient care
+  
+  # Selector for pod targeting and management
+  selector:
+    matchLabels:
+      app: visits-service
+      # TARGETING: Must match pod template labels exactly
+  
+  # Pod template defining the Visits service container
+  template:
+    metadata:
+      # Labels applied to each pod instance
+      labels:
+        app: visits-service
+        component: microservice
+        tier: business
+        # CONSISTENCY: Labels match Deployment and selector requirements
+    
+    # Pod specification
+    spec:
+      # Container array for Visits service deployment
+      containers:
+      - # Container name for identification and logging
+        name: visits-service
+        
+        # Visits microservice container image
+        image: springcommunity/spring-petclinic-visits-service:3.2.0
+        # VERSION PINNING: Specific version ensures consistent medical appointment logic
+        # SPRING COMMUNITY: Official PetClinic Visits service image
+        # VERSION 3.2.0: Matches PetClinic application version for compatibility
+        
+        # Container port configuration
+        ports:
+        - # Visits service port
+          containerPort: 8082
+          # Port name for service targeting and monitoring
+          name: http
+          # MEDICAL PORT: Unique port for visits service (8082)
+          # HTTP PROTOCOL: RESTful API for medical appointment operations
+        
+        # Environment variables for medical appointment service configuration
+        env:
+        # Spring profile activation for Kubernetes environment
+        - name: SPRING_PROFILES_ACTIVE
+          value: "kubernetes"
+          # ENVIRONMENT SPECIFIC: Activates Kubernetes-specific configuration
+          # PROFILE STRATEGY: Enables service discovery and cloud-native features
+        
+        # Config Server URL for centralized medical appointment configuration
+        - name: CONFIG_SERVER_URL
+          value: "http://config-server:8888"
+          # CONFIGURATION DEPENDENCY: Retrieves medical business configuration
+          # EXTERNALIZED CONFIG: Separates medical rules from application code
+        
+        # Discovery Server URL for service registration and discovery
+        - name: DISCOVERY_SERVER_URL
+          value: "http://discovery-server:8761/eureka"
+          # SERVICE DISCOVERY: Registers with Eureka for medical service mesh
+          # MICROSERVICE COMMUNICATION: Enables discovery by other services
+        
+        # Database connection URL for medical visit data
+        - name: SPRING_DATASOURCE_URL
+          value: "jdbc:mysql://mysql-visits:3306/petclinic?useSSL=false&serverTimezone=UTC"
+          # DATABASE CONNECTION: Connects to dedicated medical visits database
+          # MICROSERVICE PATTERN: Database-per-service for medical domain isolation
+          # CONNECTION PARAMETERS: SSL disabled for internal cluster communication
+          # TIMEZONE: UTC for consistent medical appointment scheduling
+        
+        # Database username from Kubernetes Secret
+        - name: SPRING_DATASOURCE_USERNAME
+          valueFrom:
+            secretKeyRef:
+              # Shared database credentials secret
+              name: mysql-credentials
+              # Username key within the secret
+              key: username
+          # SECURITY: Database credentials managed through Kubernetes Secrets
+        
+        # Database password from Kubernetes Secret
+        - name: SPRING_DATASOURCE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              # Same credentials secret as username
+              name: mysql-credentials
+              # Password key within the secret
+              key: password
+          # SECURITY: Sensitive medical data credentials stored securely
+        
+        # Actuator endpoints exposure for medical service monitoring
+        - name: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
+          value: "*"
+          # FULL OBSERVABILITY: Exposes all actuator endpoints for monitoring
+          # MEDICAL MONITORING: Enables medical appointment business metrics
+          # SECURITY CONSIDERATION: In production, limit to specific endpoints for HIPAA compliance
+        
+        # Resource allocation for medical appointment service workload
+        resources:
+          # Guaranteed resources for baseline medical appointment operations
+          requests:
+            # Memory allocation for Spring Boot application and medical logic
+            memory: "512Mi"
+            # BASELINE MEMORY: Sufficient for medical appointment service and data processing
+            
+            # CPU allocation for medical appointment business logic processing
+            cpu: "250m"
+            # BASELINE CPU: Quarter core adequate for medical appointment operations
+          
+          # Resource limits to prevent resource monopolization
+          limits:
+            # Maximum memory to prevent node pressure
+            memory: "1Gi"
+            # BURST CAPACITY: Double baseline for peak medical appointment operations
+            
+            # Maximum CPU for fair resource sharing
+            cpu: "500m"
+            # BURST CAPACITY: Half core for intensive medical appointment processing
+        
+        # Liveness probe for container health monitoring
+        livenessProbe:
+          # HTTP GET request for health verification
+          httpGet:
+            # Spring Boot Actuator health endpoint
+            path: /actuator/health
+            # Visits service port
+            port: 8082
+          # HEALTH ENDPOINT: Spring Boot provides comprehensive health information
+          
+          # Initial delay for application startup completion
+          initialDelaySeconds: 120
+          # EXTENDED STARTUP: Medical service needs time for service discovery and database
+          # DEPENDENCY WAIT: Allows time for Config Server, Discovery Server, and database
+          
+          # Probe execution frequency
+          periodSeconds: 30
+          # MONITORING FREQUENCY: Regular health checks for medical appointment service
+          
+          # Timeout for each probe execution
+          timeoutSeconds: 10
+          # RESPONSIVENESS: Generous timeout for medical business logic health checks
+          
+          # Failure threshold before pod restart
+          failureThreshold: 3
+          # STABILITY: Multiple failures required before restart
+        
+        # Readiness probe for traffic routing decisions
+        readinessProbe:
+          # HTTP GET request for readiness verification
+          httpGet:
+            # Same health endpoint for readiness
+            path: /actuator/health
+            # Visits service port
+            port: 8082
+          # READINESS VERIFICATION: Ensures service can handle medical appointment requests
+          
+          # Initial delay for readiness checking
+          initialDelaySeconds: 90
+          # STARTUP OPTIMIZATION: Shorter delay than liveness but allows service initialization
+          # MEDICAL READINESS: Ensures database connections and service discovery completion
+          
+          # Readiness check frequency
+          periodSeconds: 10
+          # TRAFFIC ROUTING: Frequent checks for responsive medical appointment service
+          
+          # Timeout for readiness verification
+          timeoutSeconds: 5
+          # QUICK RESPONSE: Fast timeout for traffic routing decisions
+          
+          # Failure threshold before removing from service
+          failureThreshold: 3
+          # SERVICE AVAILABILITY: Multiple failures before traffic removal
+
+---
+# Document separator for Service resource
+
+# -----------------------------------------------------------------------------
+# VISITS SERVICE - NETWORK ACCESS FOR MEDICAL APPOINTMENT OPERATIONS
+# -----------------------------------------------------------------------------
+# API version for Service resources
+apiVersion: v1
+
+# Resource type: Service for network access to Visits microservice
+kind: Service
+
+# Service metadata
+metadata:
+  # Service name for DNS resolution and client access
+  name: visits-service
+  # CLIENT ACCESS: Other microservices and API Gateway connect using this name
+  
+  # Namespace consistency with Deployment
+  namespace: petclinic
+  
+  # Labels for service identification and management
+  labels:
+    app: visits-service
+    component: microservice
+    # CONSISTENCY: Matches Deployment labels for unified management
+
+# Service specification
+spec:
+  # Selector for targeting Visits service pods
+  selector:
+    app: visits-service
+    # POD TARGETING: Routes traffic to medical appointment service pods
+  
+  # Port configuration for medical appointment API access
+  ports:
+  - # Service port for client connections
+    port: 8082
+    # Target port on visits service pods
+    targetPort: 8082
+    # Port name for identification
+    name: http
+    # MEDICAL API: HTTP REST API for medical appointment operations
+  
+  # Service type for cluster-internal access
+  type: ClusterIP
+  # INTERNAL ACCESS: Service accessible within cluster through API Gateway
+  # MICROSERVICE PATTERN: Internal services accessed through API Gateway
+
+# =============================================================================
+# VISITS MICROSERVICE ARCHITECTURE ANALYSIS
+# =============================================================================
+#
+# MEDICAL APPOINTMENT BUSINESS CAPABILITIES:
+# ✅ APPOINTMENT SCHEDULING: Create, modify, cancel veterinary appointments
+# ✅ MEDICAL RECORD MANAGEMENT: Maintain comprehensive medical visit records
+# ✅ TREATMENT DOCUMENTATION: Record treatments, procedures, and outcomes
+# ✅ PRESCRIPTION MANAGEMENT: Track medications and treatment plans
+# ✅ BILLING INTEGRATION: Generate billing records for medical services
+# ✅ MEDICAL HISTORY: Maintain longitudinal medical history per pet
+# ✅ FOLLOW-UP SCHEDULING: Manage follow-up appointments and care plans
+#
+# MEDICAL VISIT DOMAIN MODEL:
+#
+# 1. VISIT ENTITY:
+#    # Core medical visit information
+#    - Visit ID (primary key)
+#    - Pet ID (foreign key to customer service)
+#    - Veterinarian ID (foreign key to vets service)
+#    - Visit Date and Time
+#    - Visit Type (Routine, Emergency, Follow-up, Surgery)
+#    - Chief Complaint
+#    - Diagnosis
+#    - Treatment Plan
+#    - Visit Status (Scheduled, In-Progress, Completed, Cancelled)
+#
+# 2. TREATMENT ENTITY:
+#    # Detailed treatment information
+#    - Treatment ID (primary key)
+#    - Visit ID (foreign key)
+#    - Treatment Type
+#    - Procedure Code
+#    - Treatment Description
+#    - Duration
+#    - Cost
+#    - Outcome
+#
+# 3. PRESCRIPTION ENTITY:
+#    # Medication and prescription tracking
+#    - Prescription ID (primary key)
+#    - Visit ID (foreign key)
+#    - Medication Name
+#    - Dosage
+#    - Frequency
+#    - Duration
+#    - Instructions
+#    - DEA Number (for controlled substances)
+#
+# 4. MEDICAL_NOTES ENTITY:
+#    # Clinical notes and observations
+#    - Note ID (primary key)
+#    - Visit ID (foreign key)
+#    - Note Type (Clinical, Behavioral, Follow-up)
+#    - Note Text
+#    - Created By (Veterinarian ID)
+#    - Created Date
+#
+# MEDICAL APPOINTMENT BUSINESS LOGIC:
+#
+# 1. VISIT OPERATIONS:
+#    # RESTful API endpoints for medical visit management
+#    GET /visits - List visits with filtering options
+#    GET /visits/{id} - Get detailed visit information
+#    POST /visits - Schedule new appointment
+#    PUT /visits/{id} - Update visit information
+#    DELETE /visits/{id} - Cancel appointment
+#    GET /visits/pet/{petId} - Get medical history for pet
+#    GET /visits/vet/{vetId} - Get visits for veterinarian
+#
+# 2. TREATMENT OPERATIONS:
+#    # Treatment and procedure management
+#    GET /visits/{id}/treatments - Get treatments for visit
+#    POST /visits/{id}/treatments - Add treatment to visit
+#    PUT /treatments/{id} - Update treatment information
+#    GET /treatments/statistics - Treatment outcome statistics
+#
+# 3. PRESCRIPTION OPERATIONS:
+#    # Medication and prescription management
+#    GET /visits/{id}/prescriptions - Get prescriptions for visit
+#    POST /visits/{id}/prescriptions - Add prescription
+#    PUT /prescriptions/{id} - Update prescription
+#    GET /prescriptions/refills - Get refill requests
+#
+# PRODUCTION ENHANCEMENTS NEEDED:
+#
+# 1. APPOINTMENT SCHEDULING ENGINE:
+#    # Advanced scheduling with conflict resolution
+#    @Service
+#    public class AppointmentSchedulingService {
+#        public List<TimeSlot> getAvailableSlots(Long vetId, LocalDate date) {
+#            // Complex scheduling logic with vet availability
+#            return scheduleEngine.findAvailableSlots(vetId, date);
+#        }
+#        
+#        public boolean scheduleAppointment(VisitRequest request) {
+#            // Conflict detection and resolution
+#            return scheduleEngine.schedule(request);
+#        }
+#    }
+#
+# 2. MEDICAL RECORD COMPLIANCE:
+#    # HIPAA and veterinary record compliance
+#    @Entity
+#    @Audited
+#    public class Visit {
+#        // Audit trail for medical record access
+#        @CreatedBy
+#        private String createdBy;
+#        
+#        @LastModifiedBy
+#        private String lastModifiedBy;
+#        
+#        @CreatedDate
+#        private LocalDateTime createdDate;
+#        
+#        @LastModifiedDate
+#        private LocalDateTime lastModifiedDate;
+#    }
+#
+# 3. BILLING INTEGRATION:
+#    # Integration with billing and payment systems
+#    @EventListener
+#    public void handleVisitCompletion(VisitCompletedEvent event) {
+#        BillingRecord billing = billingService.generateBill(event.getVisit());
+#        paymentService.processPayment(billing);
+#        insuranceService.submitClaim(billing);
+#    }
+#
+# 4. CLINICAL DECISION SUPPORT:
+#    # AI-powered clinical recommendations
+#    @Service
+#    public class ClinicalDecisionSupport {
+#        public List<Recommendation> getRecommendations(Visit visit) {
+#            // AI analysis of symptoms and medical history
+#            return aiService.analyzeClinicalData(visit);
+#        }
+#    }
+#
+# INTEGRATION PATTERNS:
+#
+# 1. CUSTOMER SERVICE INTEGRATION:
+#    # Pet and owner information retrieval
+#    @FeignClient("customers-service")
+#    public interface CustomersServiceClient {
+#        @GetMapping("/pets/{id}")
+#        Pet getPetById(@PathVariable Long id);
+#        
+#        @GetMapping("/customers/{id}")
+#        Customer getCustomerById(@PathVariable Long id);
+#    }
+#
+# 2. VETS SERVICE INTEGRATION:
+#    # Veterinarian information and availability
+#    @FeignClient("vets-service")
+#    public interface VetsServiceClient {
+#        @GetMapping("/vets/{id}")
+#        Vet getVetById(@PathVariable Long id);
+#        
+#        @GetMapping("/vets/available")
+#        List<Vet> getAvailableVets(@RequestParam LocalDateTime dateTime);
+#    }
+#
+# 3. NOTIFICATION SERVICE INTEGRATION:
+#    # Appointment reminders and notifications
+#    @EventListener
+#    public void handleAppointmentScheduled(AppointmentScheduledEvent event) {
+#        notificationService.sendAppointmentConfirmation(event.getCustomer(), event.getVisit());
+#        notificationService.scheduleReminder(event.getVisit());
+#    }
+#
+# MEDICAL COMPLIANCE REQUIREMENTS:
+#
+# 1. VETERINARY MEDICAL RECORDS:
+#    # State veterinary practice act compliance
+#    # Medical record retention requirements (typically 3-7 years)
+#    # Client access to medical records
+#    # Transfer of records between practices
+#
+# 2. PRESCRIPTION COMPLIANCE:
+#    # DEA compliance for controlled substances
+#    # Prescription tracking and audit trails
+#    # Electronic prescription requirements
+#    # Pharmacy integration and verification
+#
+# 3. PRIVACY AND SECURITY:
+#    # Animal medical record privacy (similar to HIPAA)
+#    # Client consent for treatment documentation
+#    # Secure transmission of medical data
+#    # Access controls and audit logging
+#
+# MONITORING AND OBSERVABILITY:
+#
+# 1. MEDICAL BUSINESS METRICS:
+#    # Appointment scheduling efficiency
+#    # Visit completion rates
+#    # Treatment outcome tracking
+#    # Revenue per visit analysis
+#
+# 2. OPERATIONAL METRICS:
+#    # API response times for appointment operations
+#    # Database performance for medical record queries
+#    # Service availability and error rates
+#    # Integration health with other services
+#
+# 3. CLINICAL QUALITY METRICS:
+#    # Treatment success rates
+#    # Follow-up appointment adherence
+#    # Prescription compliance tracking
+#    # Client satisfaction scores
+#
+# DISASTER RECOVERY AND BACKUP:
+#
+# 1. MEDICAL DATA PROTECTION:
+#    # Critical medical record backup
+#    # Prescription history preservation
+#    # Treatment outcome data protection
+#    # Appointment schedule backup
+#
+# 2. BUSINESS CONTINUITY:
+#    # Emergency appointment procedures
+#    # Medical record access during outages
+#    # Critical patient care escalation
+#    # Regulatory compliance during disasters
+#
+# SECURITY CONSIDERATIONS:
+# - Medical record encryption at rest and in transit
+# - Access controls for sensitive medical data
+# - Audit logging for all medical record access
+# - Compliance with veterinary privacy regulations
+# - Secure prescription management and DEA compliance
+#
+# =============================================================================

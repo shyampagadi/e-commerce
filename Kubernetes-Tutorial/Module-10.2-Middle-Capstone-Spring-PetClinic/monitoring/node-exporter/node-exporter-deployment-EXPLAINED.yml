@@ -1,0 +1,401 @@
+# =============================================================================
+# NODE EXPORTER DAEMONSET - COMPREHENSIVE INFRASTRUCTURE MONITORING DOCUMENTATION
+# =============================================================================
+# This file defines the Node Exporter DaemonSet for comprehensive infrastructure
+# monitoring in the PetClinic Kubernetes cluster. Node Exporter collects
+# hardware and OS-level metrics from every node, providing essential visibility
+# into cluster infrastructure health and performance.
+#
+# INFRASTRUCTURE MONITORING PHILOSOPHY: Node Exporter implements the "white-box"
+# monitoring approach, exposing detailed system metrics that enable proactive
+# infrastructure management and capacity planning.
+#
+# OPERATIONAL CRITICALITY: Infrastructure metrics are fundamental for cluster
+# health monitoring, resource planning, and early detection of hardware or
+# system-level issues that could impact application performance.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# NODE EXPORTER DAEMONSET - CLUSTER-WIDE INFRASTRUCTURE MONITORING
+# -----------------------------------------------------------------------------
+# API version for DaemonSet resources
+apiVersion: apps/v1
+
+# Resource type: DaemonSet ensures one pod per node
+kind: DaemonSet
+# DAEMONSET_PATTERN: Ensures Node Exporter runs on every cluster node
+# INFRASTRUCTURE_COVERAGE: Provides complete cluster monitoring coverage
+# AUTOMATIC_SCALING: New nodes automatically get Node Exporter pods
+
+# DaemonSet metadata
+metadata:
+  # DaemonSet name for Node Exporter
+  name: node-exporter
+  # INFRASTRUCTURE_SERVICE: Core infrastructure monitoring component
+  
+  # Namespace for monitoring stack
+  namespace: petclinic
+  
+  # Labels for DaemonSet classification
+  labels:
+    app: node-exporter
+    component: monitoring
+    # MONITORING_COMPONENT: Identifies as infrastructure monitoring service
+
+# DaemonSet specification
+spec:
+  # Selector for pod targeting
+  selector:
+    matchLabels:
+      app: node-exporter
+      # POD_SELECTION: Matches pods created by this DaemonSet
+  
+  # Pod template for Node Exporter
+  template:
+    metadata:
+      labels:
+        app: node-exporter
+        component: monitoring
+        # CONSISTENT_LABELING: Matches DaemonSet selector requirements
+    
+    spec:
+      # Host network access for comprehensive system monitoring
+      hostNetwork: true
+      # HOST_NETWORK: Enables access to host network interfaces and statistics
+      # NETWORK_MONITORING: Required for accurate network metrics collection
+      # SECURITY_CONSIDERATION: Provides elevated network access
+      
+      # Host PID namespace access for process monitoring
+      hostPID: true
+      # HOST_PID: Enables access to host process information
+      # PROCESS_MONITORING: Required for comprehensive process metrics
+      # SYSTEM_VISIBILITY: Provides visibility into all host processes
+      
+      containers:
+      - # Container name
+        name: node-exporter
+        
+        # Node Exporter container image
+        image: prom/node-exporter:v1.6.0
+        # VERSION_PINNING: Specific Node Exporter version for stability
+        # OFFICIAL_IMAGE: Using official Prometheus Node Exporter image
+        # LATEST_STABLE: v1.6.0 provides comprehensive metric collection
+        
+        # Node Exporter startup arguments
+        args:
+        # Proc filesystem path for system metrics
+        - '--path.procfs=/host/proc'
+        # PROC_PATH: Points to host /proc filesystem mounted in container
+        # SYSTEM_METRICS: Enables CPU, memory, and process metrics collection
+        
+        # Sys filesystem path for hardware metrics
+        - '--path.sysfs=/host/sys'
+        # SYS_PATH: Points to host /sys filesystem mounted in container
+        # HARDWARE_METRICS: Enables hardware and kernel metrics collection
+        
+        # Filesystem collector configuration
+        - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($|/)'
+        # MOUNT_POINT_FILTERING: Excludes system and container filesystems
+        # NOISE_REDUCTION: Prevents monitoring of irrelevant filesystem mounts
+        # REGEX_PATTERN: Matches system directories to exclude from monitoring
+        
+        # Container ports for metrics exposure
+        ports:
+        - containerPort: 9100
+          name: metrics
+          # METRICS_PORT: Standard Node Exporter metrics endpoint
+          # PROMETHEUS_INTEGRATION: Port scraped by Prometheus for metrics
+        
+        # Resource allocation for Node Exporter
+        resources:
+          # Guaranteed resources for baseline monitoring
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+            # LIGHTWEIGHT_MONITORING: Minimal resources for system metrics collection
+            # EFFICIENT_OPERATION: Low overhead on cluster nodes
+          
+          # Resource limits to prevent resource monopolization
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+            # RESOURCE_PROTECTION: Prevents Node Exporter from impacting node performance
+            # BOUNDED_USAGE: Ensures predictable resource consumption
+        
+        # Volume mounts for host filesystem access
+        volumeMounts:
+        # Proc filesystem mount
+        - name: proc
+          mountPath: /host/proc
+          readOnly: true
+          # PROC_MOUNT: Read-only access to host /proc filesystem
+          # SYSTEM_METRICS_ACCESS: Enables CPU, memory, and process monitoring
+        
+        # Sys filesystem mount
+        - name: sys
+          mountPath: /host/sys
+          readOnly: true
+          # SYS_MOUNT: Read-only access to host /sys filesystem
+          # HARDWARE_METRICS_ACCESS: Enables hardware and kernel monitoring
+      
+      # Volume definitions for host filesystem access
+      volumes:
+      # Proc filesystem volume
+      - name: proc
+        hostPath:
+          path: /proc
+          # HOST_PROC: Direct access to host /proc filesystem
+          # SYSTEM_VISIBILITY: Provides access to system and process information
+      
+      # Sys filesystem volume
+      - name: sys
+        hostPath:
+          path: /sys
+          # HOST_SYS: Direct access to host /sys filesystem
+          # HARDWARE_VISIBILITY: Provides access to hardware and kernel information
+      
+      # Tolerations for scheduling on all nodes
+      tolerations:
+      # Tolerate NoSchedule taints on all nodes
+      - effect: NoSchedule
+        operator: Exists
+        # UNIVERSAL_SCHEDULING: Allows scheduling on nodes with NoSchedule taints
+        # COMPLETE_COVERAGE: Ensures Node Exporter runs on all nodes including masters
+        # TAINT_TOLERANCE: Overcomes node taints that might prevent scheduling
+
+---
+# Document separator for Service resource
+
+# -----------------------------------------------------------------------------
+# NODE EXPORTER SERVICE - METRICS COLLECTION ENDPOINT
+# -----------------------------------------------------------------------------
+# API version for Service resources
+apiVersion: v1
+
+# Resource type: Service for Node Exporter metrics access
+kind: Service
+
+# Service metadata
+metadata:
+  # Service name for Node Exporter metrics
+  name: node-exporter
+  # METRICS_SERVICE: Provides access to infrastructure metrics
+  
+  # Namespace consistency
+  namespace: petclinic
+  
+  # Labels for service identification
+  labels:
+    app: node-exporter
+    # SERVICE_CLASSIFICATION: Identifies as Node Exporter service
+
+# Service specification
+spec:
+  # Selector for targeting Node Exporter pods
+  selector:
+    app: node-exporter
+    # POD_TARGETING: Routes traffic to Node Exporter DaemonSet pods
+  
+  # Port configuration for metrics access
+  ports:
+  - port: 9100
+    targetPort: 9100
+    name: metrics
+    # METRICS_ENDPOINT: Standard Node Exporter metrics port
+    # PROMETHEUS_SCRAPING: Port used by Prometheus for metrics collection
+  
+  # Service type for cluster-internal access
+  type: ClusterIP
+  # INTERNAL_ACCESS: Metrics accessible within cluster for Prometheus scraping
+  # SECURITY: Prevents external access to infrastructure metrics
+
+# =============================================================================
+# NODE EXPORTER INFRASTRUCTURE MONITORING ANALYSIS
+# =============================================================================
+#
+# NODE EXPORTER METRICS CATEGORIES:
+# ✅ CPU METRICS: Usage, load average, context switches, interrupts
+# ✅ MEMORY METRICS: Total, available, used, cached, buffer memory
+# ✅ DISK METRICS: I/O operations, throughput, utilization, space usage
+# ✅ NETWORK METRICS: Interface statistics, packet counts, error rates
+# ✅ FILESYSTEM METRICS: Mount points, disk usage, inode utilization
+# ✅ SYSTEM METRICS: Boot time, system load, process counts
+# ✅ HARDWARE METRICS: Temperature, power, hardware health (when available)
+#
+# INFRASTRUCTURE MONITORING CAPABILITIES:
+# ✅ CLUSTER-WIDE COVERAGE: DaemonSet ensures monitoring on every node
+# ✅ REAL-TIME METRICS: Continuous collection of system performance data
+# ✅ PROMETHEUS INTEGRATION: Native integration with Prometheus monitoring
+# ✅ LOW OVERHEAD: Minimal resource impact on cluster nodes
+# ✅ COMPREHENSIVE VISIBILITY: Hardware to OS-level metric collection
+# ✅ AUTOMATIC DISCOVERY: New nodes automatically monitored
+#
+# PRODUCTION ENHANCEMENTS NEEDED:
+#
+# 1. ENHANCED SECURITY CONFIGURATION:
+#    spec:
+#      securityContext:
+#        runAsNonRoot: true
+#        runAsUser: 65534  # nobody user
+#        fsGroup: 65534
+#      containers:
+#      - name: node-exporter
+#        securityContext:
+#          allowPrivilegeEscalation: false
+#          readOnlyRootFilesystem: true
+#          capabilities:
+#            drop:
+#            - ALL
+#
+# 2. ADVANCED COLLECTOR CONFIGURATION:
+#    args:
+#    - '--path.procfs=/host/proc'
+#    - '--path.sysfs=/host/sys'
+#    - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($|/)'
+#    - '--collector.netdev.ignored-devices=^(veth.*|docker.*|br-.*|lo)$'
+#    - '--collector.diskstats.ignored-devices=^(ram|loop|fd|(h|s|v|xv)d[a-z]|nvme\\d+n\\d+p)\\d+$'
+#    - '--collector.textfile.directory=/var/lib/node_exporter/textfile_collector'
+#    - '--collector.systemd'
+#    - '--collector.processes'
+#
+# 3. CUSTOM METRICS COLLECTION:
+#    volumeMounts:
+#    - name: textfile-collector
+#      mountPath: /var/lib/node_exporter/textfile_collector
+#      readOnly: true
+#    volumes:
+#    - name: textfile-collector
+#      hostPath:
+#        path: /var/lib/node_exporter/textfile_collector
+#        type: DirectoryOrCreate
+#
+# 4. MONITORING STACK INTEGRATION:
+#    # ServiceMonitor for Prometheus Operator
+#    apiVersion: monitoring.coreos.com/v1
+#    kind: ServiceMonitor
+#    metadata:
+#      name: node-exporter
+#      namespace: petclinic
+#    spec:
+#      selector:
+#        matchLabels:
+#          app: node-exporter
+#      endpoints:
+#      - port: metrics
+#        interval: 30s
+#        path: /metrics
+#
+# PROMETHEUS SCRAPING CONFIGURATION:
+#
+# 1. PROMETHEUS JOB CONFIGURATION:
+#    scrape_configs:
+#    - job_name: 'node-exporter'
+#      kubernetes_sd_configs:
+#      - role: endpoints
+#        namespaces:
+#          names:
+#          - petclinic
+#      relabel_configs:
+#      - source_labels: [__meta_kubernetes_service_name]
+#        action: keep
+#        regex: node-exporter
+#      - source_labels: [__meta_kubernetes_endpoint_port_name]
+#        action: keep
+#        regex: metrics
+#      - source_labels: [__meta_kubernetes_node_name]
+#        target_label: instance
+#
+# 2. ALERTING RULES FOR INFRASTRUCTURE:
+#    groups:
+#    - name: node-exporter-alerts
+#      rules:
+#      - alert: NodeDown
+#        expr: up{job="node-exporter"} == 0
+#        for: 1m
+#        labels:
+#          severity: critical
+#        annotations:
+#          summary: "Node {{ $labels.instance }} is down"
+#      
+#      - alert: HighCPUUsage
+#        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+#        for: 5m
+#        labels:
+#          severity: warning
+#        annotations:
+#          summary: "High CPU usage on {{ $labels.instance }}"
+#      
+#      - alert: HighMemoryUsage
+#        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 80
+#        for: 5m
+#        labels:
+#          severity: warning
+#        annotations:
+#          summary: "High memory usage on {{ $labels.instance }}"
+#      
+#      - alert: DiskSpaceLow
+#        expr: (1 - (node_filesystem_avail_bytes / node_filesystem_size_bytes)) * 100 > 85
+#        for: 5m
+#        labels:
+#          severity: warning
+#        annotations:
+#          summary: "Disk space low on {{ $labels.instance }}"
+#
+# GRAFANA DASHBOARD INTEGRATION:
+#
+# 1. NODE EXPORTER DASHBOARD PANELS:
+#    # CPU utilization by core
+#    # Memory usage breakdown
+#    # Disk I/O operations and throughput
+#    # Network interface statistics
+#    # System load and process counts
+#    # Filesystem usage by mount point
+#
+# 2. INFRASTRUCTURE OVERVIEW DASHBOARD:
+#    # Cluster-wide resource utilization
+#    # Node health status matrix
+#    # Resource capacity planning metrics
+#    # Performance trend analysis
+#
+# OPERATIONAL PROCEDURES:
+#
+# 1. INFRASTRUCTURE HEALTH MONITORING:
+#    # Daily review of node health metrics
+#    # Capacity planning based on utilization trends
+#    # Performance bottleneck identification
+#    # Hardware failure prediction and prevention
+#
+# 2. ALERTING AND ESCALATION:
+#    # Critical infrastructure alerts to on-call teams
+#    # Automated ticket creation for hardware issues
+#    # Escalation procedures for cluster-wide problems
+#    # Integration with infrastructure management systems
+#
+# 3. MAINTENANCE AND OPTIMIZATION:
+#    # Regular review of metric collection efficiency
+#    # Optimization of collector configurations
+#    # Performance impact assessment
+#    # Resource allocation adjustments
+#
+# TROUBLESHOOTING INFRASTRUCTURE ISSUES:
+#
+# 1. NODE HEALTH DIAGNOSTICS:
+#    # CPU and memory utilization analysis
+#    # Disk I/O performance investigation
+#    # Network connectivity and throughput testing
+#    # System log correlation with metrics
+#
+# 2. CAPACITY PLANNING:
+#    # Historical trend analysis for resource growth
+#    # Peak usage pattern identification
+#    # Resource allocation optimization
+#    # Scaling decision support
+#
+# COMPLIANCE AND GOVERNANCE:
+# - Infrastructure monitoring compliance with organizational standards
+# - Resource utilization reporting for cost optimization
+# - Performance baseline establishment and maintenance
+# - Audit trail for infrastructure changes and incidents
+# - Integration with enterprise monitoring and ITSM systems
+#
+# =============================================================================

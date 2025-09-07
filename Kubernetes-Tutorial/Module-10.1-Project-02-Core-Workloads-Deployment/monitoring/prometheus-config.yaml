@@ -1,0 +1,612 @@
+# =============================================================================
+# PROMETHEUS CONFIGURATION
+# =============================================================================
+# Purpose: Configures Prometheus for monitoring the e-commerce application
+# Why needed: Provides metrics collection, storage, and querying capabilities
+# Kubernetes concept: ConfigMap stores Prometheus configuration for the monitoring stack
+# This file will be built section by section to avoid token limits
+
+apiVersion: v1
+# API Version: v1 is the stable version for ConfigMap resources
+# This is the most commonly used API version for configuration storage
+
+kind: ConfigMap
+# Resource Type: ConfigMap provides configuration data to pods
+# This enables externalized configuration management for Prometheus
+
+metadata:
+  # Metadata section contains identifying information about the resource
+  name: prometheus-config
+  # Name: Unique identifier for this ConfigMap within the namespace
+  # This name will be used to reference the configuration in Prometheus deployment
+  
+  namespace: ecommerce
+  # Namespace: Specifies which namespace this ConfigMap belongs to
+  # Must match the namespace created in the namespace.yaml file
+  
+  labels:
+    # Labels: Key-value pairs for organizing and selecting resources
+    app: prometheus
+    # app: prometheus - Identifies this ConfigMap as belonging to Prometheus
+    component: monitoring
+    # component: monitoring - Identifies this as a monitoring component
+    tier: observability
+    # tier: observability - Identifies this as observability tier
+    environment: production
+    # environment: production - Indicates this is for production environment
+    managed-by: kubernetes
+    # managed-by: kubernetes - Indicates this resource is managed by Kubernetes
+  
+  annotations:
+    # Annotations: Additional metadata that doesn't affect resource behavior
+    description: "Prometheus configuration for e-commerce application monitoring"
+    # description: Human-readable description of the ConfigMap purpose
+    # Used for documentation and operational understanding
+    
+    contact: "platform-engineering@company.com"
+    # contact: Email address for the team responsible for this ConfigMap
+    # Used for incident response and maintenance coordination
+    
+    last-updated: "2024-12-01T00:00:00Z"
+    # last-updated: Timestamp of last configuration update
+    # Used for change tracking and audit trails
+    
+    version: "1.0.0"
+    # version: Version of the configuration
+    # Used for configuration versioning and rollback
+
+data:
+  # Data section contains the actual configuration data
+  # Each key represents a configuration file name
+  # Each value represents the configuration file content
+  
+  prometheus.yml: |
+    # =============================================================================
+    # PROMETHEUS CONFIGURATION FILE
+    # =============================================================================
+    # Purpose: Main configuration file for Prometheus server
+    # Why needed: Defines scraping targets, rules, and storage configuration
+    # This configuration enables comprehensive monitoring of the e-commerce application
+    
+    # =============================================================================
+    # GLOBAL CONFIGURATION
+    # =============================================================================
+    global:
+      # Global configuration section
+      # These settings apply to all configuration contexts
+      
+      scrape_interval: 15s
+      # scrape_interval: 15s - Default interval between scrapes
+      # Value: 15 seconds - How often Prometheus scrapes targets
+      # Purpose: Balances data freshness with resource usage
+      # Impact: All targets are scraped every 15 seconds by default
+      # Production consideration: 15s provides good balance for most use cases
+      
+      evaluation_interval: 15s
+      # evaluation_interval: 15s - Default interval between rule evaluations
+      # Value: 15 seconds - How often Prometheus evaluates recording and alerting rules
+      # Purpose: Ensures rules are evaluated frequently enough
+      # Impact: Rules are evaluated every 15 seconds
+      # Production consideration: Matches scrape interval for consistency
+      
+      external_labels:
+        # external_labels: Labels to add to any time series or alerts
+        # Purpose: Provides additional context for all metrics
+        # Impact: All metrics will have these labels attached
+        # Production consideration: Helps identify metrics source and environment
+        
+        cluster: 'ecommerce-cluster'
+        # cluster: ecommerce-cluster - Cluster identifier
+        # Purpose: Identifies which cluster the metrics come from
+        # Impact: All metrics are tagged with cluster name
+        # Production consideration: Essential for multi-cluster monitoring
+        
+        environment: 'production'
+        # environment: production - Environment identifier
+        # Purpose: Identifies which environment the metrics come from
+        # Impact: All metrics are tagged with environment
+        # Production consideration: Enables environment-specific monitoring
+        
+        project: 'ecommerce-platform'
+        # project: ecommerce-platform - Project identifier
+        # Purpose: Identifies which project the metrics belong to
+        # Impact: All metrics are tagged with project name
+        # Production consideration: Enables project-specific monitoring
+    
+    # =============================================================================
+    # RULE FILES CONFIGURATION
+    # =============================================================================
+    rule_files:
+      # rule_files: List of rule files to load
+      # Purpose: Defines where Prometheus looks for recording and alerting rules
+      # Impact: Rules from these files are loaded and evaluated
+      # Production consideration: Enables automated alerting and metric recording
+      
+      - "alerting_rules.yml"
+      # alerting_rules.yml - Alerting rules file
+      # Purpose: Contains alert definitions and conditions
+      # Impact: Alerts are defined and evaluated based on these rules
+      # Production consideration: Critical for proactive monitoring
+      
+      - "recording_rules.yml"
+      # recording_rules.yml - Recording rules file
+      # Purpose: Contains pre-computed metric expressions
+      # Impact: Complex queries are pre-computed for better performance
+      # Production consideration: Improves query performance and reduces load
+    
+    # =============================================================================
+    # SCRAPE CONFIGURATIONS
+    # =============================================================================
+    scrape_configs:
+      # scrape_configs: List of scrape configurations
+      # Purpose: Defines which targets Prometheus should scrape
+      # Impact: Prometheus collects metrics from these targets
+      # Production consideration: Comprehensive monitoring coverage
+      
+      # =============================================================================
+      # PROMETHEUS SELF-MONITORING
+      # =============================================================================
+      - job_name: 'prometheus'
+        # job_name: prometheus - Job identifier
+        # Purpose: Monitors Prometheus itself
+        # Impact: Prometheus collects its own metrics
+        # Production consideration: Essential for monitoring system health
+        
+        static_configs:
+          # static_configs: Static target configuration
+          # Purpose: Defines static targets to scrape
+          # Impact: Prometheus scrapes these targets
+          # Production consideration: Simple and reliable for local targets
+          
+          - targets: ['localhost:9090']
+            # targets: localhost:9090 - Target address
+            # Value: localhost:9090 - Prometheus server address
+            # Purpose: Scrapes Prometheus server metrics
+            # Impact: Prometheus monitors itself
+            # Production consideration: Self-monitoring is critical for reliability
+        
+        scrape_interval: 15s
+        # scrape_interval: 15s - Scrape interval for this job
+        # Value: 15 seconds - How often to scrape Prometheus
+        # Purpose: Ensures frequent monitoring of Prometheus health
+        # Impact: Prometheus metrics are collected every 15 seconds
+        # Production consideration: Frequent monitoring for critical system component
+        
+        metrics_path: '/metrics'
+        # metrics_path: /metrics - Path to metrics endpoint
+        # Value: /metrics - Standard Prometheus metrics path
+        # Purpose: Specifies where to find metrics on the target
+        # Impact: Prometheus scrapes metrics from /metrics endpoint
+        # Production consideration: Standard path for Prometheus metrics
+      
+      # =============================================================================
+      # E-COMMERCE BACKEND MONITORING
+      # =============================================================================
+      - job_name: 'ecommerce-backend'
+        # job_name: ecommerce-backend - Job identifier
+        # Purpose: Monitors the FastAPI backend application
+        # Impact: Prometheus collects backend application metrics
+        # Production consideration: Critical for application performance monitoring
+        
+        kubernetes_sd_configs:
+          # kubernetes_sd_configs: Kubernetes service discovery configuration
+          # Purpose: Automatically discovers targets in Kubernetes
+          # Impact: Prometheus automatically finds backend pods
+          # Production consideration: Dynamic discovery adapts to pod changes
+          
+          - role: endpoints
+            # role: endpoints - Discovery role
+            # Purpose: Discovers Kubernetes endpoints
+            # Impact: Finds all endpoints in the cluster
+            # Production consideration: Enables discovery of service endpoints
+            
+            namespaces:
+              # namespaces: List of namespaces to discover
+              # Purpose: Limits discovery to specific namespaces
+              # Impact: Only discovers endpoints in ecommerce namespace
+              # Production consideration: Reduces discovery scope and improves security
+              
+              names:
+                - ecommerce
+                # ecommerce - Namespace name
+                # Purpose: Only discover endpoints in ecommerce namespace
+                # Impact: Prometheus only monitors ecommerce application
+                # Production consideration: Namespace isolation improves security
+        
+        relabel_configs:
+          # relabel_configs: Metric relabeling configuration
+          # Purpose: Modifies labels before scraping
+          # Impact: Adds context and filters targets
+          # Production consideration: Enables precise target selection and labeling
+          
+          - source_labels: [__meta_kubernetes_service_name]
+            # source_labels: __meta_kubernetes_service_name - Source label
+            # Purpose: Uses service name as source for relabeling
+            # Impact: Enables filtering based on service name
+            # Production consideration: Allows precise service targeting
+            
+            action: keep
+            # action: keep - Relabel action
+            # Purpose: Keeps targets that match the condition
+            # Impact: Only keeps targets from specified service
+            # Production consideration: Filters out unwanted targets
+            
+            regex: ecommerce-backend-service
+            # regex: ecommerce-backend-service - Regular expression
+            # Purpose: Matches backend service name
+            # Impact: Only keeps targets from backend service
+            # Production consideration: Ensures only backend pods are monitored
+          
+          - source_labels: [__meta_kubernetes_endpoint_port_name]
+            # source_labels: __meta_kubernetes_endpoint_port_name - Source label
+            # Purpose: Uses endpoint port name as source for relabeling
+            # Impact: Enables filtering based on port name
+            # Production consideration: Allows precise port targeting
+            
+            action: keep
+            # action: keep - Relabel action
+            # Purpose: Keeps targets that match the condition
+            # Impact: Only keeps targets with specified port name
+            # Production consideration: Filters out unwanted ports
+            
+            regex: metrics
+            # regex: metrics - Regular expression
+            # Purpose: Matches metrics port name
+            # Impact: Only keeps targets with metrics port
+            # Production consideration: Ensures only metrics endpoints are scraped
+        
+        scrape_interval: 15s
+        # scrape_interval: 15s - Scrape interval for this job
+        # Value: 15 seconds - How often to scrape backend metrics
+        # Purpose: Ensures frequent monitoring of backend health
+        # Impact: Backend metrics are collected every 15 seconds
+        # Production consideration: Frequent monitoring for critical application component
+        
+        metrics_path: '/metrics'
+        # metrics_path: /metrics - Path to metrics endpoint
+        # Value: /metrics - Standard Prometheus metrics path
+        # Purpose: Specifies where to find metrics on the target
+        # Impact: Prometheus scrapes metrics from /metrics endpoint
+        # Production consideration: Standard path for application metrics
+      
+      # =============================================================================
+      # E-COMMERCE FRONTEND MONITORING
+      # =============================================================================
+      - job_name: 'ecommerce-frontend'
+        # job_name: ecommerce-frontend - Job identifier
+        # Purpose: Monitors the React frontend application
+        # Impact: Prometheus collects frontend application metrics
+        # Production consideration: Important for user experience monitoring
+        
+        kubernetes_sd_configs:
+          # kubernetes_sd_configs: Kubernetes service discovery configuration
+          # Purpose: Automatically discovers targets in Kubernetes
+          # Impact: Prometheus automatically finds frontend pods
+          # Production consideration: Dynamic discovery adapts to pod changes
+          
+          - role: endpoints
+            # role: endpoints - Discovery role
+            # Purpose: Discovers Kubernetes endpoints
+            # Impact: Finds all endpoints in the cluster
+            # Production consideration: Enables discovery of service endpoints
+            
+            namespaces:
+              # namespaces: List of namespaces to discover
+              # Purpose: Limits discovery to specific namespaces
+              # Impact: Only discovers endpoints in ecommerce namespace
+              # Production consideration: Reduces discovery scope and improves security
+              
+              names:
+                - ecommerce
+                # ecommerce - Namespace name
+                # Purpose: Only discover endpoints in ecommerce namespace
+                # Impact: Prometheus only monitors ecommerce application
+                # Production consideration: Namespace isolation improves security
+        
+        relabel_configs:
+          # relabel_configs: Metric relabeling configuration
+          # Purpose: Modifies labels before scraping
+          # Impact: Adds context and filters targets
+          # Production consideration: Enables precise target selection and labeling
+          
+          - source_labels: [__meta_kubernetes_service_name]
+            # source_labels: __meta_kubernetes_service_name - Source label
+            # Purpose: Uses service name as source for relabeling
+            # Impact: Enables filtering based on service name
+            # Production consideration: Allows precise service targeting
+            
+            action: keep
+            # action: keep - Relabel action
+            # Purpose: Keeps targets that match the condition
+            # Impact: Only keeps targets from specified service
+            # Production consideration: Filters out unwanted targets
+            
+            regex: ecommerce-frontend-service
+            # regex: ecommerce-frontend-service - Regular expression
+            # Purpose: Matches frontend service name
+            # Impact: Only keeps targets from frontend service
+            # Production consideration: Ensures only frontend pods are monitored
+          
+          - source_labels: [__meta_kubernetes_endpoint_port_name]
+            # source_labels: __meta_kubernetes_endpoint_port_name - Source label
+            # Purpose: Uses endpoint port name as source for relabeling
+            # Impact: Enables filtering based on port name
+            # Production consideration: Allows precise port targeting
+            
+            action: keep
+            # action: keep - Relabel action
+            # Purpose: Keeps targets that match the condition
+            # Impact: Only keeps targets with specified port name
+            # Production consideration: Filters out unwanted ports
+            
+            regex: metrics
+            # regex: metrics - Regular expression
+            # Purpose: Matches metrics port name
+            # Impact: Only keeps targets with metrics port
+            # Production consideration: Ensures only metrics endpoints are scraped
+        
+        scrape_interval: 15s
+        # scrape_interval: 15s - Scrape interval for this job
+        # Value: 15 seconds - How often to scrape frontend metrics
+        # Purpose: Ensures frequent monitoring of frontend health
+        # Impact: Frontend metrics are collected every 15 seconds
+        # Production consideration: Frequent monitoring for user-facing component
+        
+        metrics_path: '/metrics'
+        # metrics_path: /metrics - Path to metrics endpoint
+        # Value: /metrics - Standard Prometheus metrics path
+        # Purpose: Specifies where to find metrics on the target
+        # Impact: Prometheus scrapes metrics from /metrics endpoint
+        # Production consideration: Standard path for application metrics
+      
+      # =============================================================================
+      # E-COMMERCE DATABASE MONITORING
+      # =============================================================================
+      - job_name: 'ecommerce-database'
+        # job_name: ecommerce-database - Job identifier
+        # Purpose: Monitors the PostgreSQL database
+        # Impact: Prometheus collects database metrics
+        # Production consideration: Critical for database performance monitoring
+        
+        kubernetes_sd_configs:
+          # kubernetes_sd_configs: Kubernetes service discovery configuration
+          # Purpose: Automatically discovers targets in Kubernetes
+          # Impact: Prometheus automatically finds database pods
+          # Production consideration: Dynamic discovery adapts to pod changes
+          
+          - role: endpoints
+            # role: endpoints - Discovery role
+            # Purpose: Discovers Kubernetes endpoints
+            # Impact: Finds all endpoints in the cluster
+            # Production consideration: Enables discovery of service endpoints
+            
+            namespaces:
+              # namespaces: List of namespaces to discover
+              # Purpose: Limits discovery to specific namespaces
+              # Impact: Only discovers endpoints in ecommerce namespace
+              # Production consideration: Reduces discovery scope and improves security
+              
+              names:
+                - ecommerce
+                # ecommerce - Namespace name
+                # Purpose: Only discover endpoints in ecommerce namespace
+                # Impact: Prometheus only monitors ecommerce application
+                # Production consideration: Namespace isolation improves security
+        
+        relabel_configs:
+          # relabel_configs: Metric relabeling configuration
+          # Purpose: Modifies labels before scraping
+          # Impact: Adds context and filters targets
+          # Production consideration: Enables precise target selection and labeling
+          
+          - source_labels: [__meta_kubernetes_service_name]
+            # source_labels: __meta_kubernetes_service_name - Source label
+            # Purpose: Uses service name as source for relabeling
+            # Impact: Enables filtering based on service name
+            # Production consideration: Allows precise service targeting
+            
+            action: keep
+            # action: keep - Relabel action
+            # Purpose: Keeps targets that match the condition
+            # Impact: Only keeps targets from specified service
+            # Production consideration: Filters out unwanted targets
+            
+            regex: ecommerce-database-service
+            # regex: ecommerce-database-service - Regular expression
+            # Purpose: Matches database service name
+            # Impact: Only keeps targets from database service
+            # Production consideration: Ensures only database pods are monitored
+          
+          - source_labels: [__meta_kubernetes_endpoint_port_name]
+            # source_labels: __meta_kubernetes_endpoint_port_name - Source label
+            # Purpose: Uses endpoint port name as source for relabeling
+            # Impact: Enables filtering based on port name
+            # Production consideration: Allows precise port targeting
+            
+            action: keep
+            # action: keep - Relabel action
+            # Purpose: Keeps targets that match the condition
+            # Impact: Only keeps targets with specified port name
+            # Production consideration: Filters out unwanted ports
+            
+            regex: metrics
+            # regex: metrics - Regular expression
+            # Purpose: Matches metrics port name
+            # Impact: Only keeps targets with metrics port
+            # Production consideration: Ensures only metrics endpoints are scraped
+        
+        scrape_interval: 30s
+        # scrape_interval: 30s - Scrape interval for this job
+        # Value: 30 seconds - How often to scrape database metrics
+        # Purpose: Ensures regular monitoring of database health
+        # Impact: Database metrics are collected every 30 seconds
+        # Production consideration: Less frequent monitoring for database component
+        
+        metrics_path: '/metrics'
+        # metrics_path: /metrics - Path to metrics endpoint
+        # Value: /metrics - Standard Prometheus metrics path
+        # Purpose: Specifies where to find metrics on the target
+        # Impact: Prometheus scrapes metrics from /metrics endpoint
+        # Production consideration: Standard path for database metrics
+      
+      # =============================================================================
+      # KUBERNETES API SERVERS MONITORING
+      # =============================================================================
+      - job_name: 'kubernetes-apiservers'
+        # job_name: kubernetes-apiservers - Job identifier
+        # Purpose: Monitors Kubernetes API servers
+        # Impact: Prometheus collects API server metrics
+        # Production consideration: Critical for cluster health monitoring
+        
+        kubernetes_sd_configs:
+          # kubernetes_sd_configs: Kubernetes service discovery configuration
+          # Purpose: Automatically discovers targets in Kubernetes
+          # Impact: Prometheus automatically finds API server endpoints
+          # Production consideration: Dynamic discovery adapts to cluster changes
+          
+          - role: endpoints
+            # role: endpoints - Discovery role
+            # Purpose: Discovers Kubernetes endpoints
+            # Impact: Finds all endpoints in the cluster
+            # Production consideration: Enables discovery of API server endpoints
+        
+        relabel_configs:
+          # relabel_configs: Metric relabeling configuration
+          # Purpose: Modifies labels before scraping
+          # Impact: Adds context and filters targets
+          # Production consideration: Enables precise target selection and labeling
+          
+          - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+            # source_labels: Multiple source labels
+            # Purpose: Uses multiple labels for filtering
+            # Impact: Enables complex filtering logic
+            # Production consideration: Allows precise target selection
+            
+            action: keep
+            # action: keep - Relabel action
+            # Purpose: Keeps targets that match the condition
+            # Impact: Only keeps targets matching the regex
+            # Production consideration: Filters out unwanted targets
+            
+            regex: default;kubernetes;https
+            # regex: default;kubernetes;https - Regular expression
+            # Purpose: Matches API server endpoints
+            # Impact: Only keeps API server targets
+            # Production consideration: Ensures only API servers are monitored
+        
+        scheme: https
+        # scheme: https - URL scheme
+        # Purpose: Uses HTTPS for API server communication
+        # Impact: Secure communication with API servers
+        # Production consideration: HTTPS is required for API server access
+        
+        tls_config:
+          # tls_config: TLS configuration
+          # Purpose: Configures TLS settings for HTTPS
+          # Impact: Enables secure communication
+          # Production consideration: Required for API server access
+          
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          # ca_file: CA certificate file path
+          # Purpose: Specifies CA certificate for TLS verification
+          # Impact: Enables certificate verification
+          # Production consideration: Uses service account CA certificate
+        
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        # bearer_token_file: Bearer token file path
+        # Purpose: Specifies bearer token for authentication
+        # Impact: Enables authentication with API servers
+        # Production consideration: Uses service account token for authentication
+      
+      # =============================================================================
+      # KUBERNETES NODES MONITORING
+      # =============================================================================
+      - job_name: 'kubernetes-nodes'
+        # job_name: kubernetes-nodes - Job identifier
+        # Purpose: Monitors Kubernetes nodes
+        # Impact: Prometheus collects node metrics
+        # Production consideration: Critical for infrastructure monitoring
+        
+        kubernetes_sd_configs:
+          # kubernetes_sd_configs: Kubernetes service discovery configuration
+          # Purpose: Automatically discovers targets in Kubernetes
+          # Impact: Prometheus automatically finds node endpoints
+          # Production consideration: Dynamic discovery adapts to cluster changes
+          
+          - role: node
+            # role: node - Discovery role
+            # Purpose: Discovers Kubernetes nodes
+            # Impact: Finds all nodes in the cluster
+            # Production consideration: Enables discovery of node endpoints
+        
+        relabel_configs:
+          # relabel_configs: Metric relabeling configuration
+          # Purpose: Modifies labels before scraping
+          # Impact: Adds context and filters targets
+          # Production consideration: Enables precise target selection and labeling
+          
+          - action: labelmap
+            # action: labelmap - Relabel action
+            # Purpose: Maps labels from source to target
+            # Impact: Copies labels with __meta_kubernetes_node_label_ prefix
+            # Production consideration: Preserves node labels for filtering
+            
+            regex: __meta_kubernetes_node_label_(.+)
+            # regex: __meta_kubernetes_node_label_(.+) - Regular expression
+            # Purpose: Matches node label prefixes
+            # Impact: Maps node labels to metric labels
+            # Production consideration: Enables filtering by node labels
+          
+          - target_label: __address__
+            # target_label: __address__ - Target label
+            # Purpose: Sets the target address for scraping
+            # Impact: Specifies where to scrape metrics from
+            # Production consideration: Enables proper target addressing
+            
+            replacement: kubernetes.default.svc:443
+            # replacement: kubernetes.default.svc:443 - Replacement value
+            # Purpose: Sets the API server address for node metrics
+            # Impact: Prometheus scrapes node metrics via API server
+            # Production consideration: Uses API server as proxy for node metrics
+          
+          - source_labels: [__meta_kubernetes_node_name]
+            # source_labels: __meta_kubernetes_node_name - Source label
+            # Purpose: Uses node name as source for relabeling
+            # Impact: Enables filtering based on node name
+            # Production consideration: Allows precise node targeting
+            
+            target_label: __metrics_path__
+            # target_label: __metrics_path__ - Target label
+            # Purpose: Sets the metrics path for scraping
+            # Impact: Specifies the path to scrape metrics from
+            # Production consideration: Enables proper metrics path configuration
+            
+            replacement: /api/v1/nodes/${1}/proxy/metrics
+            # replacement: /api/v1/nodes/${1}/proxy/metrics - Replacement value
+            # Purpose: Sets the API path for node metrics
+            # Impact: Prometheus scrapes node metrics via API proxy
+            # Production consideration: Uses API server proxy for node metrics access
+        
+        scheme: https
+        # scheme: https - URL scheme
+        # Purpose: Uses HTTPS for node metrics communication
+        # Impact: Secure communication with node metrics
+        # Production consideration: HTTPS is required for secure communication
+        
+        tls_config:
+          # tls_config: TLS configuration
+          # Purpose: Configures TLS settings for HTTPS
+          # Impact: Enables secure communication
+          # Production consideration: Required for secure API server access
+          
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          # ca_file: CA certificate file path
+          # Purpose: Specifies CA certificate for TLS verification
+          # Impact: Enables certificate verification
+          # Production consideration: Uses service account CA certificate
+        
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        # bearer_token_file: Bearer token file path
+        # Purpose: Specifies bearer token for authentication
+        # Impact: Enables authentication with API servers
+        # Production consideration: Uses service account token for authentication

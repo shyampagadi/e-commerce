@@ -1,0 +1,450 @@
+# =============================================================================
+# GRAFANA MONITORING DASHBOARD - COMPREHENSIVE VISUALIZATION DOCUMENTATION
+# =============================================================================
+# This file defines the complete Grafana deployment for the PetClinic monitoring
+# stack, including datasource configuration, dashboard provisioning, and
+# visualization setup. Grafana provides advanced metrics visualization,
+# alerting, and operational dashboards for comprehensive observability.
+#
+# VISUALIZATION PHILOSOPHY: Grafana transforms raw metrics into actionable
+# insights through interactive dashboards, enabling rapid problem identification
+# and performance analysis across the entire microservices ecosystem.
+#
+# OPERATIONAL IMPACT: Grafana dashboards are the primary interface for
+# operations teams to monitor system health, investigate issues, and
+# make data-driven decisions about system performance and capacity.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# GRAFANA DATASOURCE CONFIGURATION - PROMETHEUS INTEGRATION
+# -----------------------------------------------------------------------------
+# API version for ConfigMap resources
+apiVersion: v1
+
+# Resource type: ConfigMap for Grafana datasource configuration
+kind: ConfigMap
+
+# ConfigMap metadata
+metadata:
+  name: grafana-datasources
+  namespace: petclinic
+  # DATASOURCE_CONFIG: Automated datasource provisioning
+
+# Datasource configuration data
+data:
+  prometheus.yaml: |-
+    {
+        "apiVersion": 1,
+        "datasources": [
+            {
+               "access":"proxy",
+                # PROXY_ACCESS: Grafana server proxies requests to Prometheus
+                "editable": true,
+                # EDITABLE: Allows runtime modification of datasource settings
+                "name": "prometheus",
+                # DATASOURCE_NAME: Reference name for dashboard queries
+                "orgId": 1,
+                # ORGANIZATION: Default Grafana organization
+                "type": "prometheus",
+                # DATASOURCE_TYPE: Prometheus metrics datasource
+                "url": "http://prometheus:9090",
+                # PROMETHEUS_URL: Internal Kubernetes service URL
+                "version": 1
+                # CONFIG_VERSION: Datasource configuration version
+            }
+        ]
+    }
+
+---
+# Document separator for dashboard configuration
+
+# -----------------------------------------------------------------------------
+# GRAFANA DASHBOARD PROVISIONING CONFIGURATION
+# -----------------------------------------------------------------------------
+# API version for ConfigMap
+apiVersion: v1
+
+# Resource type: ConfigMap for dashboard provisioning
+kind: ConfigMap
+
+# ConfigMap metadata
+metadata:
+  name: grafana-dashboards-config
+  namespace: petclinic
+  # DASHBOARD_PROVISIONING: Automated dashboard deployment
+
+# Dashboard provisioning configuration
+data:
+  dashboards.yaml: |-
+    {
+        "apiVersion": 1,
+        "providers": [
+            {
+                "folder": "Spring Boot",
+                # DASHBOARD_FOLDER: Organizes dashboards by category
+                "name": "spring-boot",
+                # PROVIDER_NAME: Unique identifier for dashboard provider
+                "options": {
+                    "path": "/var/lib/grafana/dashboards/spring-boot"
+                    # DASHBOARD_PATH: File system location for dashboard JSON files
+                },
+                "orgId": 1,
+                "type": "file"
+                # FILE_PROVIDER: Dashboards loaded from file system
+            }
+        ]
+    }
+
+---
+# Document separator for dashboard definition
+
+# -----------------------------------------------------------------------------
+# SPRING BOOT DASHBOARD DEFINITION - MICROSERVICES MONITORING
+# -----------------------------------------------------------------------------
+# API version for ConfigMap
+apiVersion: v1
+
+# Resource type: ConfigMap containing dashboard JSON
+kind: ConfigMap
+
+# ConfigMap metadata
+metadata:
+  name: spring-boot-dashboard
+  namespace: petclinic
+  # DASHBOARD_DEFINITION: Complete dashboard configuration
+
+# Dashboard JSON configuration
+data:
+  spring-boot-dashboard.json: |-
+    {
+      "dashboard": {
+        "id": null,
+        "title": "Spring PetClinic Microservices",
+        # DASHBOARD_TITLE: Descriptive title for operations teams
+        "tags": ["spring-boot", "microservices", "petclinic"],
+        # DASHBOARD_TAGS: Categorization and search optimization
+        "style": "dark",
+        # UI_THEME: Dark theme for reduced eye strain during monitoring
+        "timezone": "browser",
+        # TIMEZONE: Uses browser timezone for consistent time display
+        "panels": [
+          # Panel 1: JVM Memory Usage Monitoring
+          {
+            "id": 1,
+            "title": "JVM Memory Usage",
+            # MEMORY_MONITORING: Critical for Java application health
+            "type": "graph",
+            # VISUALIZATION_TYPE: Time series graph for trend analysis
+            "targets": [
+              {
+                "expr": "jvm_memory_used_bytes{job=\"spring-boot-apps\"}",
+                # PROMETHEUS_QUERY: JVM memory usage across all microservices
+                "legendFormat": "{{instance}} - {{area}}"
+                # LEGEND_FORMAT: Instance and memory area identification
+              }
+            ],
+            "yAxes": [
+              {
+                "unit": "bytes"
+                # Y_AXIS_UNIT: Memory displayed in bytes
+              }
+            ],
+            "gridPos": {
+              "h": 8, "w": 12, "x": 0, "y": 0
+              # PANEL_POSITION: Top-left quadrant of dashboard
+            }
+          },
+          # Panel 2: HTTP Request Rate Monitoring
+          {
+            "id": 2,
+            "title": "HTTP Request Rate",
+            # TRAFFIC_MONITORING: API request volume analysis
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(http_server_requests_seconds_count{job=\"spring-boot-apps\"}[5m])",
+                # RATE_CALCULATION: Requests per second over 5-minute window
+                "legendFormat": "{{instance}} - {{method}} {{uri}}"
+                # REQUEST_IDENTIFICATION: Service, HTTP method, and endpoint
+              }
+            ],
+            "gridPos": {
+              "h": 8, "w": 12, "x": 12, "y": 0
+              # PANEL_POSITION: Top-right quadrant
+            }
+          },
+          # Panel 3: HTTP Response Time Monitoring
+          {
+            "id": 3,
+            "title": "HTTP Response Time",
+            # PERFORMANCE_MONITORING: API response latency analysis
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(http_server_requests_seconds_sum{job=\"spring-boot-apps\"}[5m]) / rate(http_server_requests_seconds_count{job=\"spring-boot-apps\"}[5m])",
+                # LATENCY_CALCULATION: Average response time calculation
+                "legendFormat": "{{instance}} - {{method}} {{uri}}"
+              }
+            ],
+            "yAxes": [
+              {
+                "unit": "s"
+                # TIME_UNIT: Response time in seconds
+              }
+            ],
+            "gridPos": {
+              "h": 8, "w": 12, "x": 0, "y": 8
+              # PANEL_POSITION: Bottom-left quadrant
+            }
+          },
+          # Panel 4: CPU Usage Monitoring
+          {
+            "id": 4,
+            "title": "CPU Usage",
+            # RESOURCE_MONITORING: CPU utilization tracking
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "process_cpu_usage{job=\"spring-boot-apps\"}",
+                # CPU_METRIC: Process CPU usage percentage
+                "legendFormat": "{{instance}}"
+              }
+            ],
+            "yAxes": [
+              {
+                "unit": "percentunit"
+                # PERCENTAGE_UNIT: CPU usage as percentage
+              }
+            ],
+            "gridPos": {
+              "h": 8, "w": 12, "x": 12, "y": 8
+              # PANEL_POSITION: Bottom-right quadrant
+            }
+          }
+        ],
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+          # TIME_RANGE: Default 1-hour view for operational monitoring
+        },
+        "refresh": "5s"
+        # AUTO_REFRESH: 5-second refresh for real-time monitoring
+      }
+    }
+
+---
+# Document separator for Grafana deployment
+
+# -----------------------------------------------------------------------------
+# GRAFANA DEPLOYMENT - VISUALIZATION SERVER
+# -----------------------------------------------------------------------------
+# API version for Deployment
+apiVersion: apps/v1
+
+# Resource type: Deployment for Grafana server
+kind: Deployment
+
+# Deployment metadata
+metadata:
+  name: grafana
+  namespace: petclinic
+  labels:
+    app: grafana
+    component: monitoring
+    # MONITORING_COMPONENT: Visualization layer of monitoring stack
+
+# Deployment specification
+spec:
+  replicas: 1
+  # SINGLE_INSTANCE: Grafana typically runs as single instance
+  
+  selector:
+    matchLabels:
+      app: grafana
+  
+  template:
+    metadata:
+      labels:
+        app: grafana
+        component: monitoring
+    
+    spec:
+      # Security context for Grafana container
+      securityContext:
+        fsGroup: 472
+        # GRAFANA_GROUP: Default Grafana group ID
+        supplementalGroups:
+          - 0
+        # SUPPLEMENTAL_GROUPS: Additional group permissions
+      
+      containers:
+      - name: grafana
+        # Grafana container image
+        image: grafana/grafana:10.0.0
+        # VERSION_PINNING: Specific Grafana version for stability
+        
+        ports:
+        - containerPort: 3000
+          name: http-grafana
+          protocol: TCP
+          # GRAFANA_PORT: Standard Grafana web interface port
+        
+        # Environment variables for Grafana configuration
+        env:
+        - name: GF_SECURITY_ADMIN_USER
+          value: admin
+          # ADMIN_USER: Default administrative user
+        - name: GF_SECURITY_ADMIN_PASSWORD
+          value: admin
+          # ADMIN_PASSWORD: Default password (change in production)
+        - name: GF_INSTALL_PLUGINS
+          value: ""
+          # PLUGIN_INSTALLATION: No additional plugins by default
+        
+        # Resource allocation
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+            # BASELINE_RESOURCES: Minimum for Grafana operation
+          limits:
+            memory: "512Mi"
+            cpu: "200m"
+            # RESOURCE_LIMITS: Maximum resources for Grafana
+        
+        # Readiness probe
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /robots.txt
+            port: 3000
+            scheme: HTTP
+            # READINESS_CHECK: Grafana web interface availability
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 2
+        
+        # Liveness probe
+        livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          tcpSocket:
+            port: 3000
+            # LIVENESS_CHECK: TCP connection to Grafana port
+          timeoutSeconds: 1
+        
+        # Volume mounts
+        volumeMounts:
+        - mountPath: /var/lib/grafana
+          name: grafana-pv
+          # GRAFANA_DATA: Persistent storage for Grafana data
+        - mountPath: /etc/grafana/provisioning/datasources
+          name: grafana-datasources
+          readOnly: false
+          # DATASOURCE_PROVISIONING: Automated datasource configuration
+        - mountPath: /etc/grafana/provisioning/dashboards
+          name: grafana-dashboards-config
+          readOnly: false
+          # DASHBOARD_PROVISIONING: Automated dashboard configuration
+        - mountPath: /var/lib/grafana/dashboards/spring-boot
+          name: spring-boot-dashboard
+          readOnly: false
+          # DASHBOARD_FILES: Dashboard JSON definitions
+      
+      # Volume definitions
+      volumes:
+      - name: grafana-pv
+        emptyDir: {}
+        # EPHEMERAL_STORAGE: Data lost on pod restart (use PV for production)
+      - name: grafana-datasources
+        configMap:
+          defaultMode: 420
+          name: grafana-datasources
+          # DATASOURCE_CONFIG: Mounts datasource configuration
+      - name: grafana-dashboards-config
+        configMap:
+          defaultMode: 420
+          name: grafana-dashboards-config
+          # DASHBOARD_CONFIG: Mounts dashboard provisioning configuration
+      - name: spring-boot-dashboard
+        configMap:
+          defaultMode: 420
+          name: spring-boot-dashboard
+          # DASHBOARD_DEFINITION: Mounts dashboard JSON files
+
+---
+# Document separator for Service
+
+# -----------------------------------------------------------------------------
+# GRAFANA SERVICE - NETWORK ACCESS FOR DASHBOARD INTERFACE
+# -----------------------------------------------------------------------------
+# API version for Service
+apiVersion: v1
+
+# Resource type: Service for Grafana access
+kind: Service
+
+# Service metadata
+metadata:
+  name: grafana
+  namespace: petclinic
+  labels:
+    app: grafana
+    component: monitoring
+
+# Service specification
+spec:
+  ports:
+  - port: 3000
+    protocol: TCP
+    targetPort: http-grafana
+    # GRAFANA_ACCESS: Standard Grafana web interface port
+  selector:
+    app: grafana
+  type: ClusterIP
+  # INTERNAL_ACCESS: Grafana accessible within cluster
+
+# =============================================================================
+# GRAFANA MONITORING DASHBOARD ANALYSIS
+# =============================================================================
+#
+# VISUALIZATION CAPABILITIES:
+# ✅ REAL-TIME DASHBOARDS: Live monitoring with 5-second refresh
+# ✅ MICROSERVICE METRICS: Comprehensive Spring Boot application monitoring
+# ✅ AUTOMATED PROVISIONING: Datasources and dashboards deployed automatically
+# ✅ INTERACTIVE EXPLORATION: Drill-down capabilities for detailed analysis
+# ✅ ALERTING INTEGRATION: Visual alert status and notification management
+# ✅ MULTI-TENANT SUPPORT: Organization-based access control
+#
+# PRODUCTION ENHANCEMENTS NEEDED:
+#
+# 1. PERSISTENT STORAGE:
+#    volumes:
+#    - name: grafana-pv
+#      persistentVolumeClaim:
+#        claimName: grafana-storage
+#
+# 2. SECURITY HARDENING:
+#    env:
+#    - name: GF_SECURITY_ADMIN_PASSWORD
+#      valueFrom:
+#        secretKeyRef:
+#          name: grafana-secrets
+#          key: admin-password
+#
+# 3. ADVANCED DASHBOARDS:
+#    # Business metrics dashboards
+#    # Infrastructure monitoring dashboards
+#    # Application performance monitoring
+#    # Custom alerting dashboards
+#
+# OPERATIONAL EXCELLENCE:
+# - Dashboard standardization across teams
+# - Alert fatigue reduction through smart alerting
+# - Performance optimization for large datasets
+# - Integration with incident management systems
+#
+# =============================================================================

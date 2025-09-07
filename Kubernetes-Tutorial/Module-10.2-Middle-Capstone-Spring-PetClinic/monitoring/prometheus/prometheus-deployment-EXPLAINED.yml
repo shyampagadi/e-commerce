@@ -1,0 +1,558 @@
+# =============================================================================
+# PROMETHEUS MONITORING DEPLOYMENT - COMPREHENSIVE OBSERVABILITY DOCUMENTATION
+# =============================================================================
+# This file defines the complete Prometheus monitoring stack for the PetClinic
+# application, including configuration, deployment, RBAC, and alerting rules.
+# Prometheus provides metrics collection, storage, and alerting capabilities
+# essential for production observability and operational excellence.
+#
+# OBSERVABILITY PHILOSOPHY: Prometheus implements the "pull-based" monitoring
+# approach, actively scraping metrics from applications and infrastructure
+# to provide comprehensive visibility into system health and performance.
+#
+# OPERATIONAL CRITICALITY: This monitoring infrastructure is essential for
+# production operations, enabling proactive issue detection, performance
+# optimization, and SLA compliance monitoring.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# PROMETHEUS CONFIGURATION - METRICS COLLECTION AND ALERTING RULES
+# -----------------------------------------------------------------------------
+# API version for ConfigMap resources
+apiVersion: v1
+
+# Resource type: ConfigMap for Prometheus configuration storage
+kind: ConfigMap
+# CONFIGURATION_MANAGEMENT: ConfigMaps provide externalized configuration
+# SEPARATION_OF_CONCERNS: Configuration separated from container images
+
+# ConfigMap metadata
+metadata:
+  # ConfigMap name for Prometheus configuration
+  name: prometheus-config
+  # NAMING_CONVENTION: Descriptive name indicating purpose and scope
+  
+  # Namespace for monitoring stack isolation
+  namespace: petclinic
+  # MONITORING_NAMESPACE: Centralized monitoring in application namespace
+
+# Configuration data
+data:
+  # Main Prometheus configuration file
+  prometheus.yml: |
+    # Global Prometheus configuration
+    global:
+      # Default scrape interval for all jobs
+      scrape_interval: 15s
+      # SCRAPE_FREQUENCY: 15-second intervals balance accuracy with resource usage
+      # PERFORMANCE_CONSIDERATION: Shorter intervals increase storage and CPU usage
+      
+      # Rule evaluation interval for alerting rules
+      evaluation_interval: 15s
+      # ALERT_EVALUATION: How often Prometheus evaluates alerting rules
+      # CONSISTENCY: Matches scrape interval for coherent alerting
+
+    # Alert rule files to load
+    rule_files:
+      - "alert_rules.yml"
+      # ALERTING_RULES: External file containing alert definitions
+      # MODULARITY: Separates alerting logic from main configuration
+
+    # Scrape configuration for different targets
+    scrape_configs:
+      # Job 1: Prometheus self-monitoring
+      - job_name: 'prometheus'
+        # SELF_MONITORING: Prometheus monitors its own metrics
+        static_configs:
+          - targets: ['localhost:9090']
+            # STATIC_TARGET: Prometheus monitoring itself on standard port
+
+      # Job 2: Spring Boot application monitoring
+      - job_name: 'spring-boot-apps'
+        # MICROSERVICE_MONITORING: Dedicated job for Spring Boot applications
+        
+        # Metrics endpoint path for Spring Boot Actuator
+        metrics_path: '/actuator/prometheus'
+        # ACTUATOR_INTEGRATION: Spring Boot Actuator exposes Prometheus metrics
+        
+        # Scrape interval for Spring Boot apps
+        scrape_interval: 5s
+        # HIGH_FREQUENCY: More frequent scraping for application metrics
+        # BUSINESS_METRICS: Captures rapid changes in business metrics
+        
+        # Kubernetes service discovery configuration
+        kubernetes_sd_configs:
+          - role: pod
+            # POD_DISCOVERY: Discovers pods automatically in Kubernetes
+            namespaces:
+              names:
+                - petclinic
+              # NAMESPACE_SCOPE: Only discover pods in petclinic namespace
+        
+        # Relabeling configuration for service discovery
+        relabel_configs:
+          # Keep only pods with scrape annotation
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+            # ANNOTATION_FILTERING: Only scrape pods with prometheus.io/scrape=true
+          
+          # Use custom metrics path if specified
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+            # CUSTOM_PATHS: Allows pods to specify custom metrics endpoints
+          
+          # Use custom port if specified
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+            # PORT_OVERRIDE: Allows pods to specify custom metrics ports
+          
+          # Map pod labels to metric labels
+          - action: labelmap
+            regex: __meta_kubernetes_pod_label_(.+)
+            # LABEL_PROPAGATION: Pod labels become metric labels
+          
+          # Add namespace label
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: kubernetes_namespace
+            # NAMESPACE_LABELING: Adds namespace context to metrics
+          
+          # Add pod name label
+          - source_labels: [__meta_kubernetes_pod_name]
+            action: replace
+            target_label: kubernetes_pod_name
+            # POD_IDENTIFICATION: Enables pod-specific metric analysis
+
+      # Job 3: General Kubernetes pod monitoring
+      - job_name: 'kubernetes-pods'
+        # GENERIC_POD_MONITORING: Fallback for pods not covered by specific jobs
+        
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - petclinic
+        
+        # Similar relabeling configuration as Spring Boot apps
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+
+  # Alerting rules configuration
+  alert_rules.yml: |
+    # Alert rule groups
+    groups:
+      # Spring Boot application alerts
+      - name: spring-boot-alerts
+        # ALERT_GROUPING: Logical grouping of related alerts
+        
+        rules:
+          # Service availability alert
+          - alert: ServiceDown
+            # AVAILABILITY_MONITORING: Critical service availability alert
+            expr: up == 0
+            # METRIC_EXPRESSION: 'up' metric indicates scrape success
+            for: 1m
+            # ALERT_DURATION: Alert fires after 1 minute of downtime
+            labels:
+              severity: critical
+              # SEVERITY_CLASSIFICATION: Critical alerts require immediate attention
+            annotations:
+              summary: "Service {{ $labels.instance }} is down"
+              description: "{{ $labels.instance }} has been down for more than 1 minute."
+              # ALERT_CONTEXT: Provides actionable information for responders
+
+          # Memory usage alert
+          - alert: HighMemoryUsage
+            # RESOURCE_MONITORING: JVM memory usage monitoring
+            expr: (jvm_memory_used_bytes / jvm_memory_max_bytes) * 100 > 80
+            # MEMORY_CALCULATION: Percentage of heap memory used
+            for: 2m
+            # ALERT_DURATION: 2-minute threshold to avoid false positives
+            labels:
+              severity: warning
+              # WARNING_SEVERITY: Non-critical but requires attention
+            annotations:
+              summary: "High memory usage on {{ $labels.instance }}"
+              description: "Memory usage is above 80% for more than 2 minutes."
+
+          # CPU usage alert
+          - alert: HighCPUUsage
+            # PERFORMANCE_MONITORING: CPU utilization monitoring
+            expr: process_cpu_usage > 0.8
+            # CPU_THRESHOLD: 80% CPU usage threshold
+            for: 2m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High CPU usage on {{ $labels.instance }}"
+              description: "CPU usage is above 80% for more than 2 minutes."
+
+---
+# Document separator for Deployment resource
+
+# -----------------------------------------------------------------------------
+# PROMETHEUS DEPLOYMENT - METRICS COLLECTION AND STORAGE
+# -----------------------------------------------------------------------------
+# API version for Deployment resources
+apiVersion: apps/v1
+
+# Resource type: Deployment for Prometheus server
+kind: Deployment
+
+# Deployment metadata
+metadata:
+  # Deployment name for Prometheus server
+  name: prometheus
+  # MONITORING_SERVICE: Core monitoring infrastructure component
+  
+  # Namespace for monitoring stack
+  namespace: petclinic
+  
+  # Labels for deployment classification
+  labels:
+    app: prometheus
+    component: monitoring
+    # MONITORING_COMPONENT: Identifies as monitoring infrastructure
+
+# Deployment specification
+spec:
+  # Single replica for development
+  replicas: 1
+  # SINGLE_INSTANCE: Sufficient for development, consider clustering for production
+  # SCALING_CONSIDERATION: Prometheus typically runs as single instance with federation
+  
+  # Selector for pod targeting
+  selector:
+    matchLabels:
+      app: prometheus
+  
+  # Pod template
+  template:
+    metadata:
+      labels:
+        app: prometheus
+        component: monitoring
+    
+    spec:
+      # Service account for Kubernetes API access
+      serviceAccountName: prometheus
+      # RBAC_INTEGRATION: Service account provides necessary permissions
+      
+      containers:
+      - # Container name
+        name: prometheus
+        
+        # Prometheus container image
+        image: prom/prometheus:v2.45.0
+        # VERSION_PINNING: Specific version for stability and security
+        # OFFICIAL_IMAGE: Using official Prometheus image
+        
+        # Prometheus startup arguments
+        args:
+          # Configuration file location
+          - '--config.file=/etc/prometheus/prometheus.yml'
+          # CONFIG_PATH: Points to mounted configuration
+          
+          # Data storage path
+          - '--storage.tsdb.path=/prometheus/'
+          # STORAGE_PATH: Time series database storage location
+          
+          # Console libraries path
+          - '--web.console.libraries=/etc/prometheus/console_libraries'
+          # CONSOLE_SUPPORT: Web console functionality
+          
+          # Console templates path
+          - '--web.console.templates=/etc/prometheus/consoles'
+          # TEMPLATE_SUPPORT: Web console templates
+          
+          # Data retention period
+          - '--storage.tsdb.retention.time=200h'
+          # RETENTION_POLICY: ~8 days of metric retention
+          # STORAGE_MANAGEMENT: Balances storage usage with historical data needs
+          
+          # Enable lifecycle API
+          - '--web.enable-lifecycle'
+          # LIFECYCLE_API: Enables configuration reload without restart
+        
+        # Container ports
+        ports:
+        - containerPort: 9090
+          name: prometheus
+          # PROMETHEUS_PORT: Standard Prometheus web interface port
+        
+        # Resource allocation
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+            # BASELINE_RESOURCES: Minimum resources for Prometheus operation
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+            # RESOURCE_LIMITS: Maximum resources to prevent node pressure
+        
+        # Volume mounts
+        volumeMounts:
+        # Configuration volume mount
+        - name: prometheus-config-volume
+          mountPath: /etc/prometheus/
+          # CONFIG_MOUNT: Mounts ConfigMap as configuration files
+        
+        # Storage volume mount
+        - name: prometheus-storage-volume
+          mountPath: /prometheus/
+          # STORAGE_MOUNT: Persistent storage for time series data
+        
+        # Liveness probe
+        livenessProbe:
+          httpGet:
+            path: /-/healthy
+            port: 9090
+            # HEALTH_ENDPOINT: Prometheus built-in health check
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          # HEALTH_MONITORING: Regular health checks for container restart
+        
+        # Readiness probe
+        readinessProbe:
+          httpGet:
+            path: /-/ready
+            port: 9090
+            # READINESS_ENDPOINT: Prometheus readiness check
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          # TRAFFIC_ROUTING: Frequent readiness checks for service routing
+      
+      # Volume definitions
+      volumes:
+      # Configuration volume from ConfigMap
+      - name: prometheus-config-volume
+        configMap:
+          defaultMode: 420
+          name: prometheus-config
+          # CONFIG_VOLUME: Mounts Prometheus configuration from ConfigMap
+      
+      # Storage volume (ephemeral for development)
+      - name: prometheus-storage-volume
+        emptyDir: {}
+        # EPHEMERAL_STORAGE: Data lost on pod restart
+        # PRODUCTION_NOTE: Use PersistentVolume for production deployments
+
+---
+# Document separator for Service resource
+
+# -----------------------------------------------------------------------------
+# PROMETHEUS SERVICE - NETWORK ACCESS FOR MONITORING INTERFACE
+# -----------------------------------------------------------------------------
+# API version for Service resources
+apiVersion: v1
+
+# Resource type: Service for Prometheus access
+kind: Service
+
+# Service metadata
+metadata:
+  name: prometheus
+  namespace: petclinic
+  labels:
+    app: prometheus
+    component: monitoring
+
+# Service specification
+spec:
+  selector:
+    app: prometheus
+  ports:
+  - port: 9090
+    targetPort: 9090
+    name: prometheus
+    # PROMETHEUS_ACCESS: Standard port for Prometheus web interface
+  type: ClusterIP
+  # INTERNAL_ACCESS: Prometheus accessible within cluster
+
+---
+# Document separator for ServiceAccount
+
+# -----------------------------------------------------------------------------
+# PROMETHEUS SERVICE ACCOUNT - KUBERNETES API ACCESS
+# -----------------------------------------------------------------------------
+# API version for ServiceAccount
+apiVersion: v1
+
+# Resource type: ServiceAccount for Prometheus
+kind: ServiceAccount
+
+# ServiceAccount metadata
+metadata:
+  name: prometheus
+  namespace: petclinic
+  # SERVICE_ACCOUNT: Provides identity for Prometheus pods
+
+---
+# Document separator for ClusterRole
+
+# -----------------------------------------------------------------------------
+# PROMETHEUS CLUSTER ROLE - KUBERNETES API PERMISSIONS
+# -----------------------------------------------------------------------------
+# API version for RBAC ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+
+# Resource type: ClusterRole for cluster-wide permissions
+kind: ClusterRole
+
+# ClusterRole metadata
+metadata:
+  name: prometheus
+  # CLUSTER_SCOPE: Permissions apply across all namespaces
+
+# Permission rules
+rules:
+# Core API resources
+- apiGroups: [""]
+  resources:
+  - nodes          # Node metrics and information
+  - nodes/proxy    # Node proxy access for metrics
+  - services       # Service discovery
+  - endpoints      # Endpoint discovery
+  - pods           # Pod discovery and metrics
+  verbs: ["get", "list", "watch"]
+  # READ_PERMISSIONS: Read-only access for service discovery
+
+# Extensions API resources
+- apiGroups:
+  - extensions
+  resources:
+  - ingresses      # Ingress discovery
+  verbs: ["get", "list", "watch"]
+
+# Non-resource URLs
+- nonResourceURLs: ["/metrics"]
+  verbs: ["get"]
+  # METRICS_ACCESS: Access to cluster metrics endpoints
+
+---
+# Document separator for ClusterRoleBinding
+
+# -----------------------------------------------------------------------------
+# PROMETHEUS CLUSTER ROLE BINDING - PERMISSION ASSIGNMENT
+# -----------------------------------------------------------------------------
+# API version for RBAC ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+
+# Resource type: ClusterRoleBinding
+kind: ClusterRoleBinding
+
+# ClusterRoleBinding metadata
+metadata:
+  name: prometheus
+  # BINDING_NAME: Links ServiceAccount to ClusterRole
+
+# Role reference
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prometheus
+  # ROLE_REFERENCE: References the ClusterRole defined above
+
+# Subjects (who gets the permissions)
+subjects:
+- kind: ServiceAccount
+  name: prometheus
+  namespace: petclinic
+  # SUBJECT_BINDING: Grants permissions to Prometheus ServiceAccount
+
+# =============================================================================
+# PROMETHEUS MONITORING ARCHITECTURE ANALYSIS
+# =============================================================================
+#
+# MONITORING CAPABILITIES:
+# ✅ METRICS COLLECTION: Automated discovery and scraping of application metrics
+# ✅ TIME SERIES STORAGE: Efficient storage of metrics with configurable retention
+# ✅ ALERTING SYSTEM: Rule-based alerting with severity classification
+# ✅ SERVICE DISCOVERY: Kubernetes-native service discovery for dynamic environments
+# ✅ WEB INTERFACE: Built-in web UI for metrics exploration and alerting
+# ✅ API ACCESS: RESTful API for programmatic access to metrics and alerts
+#
+# PRODUCTION ENHANCEMENTS NEEDED:
+#
+# 1. PERSISTENT STORAGE:
+#    # PersistentVolume for metric retention
+#    volumes:
+#    - name: prometheus-storage-volume
+#      persistentVolumeClaim:
+#        claimName: prometheus-storage
+#    
+#    # PVC definition
+#    apiVersion: v1
+#    kind: PersistentVolumeClaim
+#    metadata:
+#      name: prometheus-storage
+#    spec:
+#      accessModes: ["ReadWriteOnce"]
+#      resources:
+#        requests:
+#          storage: 100Gi
+#
+# 2. HIGH AVAILABILITY:
+#    # Prometheus federation for HA
+#    # Multiple Prometheus instances with data replication
+#    # Load balancing across Prometheus instances
+#    # Shared storage or data replication strategies
+#
+# 3. ADVANCED ALERTING:
+#    # AlertManager integration
+#    # Multi-channel notifications (Slack, email, PagerDuty)
+#    # Alert routing and escalation policies
+#    # Alert suppression and grouping
+#
+# 4. SECURITY ENHANCEMENTS:
+#    # TLS encryption for Prometheus web interface
+#    # Authentication and authorization
+#    # Network policies for monitoring traffic
+#    # Secret management for external integrations
+#
+# MONITORING BEST PRACTICES:
+#
+# 1. METRIC NAMING CONVENTIONS:
+#    # Follow Prometheus naming conventions
+#    # Use consistent labeling strategies
+#    # Implement metric documentation
+#    # Regular metric cleanup and optimization
+#
+# 2. ALERT DESIGN PRINCIPLES:
+#    # Actionable alerts only
+#    # Appropriate severity levels
+#    # Clear alert descriptions
+#    # Runbook links in alert annotations
+#
+# 3. PERFORMANCE OPTIMIZATION:
+#    # Efficient query patterns
+#    # Appropriate scrape intervals
+#    # Metric cardinality management
+#    # Storage optimization strategies
+#
+# INTEGRATION PATTERNS:
+# - Grafana for advanced visualization
+# - AlertManager for alert routing
+# - Service mesh integration (Istio, Linkerd)
+# - Log aggregation correlation
+# - APM tool integration
+#
+# =============================================================================

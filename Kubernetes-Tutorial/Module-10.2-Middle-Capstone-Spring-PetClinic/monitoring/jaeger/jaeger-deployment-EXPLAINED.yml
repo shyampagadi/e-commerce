@@ -1,0 +1,439 @@
+# =============================================================================
+# JAEGER DISTRIBUTED TRACING - COMPREHENSIVE OBSERVABILITY DOCUMENTATION
+# =============================================================================
+# This file defines the Jaeger distributed tracing system for the PetClinic
+# microservices architecture. Jaeger provides end-to-end request tracing,
+# performance analysis, and service dependency mapping across the entire
+# microservices ecosystem.
+#
+# TRACING PHILOSOPHY: Distributed tracing enables understanding of request
+# flows across microservice boundaries, identifying performance bottlenecks,
+# and debugging complex distributed system interactions.
+#
+# OPERATIONAL IMPACT: Jaeger tracing is essential for microservice observability,
+# enabling rapid root cause analysis, performance optimization, and system
+# understanding in distributed architectures.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# JAEGER ALL-IN-ONE DEPLOYMENT - DISTRIBUTED TRACING PLATFORM
+# -----------------------------------------------------------------------------
+# API version for Deployment resources
+apiVersion: apps/v1
+
+# Resource type: Deployment for Jaeger tracing system
+kind: Deployment
+
+# Deployment metadata
+metadata:
+  # Deployment name for Jaeger tracing system
+  name: jaeger
+  # TRACING_SERVICE: Core distributed tracing infrastructure
+  
+  # Namespace for tracing stack
+  namespace: petclinic
+  
+  # Labels for deployment classification
+  labels:
+    app: jaeger
+    component: tracing
+    # TRACING_COMPONENT: Identifies as distributed tracing infrastructure
+
+# Deployment specification
+spec:
+  # Single replica for all-in-one deployment
+  replicas: 1
+  # ALL_IN_ONE: Single instance contains collector, query, and UI components
+  # DEVELOPMENT_MODE: Suitable for development and testing environments
+  # PRODUCTION_NOTE: Use separate components for production scalability
+  
+  # Selector for pod targeting
+  selector:
+    matchLabels:
+      app: jaeger
+  
+  # Pod template
+  template:
+    metadata:
+      labels:
+        app: jaeger
+        component: tracing
+    
+    spec:
+      containers:
+      - # Container name
+        name: jaeger
+        
+        # Jaeger all-in-one container image
+        image: jaegertracing/all-in-one:1.50
+        # VERSION_PINNING: Specific Jaeger version for stability
+        # ALL_IN_ONE_IMAGE: Contains collector, query service, and web UI
+        # OFFICIAL_IMAGE: Using official Jaeger project image
+        
+        # Container ports for different Jaeger components
+        ports:
+        # Jaeger Query UI port
+        - containerPort: 16686
+          name: ui
+          # UI_PORT: Web interface for trace visualization and analysis
+          # QUERY_SERVICE: Provides search and visualization capabilities
+        
+        # Jaeger Collector port
+        - containerPort: 14268
+          name: collector
+          # COLLECTOR_PORT: Receives trace data from applications
+          # INGESTION_ENDPOINT: Primary endpoint for trace data collection
+        
+        # Environment variables for Jaeger configuration
+        env:
+        # Enable OpenTelemetry Protocol (OTLP) support
+        - name: COLLECTOR_OTLP_ENABLED
+          value: "true"
+          # OTLP_SUPPORT: Enables modern OpenTelemetry protocol for trace ingestion
+          # PROTOCOL_COMPATIBILITY: Supports both Jaeger and OpenTelemetry clients
+          # FUTURE_PROOFING: OTLP is the emerging standard for observability data
+        
+        # Resource allocation for Jaeger workload
+        resources:
+          # Guaranteed resources for baseline tracing operations
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+            # BASELINE_RESOURCES: Minimum for Jaeger all-in-one operation
+            # TRACING_OVERHEAD: Lightweight resource requirements for tracing
+          
+          # Resource limits to prevent resource monopolization
+          limits:
+            memory: "512Mi"
+            cpu: "200m"
+            # RESOURCE_LIMITS: Maximum resources for trace processing
+            # BURST_CAPACITY: Handles peak trace ingestion loads
+
+---
+# Document separator for Query Service
+
+# -----------------------------------------------------------------------------
+# JAEGER QUERY SERVICE - TRACE VISUALIZATION AND SEARCH
+# -----------------------------------------------------------------------------
+# API version for Service resources
+apiVersion: v1
+
+# Resource type: Service for Jaeger Query UI access
+kind: Service
+
+# Service metadata
+metadata:
+  # Service name for Jaeger Query UI
+  name: jaeger-query
+  # QUERY_SERVICE: Provides access to trace search and visualization
+  
+  # Namespace consistency
+  namespace: petclinic
+  
+  # Labels for service identification
+  labels:
+    app: jaeger
+    # SERVICE_CLASSIFICATION: Identifies as Jaeger service component
+
+# Service specification
+spec:
+  # Selector for targeting Jaeger pods
+  selector:
+    app: jaeger
+    # POD_TARGETING: Routes traffic to Jaeger deployment pods
+  
+  # Port configuration for Query UI access
+  ports:
+  - port: 16686
+    targetPort: 16686
+    name: ui
+    # QUERY_UI_ACCESS: Web interface for trace analysis
+    # PORT_MAPPING: Standard Jaeger Query UI port
+  
+  # Service type for cluster-internal access
+  type: ClusterIP
+  # INTERNAL_ACCESS: Query UI accessible within cluster
+  # SECURITY: Prevents external access to tracing data
+
+---
+# Document separator for Collector Service
+
+# -----------------------------------------------------------------------------
+# JAEGER COLLECTOR SERVICE - TRACE DATA INGESTION
+# -----------------------------------------------------------------------------
+# API version for Service resources
+apiVersion: v1
+
+# Resource type: Service for Jaeger Collector access
+kind: Service
+
+# Service metadata
+metadata:
+  # Service name for Jaeger Collector
+  name: jaeger-collector
+  # COLLECTOR_SERVICE: Provides trace data ingestion endpoint
+  
+  # Namespace consistency
+  namespace: petclinic
+  
+  # Labels for service identification
+  labels:
+    app: jaeger
+    # SERVICE_CLASSIFICATION: Identifies as Jaeger service component
+
+# Service specification
+spec:
+  # Selector for targeting Jaeger pods
+  selector:
+    app: jaeger
+    # POD_TARGETING: Routes trace data to Jaeger collector
+  
+  # Port configuration for Collector access
+  ports:
+  - port: 14268
+    targetPort: 14268
+    name: collector
+    # COLLECTOR_ACCESS: Trace data ingestion endpoint
+    # INGESTION_PORT: Standard Jaeger Collector HTTP port
+  
+  # Service type for cluster-internal access
+  type: ClusterIP
+  # INTERNAL_ACCESS: Collector accessible to microservices within cluster
+  # TRACE_INGESTION: Applications send traces to this service
+
+# =============================================================================
+# JAEGER DISTRIBUTED TRACING ARCHITECTURE ANALYSIS
+# =============================================================================
+#
+# JAEGER COMPONENTS IN ALL-IN-ONE DEPLOYMENT:
+# ✅ JAEGER COLLECTOR: Receives and processes trace data from applications
+# ✅ JAEGER QUERY: Provides API for trace retrieval and search
+# ✅ JAEGER UI: Web interface for trace visualization and analysis
+# ✅ STORAGE BACKEND: In-memory storage for trace data (ephemeral)
+# ✅ OTLP SUPPORT: Modern OpenTelemetry protocol compatibility
+#
+# DISTRIBUTED TRACING CAPABILITIES:
+# ✅ REQUEST TRACING: End-to-end request flow visualization
+# ✅ PERFORMANCE ANALYSIS: Latency breakdown across service calls
+# ✅ SERVICE DEPENDENCY MAPPING: Automatic service topology discovery
+# ✅ ERROR TRACKING: Exception and error propagation analysis
+# ✅ SAMPLING STRATEGIES: Configurable trace sampling for performance
+# ✅ CONTEXT PROPAGATION: Trace context across service boundaries
+#
+# MICROSERVICE INTEGRATION PATTERNS:
+#
+# 1. SPRING BOOT INTEGRATION:
+#    # Add Jaeger dependency to microservices
+#    <dependency>
+#        <groupId>io.jaegertracing</groupId>
+#        <artifactId>jaeger-client</artifactId>
+#        <version>1.8.1</version>
+#    </dependency>
+#    
+#    # Configuration in application.yml
+#    opentracing:
+#      jaeger:
+#        service-name: ${spring.application.name}
+#        udp-sender:
+#          host: jaeger-collector
+#          port: 14268
+#        probabilistic-sampler:
+#          sampling-rate: 0.1  # 10% sampling rate
+#
+# 2. AUTOMATIC INSTRUMENTATION:
+#    # Spring Cloud Sleuth integration
+#    <dependency>
+#        <groupId>org.springframework.cloud</groupId>
+#        <artifactId>spring-cloud-sleuth-zipkin</artifactId>
+#    </dependency>
+#    
+#    # Jaeger configuration
+#    spring:
+#      sleuth:
+#        jaeger:
+#          remote-sender:
+#            endpoint: http://jaeger-collector:14268/api/traces
+#
+# 3. CUSTOM INSTRUMENTATION:
+#    @Autowired
+#    private Tracer tracer;
+#    
+#    public void businessMethod() {
+#        Span span = tracer.nextSpan()
+#            .name("business-operation")
+#            .tag("operation.type", "database")
+#            .start();
+#        try (Tracer.SpanInScope ws = tracer.withSpanInScope(span)) {
+#            // Business logic here
+#            span.tag("result", "success");
+#        } catch (Exception e) {
+#            span.tag("error", e.getMessage());
+#            throw e;
+#        } finally {
+#            span.end();
+#        }
+#    }
+#
+# PRODUCTION ENHANCEMENTS NEEDED:
+#
+# 1. PRODUCTION DEPLOYMENT ARCHITECTURE:
+#    # Separate Jaeger components for scalability
+#    apiVersion: apps/v1
+#    kind: Deployment
+#    metadata:
+#      name: jaeger-collector
+#    spec:
+#      replicas: 3  # Multiple collectors for high availability
+#      template:
+#        spec:
+#          containers:
+#          - name: jaeger-collector
+#            image: jaegertracing/jaeger-collector:1.50
+#            env:
+#            - name: SPAN_STORAGE_TYPE
+#              value: elasticsearch
+#            - name: ES_SERVER_URLS
+#              value: http://elasticsearch:9200
+#
+# 2. PERSISTENT STORAGE CONFIGURATION:
+#    # Elasticsearch backend for production
+#    env:
+#    - name: SPAN_STORAGE_TYPE
+#      value: elasticsearch
+#    - name: ES_SERVER_URLS
+#      value: http://elasticsearch-cluster:9200
+#    - name: ES_USERNAME
+#      valueFrom:
+#        secretKeyRef:
+#          name: elasticsearch-credentials
+#          key: username
+#    - name: ES_PASSWORD
+#      valueFrom:
+#        secretKeyRef:
+#          name: elasticsearch-credentials
+#          key: password
+#
+# 3. SAMPLING STRATEGIES:
+#    # Adaptive sampling configuration
+#    apiVersion: v1
+#    kind: ConfigMap
+#    metadata:
+#      name: jaeger-sampling-strategies
+#    data:
+#      strategies.json: |
+#        {
+#          "service_strategies": [
+#            {
+#              "service": "api-gateway",
+#              "type": "probabilistic",
+#              "param": 0.5
+#            },
+#            {
+#              "service": "customers-service",
+#              "type": "probabilistic",
+#              "param": 0.2
+#            }
+#          ],
+#          "default_strategy": {
+#            "type": "probabilistic",
+#            "param": 0.1
+#          }
+#        }
+#
+# 4. SECURITY AND ACCESS CONTROL:
+#    # OAuth2 authentication for Jaeger UI
+#    env:
+#    - name: QUERY_BASE_PATH
+#      value: /jaeger
+#    - name: JAEGER_DISABLED
+#      value: "false"
+#    
+#    # Network policies for trace data security
+#    apiVersion: networking.k8s.io/v1
+#    kind: NetworkPolicy
+#    metadata:
+#      name: jaeger-network-policy
+#    spec:
+#      podSelector:
+#        matchLabels:
+#          app: jaeger
+#      policyTypes:
+#      - Ingress
+#      ingress:
+#      - from:
+#        - podSelector:
+#            matchLabels:
+#              component: microservice
+#        ports:
+#        - protocol: TCP
+#          port: 14268
+#
+# OBSERVABILITY INTEGRATION:
+#
+# 1. METRICS INTEGRATION:
+#    # Jaeger metrics for Prometheus
+#    env:
+#    - name: METRICS_BACKEND
+#      value: prometheus
+#    - name: PROMETHEUS_SERVER_URL
+#      value: http://prometheus:9090
+#
+# 2. ALERTING ON TRACING HEALTH:
+#    # Prometheus alerts for Jaeger health
+#    - alert: JaegerCollectorDown
+#      expr: up{job="jaeger-collector"} == 0
+#      for: 1m
+#      labels:
+#        severity: critical
+#      annotations:
+#        summary: "Jaeger Collector is down"
+#        description: "Jaeger Collector has been down for more than 1 minute"
+#
+# 3. DASHBOARD INTEGRATION:
+#    # Grafana dashboards for Jaeger metrics
+#    # Service dependency visualization
+#    # Trace volume and latency monitoring
+#    # Error rate correlation with traces
+#
+# OPERATIONAL PROCEDURES:
+#
+# 1. TRACE ANALYSIS WORKFLOWS:
+#    # Performance bottleneck identification
+#    # Error root cause analysis
+#    # Service dependency impact assessment
+#    # Capacity planning based on trace data
+#
+# 2. SAMPLING OPTIMIZATION:
+#    # Monitor trace volume vs. storage capacity
+#    # Adjust sampling rates based on service criticality
+#    # Implement adaptive sampling for cost optimization
+#    # Balance trace completeness with performance impact
+#
+# 3. DATA RETENTION MANAGEMENT:
+#    # Configure appropriate trace retention periods
+#    # Implement data archival strategies
+#    # Monitor storage utilization and costs
+#    # Compliance with data retention policies
+#
+# TROUBLESHOOTING AND DEBUGGING:
+#
+# 1. TRACE COLLECTION ISSUES:
+#    # Verify application instrumentation
+#    # Check network connectivity to collector
+#    # Validate sampling configuration
+#    # Monitor collector resource utilization
+#
+# 2. PERFORMANCE IMPACT ANALYSIS:
+#    # Monitor tracing overhead on applications
+#    # Optimize sampling rates for performance
+#    # Analyze trace processing latency
+#    # Balance observability with system performance
+#
+# COMPLIANCE AND GOVERNANCE:
+# - Trace data privacy and security considerations
+# - Data retention compliance with regulations
+# - Access controls for sensitive trace information
+# - Audit logging for trace data access
+# - Integration with security monitoring systems
+#
+# =============================================================================

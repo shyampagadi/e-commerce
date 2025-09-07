@@ -1,0 +1,17 @@
+apiVersion: v2
+name: petclinic
+description: Spring PetClinic Microservices Platform
+type: application
+version: 1.0.0
+appVersion: "3.2.0"
+keywords:
+  - spring-boot
+  - microservices
+  - java
+  - veterinary
+home: https://github.com/spring-petclinic/spring-petclinic-microservices
+sources:
+  - https://github.com/spring-petclinic/spring-petclinic-microservices
+maintainers:
+  - name: Spring PetClinic Team
+    email: petclinic@spring.io

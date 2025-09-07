@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: petclinic
+  labels:
+    name: petclinic
+    environment: development
+    project: spring-petclinic-microservices
+    version: "1.0.0"
+  annotations:
+    description: "Spring PetClinic Microservices Platform"
+    contact: "senior-java-architect@company.com"
+    created-by: "kubernetes-tutorial-module-10.2"
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: petclinic-quota
+  namespace: petclinic
+spec:
+  hard:
+    requests.cpu: "4"
+    requests.memory: 8Gi
+    limits.cpu: "8"
+    limits.memory: 16Gi
+    persistentvolumeclaims: "10"
+    services: "20"
+    secrets: "10"
+    configmaps: "10"
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: petclinic-limits
+  namespace: petclinic
+spec:
+  limits:
+  - default:
+      cpu: "500m"
+      memory: "1Gi"
+    defaultRequest:
+      cpu: "250m"
+      memory: "512Mi"
+    type: Container
+  - default:
+      storage: "10Gi"
+    type: PersistentVolumeClaim

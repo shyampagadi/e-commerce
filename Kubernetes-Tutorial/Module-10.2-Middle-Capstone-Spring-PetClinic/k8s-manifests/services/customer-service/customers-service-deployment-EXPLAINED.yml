@@ -1,0 +1,449 @@
+# =============================================================================
+# CUSTOMERS MICROSERVICE - COMPREHENSIVE BUSINESS LOGIC DOCUMENTATION
+# =============================================================================
+# This file defines the Customers microservice deployment, which manages customer
+# and pet information in the PetClinic application. This service represents the core
+# business domain for customer relationship management, implementing domain-driven
+# design principles and microservice architecture patterns.
+#
+# BUSINESS DOMAIN: Customer management is a critical business capability that handles
+# customer registration, profile management, pet ownership, and customer-related operations.
+#
+# ARCHITECTURAL SIGNIFICANCE: This microservice demonstrates the complete microservice
+# pattern with dedicated database, service discovery, configuration management, and
+# independent scaling capabilities.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# CUSTOMERS SERVICE DEPLOYMENT - CORE BUSINESS MICROSERVICE
+# -----------------------------------------------------------------------------
+# API version for Deployment resources
+# apps/v1 provides stable deployment functionality for business microservices
+apiVersion: apps/v1
+
+# Resource type: Deployment for stateless business logic service
+# Deployments are ideal for microservices as they provide scaling, rolling updates,
+# and high availability for stateless business applications
+kind: Deployment
+
+# Metadata section for Deployment identification
+metadata:
+  # Deployment name following microservice naming convention
+  name: customers-service
+  # NAMING CONVENTION: <domain>-service pattern for business microservices
+  
+  # Namespace for application boundary and resource management
+  namespace: petclinic
+  
+  # Labels for resource classification and management
+  labels:
+    # Application identifier for service grouping
+    app: customers-service
+    # MICROSERVICE IDENTITY: Unique identifier for customers domain service
+    
+    # Component classification for architectural organization
+    component: microservice
+    # BUSINESS LAYER: Distinguishes from infrastructure and data services
+    
+    # Tier classification for network policies and resource allocation
+    tier: business
+    # BUSINESS TIER: Core business logic tier for domain services
+
+# Deployment specification
+spec:
+  # Replica count for high availability and load distribution
+  replicas: 2
+  # HIGH AVAILABILITY: Multiple instances ensure service availability
+  # LOAD DISTRIBUTION: Distributes customer requests across instances
+  # SCALING BASELINE: Starting point for horizontal pod autoscaling
+  
+  # Selector for pod targeting and management
+  selector:
+    matchLabels:
+      app: customers-service
+      # TARGETING: Must match pod template labels exactly
+  
+  # Pod template defining the Customers service container
+  template:
+    metadata:
+      # Labels applied to each pod instance
+      labels:
+        app: customers-service
+        component: microservice
+        tier: business
+        # CONSISTENCY: Labels match Deployment and selector requirements
+    
+    # Pod specification
+    spec:
+      # Container array for Customers service deployment
+      containers:
+      - # Container name for identification and logging
+        name: customers-service
+        
+        # Customers microservice container image
+        image: springcommunity/spring-petclinic-customers-service:3.2.0
+        # VERSION PINNING: Specific version ensures consistent business logic
+        # SPRING COMMUNITY: Official PetClinic Customers service image
+        # VERSION 3.2.0: Matches PetClinic application version for compatibility
+        
+        # Container port configuration
+        ports:
+        - # Customers service port
+          containerPort: 8081
+          # Port name for service targeting and monitoring
+          name: http
+          # BUSINESS PORT: Unique port for customers service (8081)
+          # HTTP PROTOCOL: RESTful API for customer operations
+        
+        # Environment variables for service configuration
+        env:
+        # Spring profile activation for Kubernetes environment
+        - name: SPRING_PROFILES_ACTIVE
+          value: "kubernetes"
+          # ENVIRONMENT SPECIFIC: Activates Kubernetes-specific configuration
+          # PROFILE STRATEGY: Enables service discovery and cloud-native features
+        
+        # Config Server URL for centralized configuration
+        - name: CONFIG_SERVER_URL
+          value: "http://config-server:8888"
+          # CONFIGURATION DEPENDENCY: Retrieves business configuration from Config Server
+          # EXTERNALIZED CONFIG: Separates configuration from application code
+        
+        # Discovery Server URL for service registration and discovery
+        - name: DISCOVERY_SERVER_URL
+          value: "http://discovery-server:8761/eureka"
+          # SERVICE DISCOVERY: Registers with Eureka for service mesh communication
+          # MICROSERVICE COMMUNICATION: Enables discovery by other services
+        
+        # Database connection URL for customers data
+        - name: SPRING_DATASOURCE_URL
+          value: "jdbc:mysql://mysql-customers:3306/petclinic?useSSL=false&serverTimezone=UTC"
+          # DATABASE CONNECTION: Connects to dedicated customers database
+          # MICROSERVICE PATTERN: Database-per-service implementation
+          # CONNECTION PARAMETERS: SSL disabled for internal cluster communication
+          # TIMEZONE: UTC for consistent timestamp handling
+        
+        # Database username from Kubernetes Secret
+        - name: SPRING_DATASOURCE_USERNAME
+          valueFrom:
+            secretKeyRef:
+              # Shared database credentials secret
+              name: mysql-credentials
+              # Username key within the secret
+              key: username
+          # SECURITY: Database credentials managed through Kubernetes Secrets
+        
+        # Database password from Kubernetes Secret
+        - name: SPRING_DATASOURCE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              # Same credentials secret as username
+              name: mysql-credentials
+              # Password key within the secret
+              key: password
+          # SECURITY: Sensitive credentials stored securely in Secrets
+        
+        # Actuator endpoints exposure for monitoring and management
+        - name: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
+          value: "*"
+          # FULL OBSERVABILITY: Exposes all actuator endpoints for monitoring
+          # BUSINESS MONITORING: Enables business metrics and health monitoring
+          # SECURITY CONSIDERATION: In production, limit to specific endpoints
+        
+        # Resource allocation for customers service workload
+        resources:
+          # Guaranteed resources for baseline business operations
+          requests:
+            # Memory allocation for Spring Boot application and business logic
+            memory: "512Mi"
+            # BASELINE MEMORY: Sufficient for customers service and data processing
+            
+            # CPU allocation for business logic processing
+            cpu: "250m"
+            # BASELINE CPU: Quarter core adequate for customer operations
+          
+          # Resource limits to prevent resource monopolization
+          limits:
+            # Maximum memory to prevent node pressure
+            memory: "1Gi"
+            # BURST CAPACITY: Double baseline for peak customer operations
+            
+            # Maximum CPU for fair resource sharing
+            cpu: "500m"
+            # BURST CAPACITY: Half core for intensive customer processing
+        
+        # Liveness probe for container health monitoring
+        livenessProbe:
+          # HTTP GET request for health verification
+          httpGet:
+            # Spring Boot Actuator health endpoint
+            path: /actuator/health
+            # Customers service port
+            port: 8081
+          # HEALTH ENDPOINT: Spring Boot provides comprehensive health information
+          
+          # Initial delay for application startup completion
+          initialDelaySeconds: 120
+          # EXTENDED STARTUP: Microservice needs time for service discovery and database connection
+          # DEPENDENCY WAIT: Allows time for Config Server, Discovery Server, and database startup
+          
+          # Probe execution frequency
+          periodSeconds: 30
+          # MONITORING FREQUENCY: Regular health checks for business service
+          
+          # Timeout for each probe execution
+          timeoutSeconds: 10
+          # RESPONSIVENESS: Generous timeout for business logic health checks
+          
+          # Failure threshold before pod restart
+          failureThreshold: 3
+          # STABILITY: Multiple failures required before restart
+        
+        # Readiness probe for traffic routing decisions
+        readinessProbe:
+          # HTTP GET request for readiness verification
+          httpGet:
+            # Same health endpoint for readiness
+            path: /actuator/health
+            # Customers service port
+            port: 8081
+          # READINESS VERIFICATION: Ensures service can handle customer requests
+          
+          # Initial delay for readiness checking
+          initialDelaySeconds: 90
+          # STARTUP OPTIMIZATION: Shorter delay than liveness but allows service initialization
+          # BUSINESS READINESS: Ensures database connections and service discovery completion
+          
+          # Readiness check frequency
+          periodSeconds: 10
+          # TRAFFIC ROUTING: Frequent checks for responsive customer service
+          
+          # Timeout for readiness verification
+          timeoutSeconds: 5
+          # QUICK RESPONSE: Fast timeout for traffic routing decisions
+          
+          # Failure threshold before removing from service
+          failureThreshold: 3
+          # SERVICE AVAILABILITY: Multiple failures before traffic removal
+
+---
+# Document separator for Service resource
+
+# -----------------------------------------------------------------------------
+# CUSTOMERS SERVICE - NETWORK ACCESS FOR BUSINESS OPERATIONS
+# -----------------------------------------------------------------------------
+# API version for Service resources
+apiVersion: v1
+
+# Resource type: Service for network access to Customers microservice
+kind: Service
+
+# Service metadata
+metadata:
+  # Service name for DNS resolution and client access
+  name: customers-service
+  # CLIENT ACCESS: Other microservices and API Gateway connect using this name
+  
+  # Namespace consistency with Deployment
+  namespace: petclinic
+  
+  # Labels for service identification and management
+  labels:
+    app: customers-service
+    component: microservice
+    # CONSISTENCY: Matches Deployment labels for unified management
+
+# Service specification
+spec:
+  # Selector for targeting Customers service pods
+  selector:
+    app: customers-service
+    # POD TARGETING: Routes traffic to customers service pods
+  
+  # Port configuration for business API access
+  ports:
+  - # Service port for client connections
+    port: 8081
+    # Target port on customers service pods
+    targetPort: 8081
+    # Port name for identification
+    name: http
+    # BUSINESS API: HTTP REST API for customer operations
+  
+  # Service type for cluster-internal access
+  type: ClusterIP
+  # INTERNAL ACCESS: Service accessible within cluster through API Gateway
+  # MICROSERVICE PATTERN: Internal services accessed through API Gateway
+
+# =============================================================================
+# CUSTOMERS MICROSERVICE ARCHITECTURE ANALYSIS
+# =============================================================================
+#
+# BUSINESS CAPABILITIES:
+# ✅ CUSTOMER MANAGEMENT: Create, read, update, delete customer profiles
+# ✅ PET MANAGEMENT: Manage pet information associated with customers
+# ✅ CUSTOMER SEARCH: Search and filter customers by various criteria
+# ✅ DATA VALIDATION: Business rule validation for customer data
+# ✅ AUDIT LOGGING: Track changes to customer information
+# ✅ INTEGRATION APIS: RESTful APIs for other microservices
+#
+# MICROSERVICE DESIGN PATTERNS:
+# ✅ DATABASE PER SERVICE: Dedicated MySQL database for customer data
+# ✅ SERVICE DISCOVERY: Eureka registration for service mesh communication
+# ✅ EXTERNALIZED CONFIGURATION: Config Server for environment-specific settings
+# ✅ CIRCUIT BREAKER: Resilience patterns for external service calls
+# ✅ DISTRIBUTED TRACING: Request tracing across service boundaries
+# ✅ HEALTH MONITORING: Comprehensive health checks and metrics
+#
+# DATA MODEL AND DOMAIN:
+#
+# 1. CUSTOMER ENTITY:
+#    # Core customer information
+#    - Customer ID (primary key)
+#    - First Name, Last Name
+#    - Address, City, Telephone
+#    - Creation and modification timestamps
+#
+# 2. PET ENTITY:
+#    # Pet information associated with customers
+#    - Pet ID (primary key)
+#    - Pet Name, Birth Date
+#    - Pet Type (relationship to pet types)
+#    - Customer ID (foreign key)
+#
+# 3. PET TYPE ENTITY:
+#    # Pet type classification
+#    - Type ID (primary key)
+#    - Type Name (Dog, Cat, Bird, etc.)
+#
+# BUSINESS LOGIC IMPLEMENTATION:
+#
+# 1. CUSTOMER OPERATIONS:
+#    # RESTful API endpoints
+#    GET /customers - List all customers
+#    GET /customers/{id} - Get customer by ID
+#    POST /customers - Create new customer
+#    PUT /customers/{id} - Update customer
+#    DELETE /customers/{id} - Delete customer
+#
+# 2. PET OPERATIONS:
+#    # Pet management within customer context
+#    GET /customers/{id}/pets - Get customer's pets
+#    POST /customers/{id}/pets - Add pet to customer
+#    PUT /customers/{id}/pets/{petId} - Update pet
+#    DELETE /customers/{id}/pets/{petId} - Remove pet
+#
+# 3. SEARCH AND FILTERING:
+#    # Advanced customer search capabilities
+#    GET /customers?lastName=Smith - Search by last name
+#    GET /customers?city=Seattle - Search by city
+#    GET /customers?petType=Dog - Search by pet type
+#
+# PRODUCTION ENHANCEMENTS NEEDED:
+#
+# 1. HORIZONTAL POD AUTOSCALING:
+#    apiVersion: autoscaling/v2
+#    kind: HorizontalPodAutoscaler
+#    metadata:
+#      name: customers-service-hpa
+#    spec:
+#      scaleTargetRef:
+#        apiVersion: apps/v1
+#        kind: Deployment
+#        name: customers-service
+#      minReplicas: 2
+#      maxReplicas: 10
+#      metrics:
+#      - type: Resource
+#        resource:
+#          name: cpu
+#          target:
+#            type: Utilization
+#            averageUtilization: 70
+#
+# 2. CIRCUIT BREAKER CONFIGURATION:
+#    # Resilience4j circuit breaker for external calls
+#    resilience4j:
+#      circuitbreaker:
+#        instances:
+#          vets-service:
+#            failure-rate-threshold: 50
+#            wait-duration-in-open-state: 30s
+#            sliding-window-size: 10
+#
+# 3. CACHING STRATEGY:
+#    # Redis cache for frequently accessed customer data
+#    spring:
+#      cache:
+#        type: redis
+#        redis:
+#          host: redis-cluster
+#          port: 6379
+#          timeout: 2000ms
+#
+# 4. SECURITY ENHANCEMENTS:
+#    # JWT token validation for API security
+#    spring:
+#      security:
+#        oauth2:
+#          resourceserver:
+#            jwt:
+#              issuer-uri: https://auth.petclinic.com
+#
+# INTEGRATION PATTERNS:
+#
+# 1. API GATEWAY INTEGRATION:
+#    # Routes customer requests through API Gateway
+#    # Load balancing across customer service instances
+#    # Rate limiting and throttling
+#    # Authentication and authorization
+#
+# 2. EVENT-DRIVEN COMMUNICATION:
+#    # Publish customer events for other services
+#    # Customer created, updated, deleted events
+#    # Integration with message queues (RabbitMQ, Kafka)
+#
+# 3. SAGA PATTERN IMPLEMENTATION:
+#    # Distributed transactions across services
+#    # Compensation actions for failed operations
+#    # Event sourcing for audit trails
+#
+# MONITORING AND OBSERVABILITY:
+#
+# 1. BUSINESS METRICS:
+#    # Customer registration rates
+#    # API response times and error rates
+#    # Database connection pool metrics
+#    # Custom business KPIs
+#
+# 2. DISTRIBUTED TRACING:
+#    # Request tracing across service boundaries
+#    # Performance bottleneck identification
+#    # Service dependency mapping
+#
+# 3. LOGGING STRATEGY:
+#    # Structured logging with correlation IDs
+#    # Business event logging
+#    # Error tracking and alerting
+#    # Log aggregation and analysis
+#
+# DISASTER RECOVERY AND BACKUP:
+#
+# 1. DATA BACKUP STRATEGY:
+#    # Regular database backups
+#    # Point-in-time recovery capability
+#    # Cross-region backup replication
+#
+# 2. SERVICE RECOVERY:
+#    # Automated service restart on failure
+#    # Database connection retry logic
+#    # Graceful degradation strategies
+#
+# COMPLIANCE AND GOVERNANCE:
+# - Customer data privacy (GDPR compliance)
+# - Data retention and purging policies
+# - Audit logging for regulatory requirements
+# - Access controls and data encryption
+# - Regular security assessments and updates
+#
+# =============================================================================

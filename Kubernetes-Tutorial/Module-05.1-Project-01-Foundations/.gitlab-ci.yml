@@ -1,0 +1,87 @@
+stages:
+  - validate
+  - build
+  - test
+  - security
+  - deploy-staging
+  - deploy-production
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: "/certs"
+  KUBECONFIG: /tmp/kubeconfig
+  NAMESPACE_STAGING: ecommerce-staging
+  NAMESPACE_PRODUCTION: ecommerce
+
+validate:
+  stage: validate
+  image: alpine/k8s:1.28.2
+  script:
+    - kubectl version --client
+    - kubeval k8s-manifests/*.yaml
+    - helm lint helm-charts/ecommerce
+  only:
+    - merge_requests
+    - main
+
+build:
+  stage: build
+  image: docker:20.10.16
+  services:
+    - docker:20.10.16-dind
+  script:
+    - docker build -t $CI_REGISTRY_IMAGE/backend:$CI_COMMIT_SHA .
+    - docker push $CI_REGISTRY_IMAGE/backend:$CI_COMMIT_SHA
+  only:
+    - main
+
+test:
+  stage: test
+  image: alpine/k8s:1.28.2
+  script:
+    - chmod +x validation/comprehensive-tests.sh
+    - ./validation/comprehensive-tests.sh
+  only:
+    - merge_requests
+    - main
+
+security-scan:
+  stage: security
+  image: aquasec/trivy:latest
+  script:
+    - trivy image --exit-code 1 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/backend:$CI_COMMIT_SHA
+  allow_failure: true
+  only:
+    - main
+
+deploy-staging:
+  stage: deploy-staging
+  image: alpine/helm:3.12.0
+  script:
+    - echo $KUBECONFIG_STAGING | base64 -d > $KUBECONFIG
+    - helm upgrade --install ecommerce-staging helm-charts/ecommerce 
+      --namespace $NAMESPACE_STAGING 
+      --create-namespace
+      --set global.imageTag=$CI_COMMIT_SHA
+      --set global.namespace=$NAMESPACE_STAGING
+  environment:
+    name: staging
+    url: https://staging.ecommerce.company.com
+  only:
+    - main
+
+deploy-production:
+  stage: deploy-production
+  image: alpine/helm:3.12.0
+  script:
+    - echo $KUBECONFIG_PRODUCTION | base64 -d > $KUBECONFIG
+    - helm upgrade --install ecommerce helm-charts/ecommerce 
+      --namespace $NAMESPACE_PRODUCTION 
+      --create-namespace
+      --set global.imageTag=$CI_COMMIT_SHA
+  environment:
+    name: production
+    url: https://ecommerce.company.com
+  when: manual
+  only:
+    - main

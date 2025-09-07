@@ -1,0 +1,419 @@
+# =============================================================================
+# MYSQL VISITS DATABASE STATEFULSET - COMPREHENSIVE MICROSERVICE DATA ISOLATION DOCUMENTATION
+# =============================================================================
+# This file defines the MySQL database deployment for the Visits microservice,
+# implementing the database-per-service pattern essential for microservice architecture.
+# Each microservice maintains its own dedicated database to ensure data isolation,
+# independent scaling, and service autonomy.
+#
+# MICROSERVICE PRINCIPLE: Database-per-service pattern ensures loose coupling,
+# independent deployments, and technology diversity across microservices.
+#
+# BUSINESS CONTEXT: Visits data represents appointment and medical visit records,
+# requiring high consistency, audit trails, and integration with veterinary workflows.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# MYSQL VISITS STATEFULSET - DEDICATED MICROSERVICE DATABASE
+# -----------------------------------------------------------------------------
+# API version for StatefulSet resources
+# apps/v1 provides stable, production-ready StatefulSet functionality
+apiVersion: apps/v1
+
+# Resource type: StatefulSet for stateful database workloads
+# StatefulSets provide the ordered, persistent deployment required for databases
+# with stable network identities and persistent storage guarantees
+kind: StatefulSet
+
+# Metadata section for StatefulSet identification
+metadata:
+  # StatefulSet name following microservice naming convention
+  name: mysql-visits
+  # NAMING PATTERN: <database-type>-<microservice-name> for clarity
+  # MICROSERVICE ISOLATION: Dedicated database instance for visits service
+  
+  # Namespace for application boundary and resource isolation
+  namespace: petclinic
+  
+  # Labels for resource classification and management
+  labels:
+    # Application identifier for service grouping
+    app: mysql-visits
+    # MICROSERVICE IDENTITY: Unique identifier for visits database
+    
+    # Component classification for architectural organization
+    component: database
+    # ARCHITECTURE LAYER: Distinguishes data layer from application layer
+    
+    # Tier classification for network segmentation and policies
+    tier: data
+    # SECURITY SEGMENTATION: Enables data-tier specific security controls
+
+# StatefulSet specification defining deployment behavior
+spec:
+  # Service name for stable network identity and DNS resolution
+  serviceName: mysql-visits
+  # STABLE IDENTITY: Enables predictable database connection endpoints
+  # DNS PATTERN: mysql-visits-0.mysql-visits.petclinic.svc.cluster.local
+  
+  # Replica count for database instances
+  replicas: 1
+  # SINGLE INSTANCE: Appropriate for microservice database pattern
+  # SCALING CONSIDERATION: Each microservice typically uses single database instance
+  # HIGH AVAILABILITY: Production may require master-slave or clustering
+  
+  # Selector for pod targeting and management
+  selector:
+    matchLabels:
+      app: mysql-visits
+      # TARGETING: Must match pod template labels exactly
+  
+  # Pod template defining the database container specification
+  template:
+    metadata:
+      # Labels applied to each pod instance
+      labels:
+        app: mysql-visits
+        component: database
+        tier: data
+        # CONSISTENCY: Labels match StatefulSet and selector requirements
+    
+    # Pod specification
+    spec:
+      # Container array for database deployment
+      containers:
+      - # Container name for identification and logging
+        name: mysql
+        
+        # MySQL container image with version pinning
+        image: mysql:8.0
+        # VERSION CONSISTENCY: Same MySQL version across all microservice databases
+        # STABILITY: Pinned version prevents unexpected updates
+        # MYSQL 8.0: Latest stable with enhanced security and JSON support
+        
+        # Container port configuration
+        ports:
+        - # MySQL standard port for database connections
+          containerPort: 3306
+          # Port name for service targeting and monitoring
+          name: mysql
+          # STANDARD PROTOCOL: MySQL default port for client connections
+        
+        # Environment variables for MySQL initialization and configuration
+        env:
+        # Root password from Kubernetes Secret for security
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              # Shared secret for database credentials
+              name: mysql-credentials
+              # Key containing root password
+              key: root-password
+          # SECURITY: Centralized credential management through Secrets
+          # SHARED CREDENTIALS: Same secret used across microservice databases
+        
+        # Database name for visits microservice data
+        - name: MYSQL_DATABASE
+          value: "petclinic"
+          # DATABASE NAMING: Consistent database name across microservices
+          # SCHEMA ISOLATION: Each service uses separate tables within same database
+        
+        # Application user from shared credentials
+        - name: MYSQL_USER
+          valueFrom:
+            secretKeyRef:
+              name: mysql-credentials
+              key: username
+          # PRINCIPLE OF LEAST PRIVILEGE: Dedicated application user
+        
+        # Application user password from shared credentials
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-credentials
+              key: password
+          # CREDENTIAL CONSISTENCY: Same application credentials across services
+        
+        # Resource allocation for visits database workload
+        resources:
+          # Guaranteed resources for baseline performance
+          requests:
+            # Memory allocation for database operations
+            memory: "512Mi"
+            # BASELINE MEMORY: Sufficient for visits data and query processing
+            
+            # CPU allocation for query processing
+            cpu: "250m"
+            # BASELINE CPU: Quarter core for moderate visit data operations
+          
+          # Resource limits to prevent resource monopolization
+          limits:
+            # Maximum memory to prevent node pressure
+            memory: "1Gi"
+            # BURST CAPACITY: Double baseline for peak operations
+            
+            # Maximum CPU for fair resource sharing
+            cpu: "500m"
+            # BURST CAPACITY: Half core for intensive query operations
+        
+        # Volume mounts for persistent data storage
+        volumeMounts:
+        - # Volume name matching volumeClaimTemplate
+          name: mysql-visits-storage
+          # MySQL data directory for persistent storage
+          mountPath: /var/lib/mysql
+          # DATA PERSISTENCE: Visits data survives pod restarts
+          # MICROSERVICE ISOLATION: Dedicated storage per service
+        
+        # Liveness probe for container health monitoring
+        livenessProbe:
+          # Command execution for health verification
+          exec:
+            command:
+            - mysqladmin  # MySQL administration utility
+            - ping        # Basic connectivity test
+            - -h          # Host specification
+            - localhost   # Local connection test
+          # HEALTH MONITORING: Detects MySQL daemon failures
+          
+          # Initial delay for MySQL startup completion
+          initialDelaySeconds: 30
+          # STARTUP BUFFER: Allows MySQL initialization time
+          
+          # Probe execution frequency
+          periodSeconds: 10
+          # MONITORING FREQUENCY: Regular health checks every 10 seconds
+          
+          # Timeout for each probe execution
+          timeoutSeconds: 5
+          # RESPONSIVENESS: Quick timeout for health decisions
+          
+          # Failure threshold before pod restart
+          failureThreshold: 3
+          # STABILITY: Multiple failures required before restart
+        
+        # Readiness probe for traffic routing decisions
+        readinessProbe:
+          # SQL execution for database readiness verification
+          exec:
+            command:
+            - mysql       # MySQL client
+            - -h          # Host specification
+            - localhost   # Local connection
+            - -u          # Username flag
+            - root        # Root user access
+            - -p$MYSQL_ROOT_PASSWORD  # Password from environment
+            - -e          # Execute SQL command
+            - "SELECT 1"  # Simple query for database functionality test
+          # READINESS VERIFICATION: Ensures database can process queries
+          
+          # Initial delay for readiness checking
+          initialDelaySeconds: 20
+          # STARTUP OPTIMIZATION: Shorter delay than liveness probe
+          
+          # Readiness check frequency
+          periodSeconds: 5
+          # TRAFFIC ROUTING: Frequent checks for responsive traffic management
+          
+          # Timeout for readiness verification
+          timeoutSeconds: 3
+          # QUICK RESPONSE: Fast timeout for traffic routing decisions
+          
+          # Failure threshold before removing from service
+          failureThreshold: 3
+          # SERVICE AVAILABILITY: Multiple failures before traffic removal
+  
+  # Volume claim templates for persistent storage provisioning
+  volumeClaimTemplates:
+  - # PVC template metadata
+    metadata:
+      # Storage volume name for visits data
+      name: mysql-visits-storage
+      # NAMING PATTERN: <service>-<purpose>-storage for clarity
+    
+    # PVC specification for storage requirements
+    spec:
+      # Access mode for storage volume
+      accessModes: ["ReadWriteOnce"]
+      # RWO: Single-node read-write access suitable for MySQL
+      # STORAGE PATTERN: MySQL requires exclusive access to data files
+      
+      # Storage resource requirements
+      resources:
+        requests:
+          # Storage capacity allocation
+          storage: 10Gi
+          # CAPACITY PLANNING: 10GB suitable for visits data volume
+          # MICROSERVICE SIZING: Appropriate for single service data
+
+---
+# Document separator for Service resource
+
+# -----------------------------------------------------------------------------
+# HEADLESS SERVICE - STABLE NETWORK IDENTITY FOR VISITS DATABASE
+# -----------------------------------------------------------------------------
+# API version for Service resources
+apiVersion: v1
+
+# Resource type: Service for network access to database
+kind: Service
+
+# Service metadata
+metadata:
+  # Service name matching StatefulSet serviceName requirement
+  name: mysql-visits
+  # NETWORK IDENTITY: Provides stable DNS name for database access
+  
+  # Namespace consistency with StatefulSet
+  namespace: petclinic
+  
+  # Labels for service identification and management
+  labels:
+    app: mysql-visits
+    component: database
+    # CONSISTENCY: Matches StatefulSet labels for unified management
+
+# Service specification
+spec:
+  # Selector for targeting StatefulSet pods
+  selector:
+    app: mysql-visits
+    # POD TARGETING: Routes traffic to visits database pods
+  
+  # Port configuration for database access
+  ports:
+  - # Service port for client connections
+    port: 3306
+    # Target port on database pods
+    targetPort: 3306
+    # Port name for identification
+    name: mysql
+    # MYSQL PROTOCOL: Standard port 3306 for database connections
+  
+  # Service type for cluster-internal access
+  type: ClusterIP
+  # INTERNAL ACCESS: Database only accessible within cluster
+  
+  # Headless service configuration
+  clusterIP: None
+  # HEADLESS SERVICE: No load balancing, direct pod access
+  # STATEFULSET REQUIREMENT: Enables stable network identities
+  # MICROSERVICE PATTERN: Direct database connections per service
+
+# =============================================================================
+# MICROSERVICE DATABASE ARCHITECTURE ANALYSIS
+# =============================================================================
+#
+# DATABASE-PER-SERVICE PATTERN BENEFITS:
+# ✅ DATA ISOLATION: Each microservice owns its data completely
+# ✅ INDEPENDENT SCALING: Database scales independently with service needs
+# ✅ TECHNOLOGY DIVERSITY: Each service can choose optimal database technology
+# ✅ FAULT ISOLATION: Database failures don't cascade across services
+# ✅ DEPLOYMENT INDEPENDENCE: Database changes don't affect other services
+# ✅ TEAM AUTONOMY: Teams can evolve database schema independently
+#
+# VISITS MICROSERVICE DATA CHARACTERISTICS:
+# ✅ TRANSACTIONAL DATA: Visit records require ACID compliance
+# ✅ RELATIONAL STRUCTURE: Visits relate to customers, pets, and veterinarians
+# ✅ AUDIT REQUIREMENTS: Medical visits require comprehensive audit trails
+# ✅ MODERATE VOLUME: Visit data grows steadily but predictably
+# ✅ READ-HEAVY WORKLOAD: More queries than updates for visit history
+#
+# MICROSERVICE DATA CONSISTENCY CHALLENGES:
+#
+# 1. CROSS-SERVICE TRANSACTIONS:
+#    # Visits service may need customer and vet data
+#    # Solution: Event-driven architecture with eventual consistency
+#    # Implementation: Saga pattern for distributed transactions
+#
+# 2. DATA SYNCHRONIZATION:
+#    # Customer updates need to reflect in visits context
+#    # Solution: Event sourcing and CQRS patterns
+#    # Implementation: Message queues for data synchronization
+#
+# 3. REFERENTIAL INTEGRITY:
+#    # Foreign key relationships across service boundaries
+#    # Solution: Eventual consistency with compensation actions
+#    # Implementation: Circuit breakers and retry mechanisms
+#
+# PRODUCTION ENHANCEMENTS FOR MICROSERVICE DATABASES:
+#
+# 1. DATABASE SCHEMA VERSIONING:
+#    # Implement database migration strategies
+#    apiVersion: batch/v1
+#    kind: Job
+#    metadata:
+#      name: mysql-visits-migration
+#    spec:
+#      template:
+#        spec:
+#          containers:
+#          - name: flyway-migration
+#            image: flyway/flyway:latest
+#            command:
+#            - flyway
+#            - -url=jdbc:mysql://mysql-visits:3306/petclinic
+#            - -user=$(MYSQL_USER)
+#            - -password=$(MYSQL_PASSWORD)
+#            - migrate
+#
+# 2. CROSS-SERVICE DATA ACCESS PATTERNS:
+#    # API Gateway for data aggregation
+#    # GraphQL for flexible data queries
+#    # Event sourcing for data synchronization
+#    # CQRS for read/write optimization
+#
+# 3. MICROSERVICE DATABASE MONITORING:
+#    # Service-specific database metrics
+#    # Cross-service data consistency monitoring
+#    # Database performance per microservice
+#    # Data quality and integrity checks
+#
+# 4. BACKUP STRATEGY PER MICROSERVICE:
+#    # Independent backup schedules per service
+#    # Service-specific retention policies
+#    # Cross-service backup coordination
+#    # Point-in-time recovery per service
+#
+# DATA GOVERNANCE IN MICROSERVICES:
+#
+# 1. DATA OWNERSHIP:
+#    - Visits service owns all visit-related data
+#    - Clear boundaries for data responsibility
+#    - Service contracts for data access
+#    - Data privacy compliance per service
+#
+# 2. SCHEMA EVOLUTION:
+#    - Backward compatibility requirements
+#    - Schema versioning strategies
+#    - Migration coordination across services
+#    - Breaking change management
+#
+# 3. DATA QUALITY:
+#    - Service-level data validation
+#    - Cross-service data consistency checks
+#    - Data quality metrics per service
+#    - Automated data quality testing
+#
+# DISASTER RECOVERY FOR MICROSERVICE DATABASES:
+#
+# 1. SERVICE-SPECIFIC RECOVERY:
+#    - Independent recovery procedures per service
+#    - Service dependency mapping for recovery order
+#    - Cross-service data consistency validation
+#    - Recovery time objectives per service
+#
+# 2. DATA SYNCHRONIZATION RECOVERY:
+#    - Event replay mechanisms
+#    - Compensation transaction procedures
+#    - Cross-service state reconciliation
+#    - Eventual consistency validation
+#
+# COMPLIANCE CONSIDERATIONS:
+# - Data residency requirements per microservice
+# - Service-specific audit logging
+# - Cross-service data lineage tracking
+# - Microservice-level access controls
+# - Data retention policies per service domain
+#
+# =============================================================================

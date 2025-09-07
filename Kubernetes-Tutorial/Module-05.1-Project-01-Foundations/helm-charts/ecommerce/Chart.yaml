@@ -1,0 +1,17 @@
+apiVersion: v2
+name: ecommerce
+description: A Helm chart for E-commerce Foundation Infrastructure
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - ecommerce
+  - kubernetes
+  - microservices
+home: https://github.com/your-org/ecommerce-k8s
+sources:
+  - https://github.com/your-org/ecommerce-k8s
+maintainers:
+  - name: Platform Engineering Team
+    email: platform@company.com
+dependencies: []

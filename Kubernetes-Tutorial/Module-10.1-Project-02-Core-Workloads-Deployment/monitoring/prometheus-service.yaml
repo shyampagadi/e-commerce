@@ -1,0 +1,123 @@
+# =============================================================================
+# PROMETHEUS SERVICE
+# =============================================================================
+# Purpose: Exposes Prometheus for internal and external access
+# Why needed: Provides stable endpoint for accessing Prometheus web interface
+# Kubernetes concept: Service provides stable network access to Prometheus pods
+
+apiVersion: v1
+# API Version: v1 is the stable version for Service resources
+# This is the most commonly used API version for service definitions
+
+kind: Service
+# Resource Type: Service provides stable network access to a set of pods
+# This enables load balancing and service discovery for Prometheus pods
+
+metadata:
+  # Metadata section contains identifying information about the resource
+  name: prometheus-service
+  # Name: Unique identifier for this Service within the namespace
+  # This name will be used for DNS resolution and service discovery
+  
+  namespace: ecommerce
+  # Namespace: Specifies which namespace this Service belongs to
+  # Must match the namespace created in the namespace.yaml file
+  
+  labels:
+    # Labels: Key-value pairs for organizing and selecting resources
+    app: prometheus
+    # app: prometheus - Identifies this Service as belonging to Prometheus
+    component: monitoring
+    # component: monitoring - Identifies this as a monitoring service
+    tier: observability
+    # tier: observability - Identifies this as observability tier
+    environment: production
+    # environment: production - Indicates this is for production environment
+    managed-by: kubernetes
+    # managed-by: kubernetes - Indicates this resource is managed by Kubernetes
+  
+  annotations:
+    # Annotations: Additional metadata that doesn't affect resource behavior
+    description: "Prometheus monitoring service for e-commerce application"
+    # description: Human-readable description of the Service purpose
+    # Used for documentation and operational understanding
+    
+    contact: "platform-engineering@company.com"
+    # contact: Email address for the team responsible for this Service
+    # Used for incident response and maintenance coordination
+    
+    last-updated: "2024-12-01T00:00:00Z"
+    # last-updated: Timestamp of last service update
+    # Used for change tracking and audit trails
+    
+    version: "1.0.0"
+    # version: Version of the service configuration
+    # Used for service versioning and rollback
+
+spec:
+  # Specification section defines the actual service configuration
+  
+  # =============================================================================
+  # SERVICE TYPE
+  # =============================================================================
+  type: ClusterIP
+  # type: ClusterIP - Service type
+  # Value: ClusterIP - Internal cluster IP address
+  # Purpose: Provides internal cluster access only
+  # Impact: Service is accessible only within the cluster
+  # Production consideration: Secure internal communication for monitoring
+  
+  # =============================================================================
+  # PORT CONFIGURATION
+  # =============================================================================
+  ports:
+    # ports: Array of ports exposed by this service
+    - name: web
+      # name: web - Port name
+      # Purpose: Identifies this port for service discovery
+      # Impact: Port can be referenced by name in other resources
+      # Production consideration: Enables clear port identification
+      
+      port: 9090
+      # port: 9090 - Service port
+      # Value: 9090 - Port number for external access
+      # Purpose: Port through which service is accessed
+      # Impact: Clients connect to this port
+      # Production consideration: Matches Prometheus web interface port
+      
+      targetPort: 9090
+      # targetPort: 9090 - Target port on pods
+      # Value: 9090 - Port on Prometheus pods
+      # Purpose: Port on Prometheus pods to forward traffic to
+      # Impact: Traffic is forwarded to port 9090 on Prometheus pods
+      # Production consideration: Must match container port
+      
+      protocol: TCP
+      # protocol: TCP - Port protocol
+      # Value: TCP - Transmission Control Protocol
+      # Purpose: Specifies the network protocol
+      # Impact: Port uses TCP protocol
+      # Production consideration: Standard protocol for web services
+  
+  # =============================================================================
+  # SELECTOR CONFIGURATION
+  # =============================================================================
+  selector:
+    # selector: Defines which pods this Service routes traffic to
+    app: prometheus
+    # app: prometheus - Pods must have this label
+    # Purpose: Routes traffic to Prometheus pods
+    # Impact: Only pods with this label receive traffic
+    # Production consideration: Ensures correct pod selection
+    
+    component: monitoring
+    # component: monitoring - Pods must have this label
+    # Purpose: Routes traffic to monitoring pods specifically
+    # Impact: Only monitoring pods receive traffic
+    # Production consideration: Prevents traffic to wrong components
+    
+    tier: observability
+    # tier: observability - Pods must have this label
+    # Purpose: Routes traffic to observability tier pods
+    # Impact: Only observability tier pods receive traffic
+    # Production consideration: Ensures proper tier isolation

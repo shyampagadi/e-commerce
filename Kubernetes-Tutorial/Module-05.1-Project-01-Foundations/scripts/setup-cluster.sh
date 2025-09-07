@@ -1,38 +1,182 @@
 #!/bin/bash
-
-# E-commerce Foundation Infrastructure - Cluster Setup Script
-# This script sets up a 2-node Kubernetes cluster for the e-commerce project
+# =============================================================================
+# KUBERNETES CLUSTER SETUP SCRIPT
+# =============================================================================
+# This script sets up a production-ready 2-node Kubernetes cluster for the
+# e-commerce foundation infrastructure project with proper networking and security.
+# =============================================================================
 
 set -euo pipefail
+# =============================================================================
+# SCRIPT CONFIGURATION
+# =============================================================================
+# set -e: Exit immediately if any command fails
+# set -u: Exit if any undefined variable is used
+# set -o pipefail: Exit if any command in a pipeline fails
+# =============================================================================
 
-# Color codes for output
+# =============================================================================
+# COLOR CODES FOR OUTPUT FORMATTING
+# =============================================================================
+# Define color codes for consistent output formatting throughout the script.
+# =============================================================================
+
 RED='\033[0;31m'
+# Purpose: Red color code for error messages
+# Why needed: Provides visual distinction for error output
+# Impact: Error messages are displayed in red color
+# Usage: Used in error() function for critical messages
+
 GREEN='\033[0;32m'
+# Purpose: Green color code for success messages
+# Why needed: Provides visual distinction for success output
+# Impact: Success messages are displayed in green color
+# Usage: Used in success() function for completion messages
+
 YELLOW='\033[1;33m'
+# Purpose: Yellow color code for warning messages
+# Why needed: Provides visual distinction for warning output
+# Impact: Warning messages are displayed in yellow color
+# Usage: Used in warning() function for cautionary messages
+
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+# Purpose: Blue color code for informational messages
+# Why needed: Provides visual distinction for informational output
+# Impact: Info messages are displayed in blue color
+# Usage: Used in log() function for general information
 
-# Configuration
+NC='\033[0m'
+# Purpose: No Color code to reset terminal color
+# Why needed: Resets terminal color after colored output
+# Impact: Prevents color bleeding to subsequent output
+# Usage: Used at end of all colored message functions
+
+# =============================================================================
+# CLUSTER CONFIGURATION VARIABLES
+# =============================================================================
+# Define variables for consistent cluster configuration throughout the script.
+# =============================================================================
+
 CLUSTER_NAME="ecommerce-cluster"
-MASTER_IP="192.168.1.100"
-POD_NETWORK_CIDR="10.244.0.0/16"
-SERVICE_CIDR="10.96.0.0/12"
+# Purpose: Specifies the name of the Kubernetes cluster
+# Why needed: Provides consistent cluster identification
+# Impact: Cluster resources use this name for identification
+# Value: Descriptive name matching the project purpose
 
-# Logging function
+MASTER_IP="192.168.1.100"
+# Purpose: Specifies the IP address of the master node
+# Why needed: Defines the control plane endpoint for cluster communication
+# Impact: Worker nodes connect to this IP for cluster joining
+# Value: Private network IP address for the master node
+
+POD_NETWORK_CIDR="10.244.0.0/16"
+# Purpose: Specifies the CIDR block for pod networking
+# Why needed: Defines IP address range for pod-to-pod communication
+# Impact: All pods receive IP addresses from this range
+# Value: Standard Flannel network CIDR for compatibility
+
+SERVICE_CIDR="10.96.0.0/12"
+# Purpose: Specifies the CIDR block for service networking
+# Why needed: Defines IP address range for Kubernetes services
+# Impact: All services receive cluster IPs from this range
+# Value: Default Kubernetes service CIDR for compatibility
+
+KUBERNETES_VERSION="1.28.2"
+# Purpose: Specifies the Kubernetes version to install
+# Why needed: Ensures consistent Kubernetes version across nodes
+# Impact: All cluster components use this specific version
+# Value: Stable Kubernetes version with required features
+
+CONTAINERD_VERSION="1.7.2"
+# Purpose: Specifies the containerd runtime version
+# Why needed: Ensures consistent container runtime across nodes
+# Impact: All nodes use this containerd version for container execution
+# Value: Compatible containerd version for the Kubernetes version
+
+# =============================================================================
+# LOGGING FUNCTIONS
+# =============================================================================
+# Functions for consistent logging and output formatting throughout the script.
+# =============================================================================
+
 log() {
-    echo -e "${BLUE}[$(date +'%Y-%m-%d %H:%M:%S')]${NC} $1"
+    # =============================================================================
+    # LOG FUNCTION
+    # =============================================================================
+    # Logs informational messages with timestamp and blue color formatting.
+    # =============================================================================
+    
+    local message="$1"
+    # Purpose: Specifies the message to log
+    # Why needed: Provides the content to be logged
+    # Impact: Message is displayed with timestamp and formatting
+    # Parameter: $1 is the message string to display
+    
+    echo -e "${BLUE}[$(date +'%Y-%m-%d %H:%M:%S')]${NC} $message"
+    # Purpose: Outputs formatted message with timestamp
+    # Why needed: Provides consistent logging format with timestamp
+    # Impact: Message appears with blue timestamp and normal text
+    # Format: [YYYY-MM-DD HH:MM:SS] message
 }
 
 error() {
-    echo -e "${RED}[ERROR]${NC} $1" >&2
+    # =============================================================================
+    # ERROR FUNCTION
+    # =============================================================================
+    # Logs error messages with red color formatting and outputs to stderr.
+    # =============================================================================
+    
+    local message="$1"
+    # Purpose: Specifies the error message to display
+    # Why needed: Provides the error content to be logged
+    # Impact: Message is displayed in red color and sent to stderr
+    # Parameter: $1 is the error message string
+    
+    echo -e "${RED}[ERROR]${NC} $message" >&2
+    # Purpose: Outputs formatted error message in red to stderr
+    # Why needed: Provides visual indication of errors and proper stream handling
+    # Impact: Error message appears in red and goes to error stream
+    # Format: [ERROR] message in red color to stderr
 }
 
 success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
+    # =============================================================================
+    # SUCCESS FUNCTION
+    # =============================================================================
+    # Logs success messages with green color formatting for positive outcomes.
+    # =============================================================================
+    
+    local message="$1"
+    # Purpose: Specifies the success message to display
+    # Why needed: Provides the success content to be logged
+    # Impact: Message is displayed in green color for visual distinction
+    # Parameter: $1 is the success message string
+    
+    echo -e "${GREEN}[SUCCESS]${NC} $message"
+    # Purpose: Outputs formatted success message in green
+    # Why needed: Provides visual confirmation of successful operations
+    # Impact: Success message appears in green for easy identification
+    # Format: [SUCCESS] message in green color
 }
 
 warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
+    # =============================================================================
+    # WARNING FUNCTION
+    # =============================================================================
+    # Logs warning messages with yellow color formatting for cautionary information.
+    # =============================================================================
+    
+    local message="$1"
+    # Purpose: Specifies the warning message to display
+    # Why needed: Provides the warning content to be logged
+    # Impact: Message is displayed in yellow color for attention
+    # Parameter: $1 is the warning message string
+    
+    echo -e "${YELLOW}[WARNING]${NC} $message"
+    # Purpose: Outputs formatted warning message in yellow
+    # Why needed: Provides visual indication of warnings and potential issues
+    # Impact: Warning message appears in yellow for moderate attention
+    # Format: [WARNING] message in yellow color
 }
 
 # Function to check if running as root

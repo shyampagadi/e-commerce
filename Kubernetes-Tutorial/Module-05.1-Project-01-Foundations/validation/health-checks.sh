@@ -1,52 +1,304 @@
 #!/bin/bash
-
-# E-commerce Foundation Infrastructure - Health Checks
-# This script performs comprehensive health checks on the application and infrastructure
+# =============================================================================
+# HEALTH CHECKS VALIDATION SCRIPT
+# =============================================================================
+# This script performs comprehensive health checks on the e-commerce application
+# and infrastructure components to ensure operational readiness and reliability.
+# =============================================================================
 
 set -euo pipefail
+# =============================================================================
+# SCRIPT CONFIGURATION
+# =============================================================================
+# set -e: Exit immediately if any command fails
+# set -u: Exit if any undefined variable is used
+# set -o pipefail: Exit if any command in a pipeline fails
+# =============================================================================
 
-# Color codes for output
+# =============================================================================
+# COLOR CODES FOR OUTPUT FORMATTING
+# =============================================================================
+# Define color codes for consistent output formatting throughout the script.
+# =============================================================================
+
 RED='\033[0;31m'
+# Purpose: Red color code for error messages and failed health checks
+# Why needed: Provides visual distinction for failed health checks
+# Impact: Failed checks are displayed in red color
+# Usage: Used in error() function and failed health check results
+
 GREEN='\033[0;32m'
+# Purpose: Green color code for success messages and passed health checks
+# Why needed: Provides visual distinction for successful health checks
+# Impact: Passed checks are displayed in green color
+# Usage: Used in success() function and passed health check results
+
 YELLOW='\033[1;33m'
+# Purpose: Yellow color code for warning messages and warning health checks
+# Why needed: Provides visual distinction for warning health checks
+# Impact: Warning checks are displayed in yellow color
+# Usage: Used in warning() function and warning health check results
+
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+# Purpose: Blue color code for informational messages
+# Why needed: Provides visual distinction for informational output
+# Impact: Info messages are displayed in blue color
+# Usage: Used in log() function for general information
 
-# Configuration
+NC='\033[0m'
+# Purpose: No Color code to reset terminal color
+# Why needed: Resets terminal color after colored output
+# Impact: Prevents color bleeding to subsequent output
+# Usage: Used at end of all colored message functions
+
+# =============================================================================
+# HEALTH CHECK CONFIGURATION VARIABLES
+# =============================================================================
+# Define variables for consistent health check configuration throughout the script.
+# =============================================================================
+
 NAMESPACE="ecommerce"
+# Purpose: Specifies the Kubernetes namespace for e-commerce application
+# Why needed: Provides consistent namespace reference for health checks
+# Impact: All health checks target resources in this namespace
+# Value: 'ecommerce' matches the project's application namespace
+
 APP_NAME="ecommerce-backend"
+# Purpose: Specifies the backend application name for health checks
+# Why needed: Provides consistent reference for backend health validation
+# Impact: Backend health checks target this application
+# Value: Matches the backend deployment name in manifests
+
 SERVICE_NAME="ecommerce-backend-service"
+# Purpose: Specifies the backend service name for connectivity checks
+# Why needed: Provides consistent reference for service health validation
+# Impact: Service connectivity checks target this service
+# Value: Matches the backend service name in manifests
+
 MONITORING_NAMESPACE="monitoring"
+# Purpose: Specifies the monitoring components namespace
+# Why needed: Provides consistent namespace reference for monitoring health checks
+# Impact: Monitoring health checks target resources in this namespace
+# Value: 'monitoring' matches the project's monitoring namespace
 
-# Health check results
+FRONTEND_APP="ecommerce-frontend"
+# Purpose: Specifies the frontend application name for health checks
+# Why needed: Provides consistent reference for frontend health validation
+# Impact: Frontend health checks target this application
+# Value: Matches the frontend deployment name in manifests
+
+DATABASE_APP="ecommerce-database"
+# Purpose: Specifies the database application name for health checks
+# Why needed: Provides consistent reference for database health validation
+# Impact: Database health checks target this application
+# Value: Matches the database deployment name in manifests
+
+# =============================================================================
+# HEALTH CHECK TRACKING VARIABLES
+# =============================================================================
+# Variables to track health check results and statistics.
+# =============================================================================
+
 HEALTHY=0
-UNHEALTHY=0
-TOTAL_CHECKS=0
+# Purpose: Counter for successful health checks
+# Why needed: Tracks number of passed health checks
+# Impact: Used for health check summary and success rate calculation
+# Initial: 0, incremented for each successful check
 
-# Logging function
+UNHEALTHY=0
+# Purpose: Counter for failed health checks
+# Why needed: Tracks number of failed health checks
+# Impact: Used for health check summary and failure rate calculation
+# Initial: 0, incremented for each failed check
+
+TOTAL_CHECKS=0
+# Purpose: Counter for total health checks performed
+# Why needed: Tracks total number of health checks executed
+# Impact: Used for health check summary and completion percentage
+# Initial: 0, incremented for each health check performed
+
+# =============================================================================
+# LOGGING FUNCTIONS
+# =============================================================================
+# Functions for consistent logging and output formatting throughout the script.
+# =============================================================================
+
 log() {
-    echo -e "${BLUE}[$(date +'%Y-%m-%d %H:%M:%S')]${NC} $1"
+    # =============================================================================
+    # LOG FUNCTION
+    # =============================================================================
+    # Logs informational messages with timestamp and blue color formatting.
+    # =============================================================================
+    
+    local message="$1"
+    # Purpose: Specifies the message to log
+    # Why needed: Provides the content to be logged
+    # Impact: Message is displayed with timestamp and formatting
+    # Parameter: $1 is the message string to display
+    
+    echo -e "${BLUE}[$(date +'%Y-%m-%d %H:%M:%S')]${NC} $message"
+    # Purpose: Outputs formatted message with timestamp
+    # Why needed: Provides consistent logging format with timestamp
+    # Impact: Message appears with blue timestamp and normal text
+    # Format: [YYYY-MM-DD HH:MM:SS] message
 }
 
 error() {
-    echo -e "${RED}[ERROR]${NC} $1" >&2
+    # =============================================================================
+    # ERROR FUNCTION
+    # =============================================================================
+    # Logs error messages with red color formatting and outputs to stderr.
+    # =============================================================================
+    
+    local message="$1"
+    # Purpose: Specifies the error message to display
+    # Why needed: Provides the error content to be logged
+    # Impact: Message is displayed in red color and sent to stderr
+    # Parameter: $1 is the error message string
+    
+    echo -e "${RED}[ERROR]${NC} $message" >&2
+    # Purpose: Outputs formatted error message in red to stderr
+    # Why needed: Provides visual indication of errors and proper stream handling
+    # Impact: Error message appears in red and goes to error stream
+    # Format: [ERROR] message in red color to stderr
 }
 
 success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
+    # =============================================================================
+    # SUCCESS FUNCTION
+    # =============================================================================
+    # Logs success messages with green color formatting for positive outcomes.
+    # =============================================================================
+    
+    local message="$1"
+    # Purpose: Specifies the success message to display
+    # Why needed: Provides the success content to be logged
+    # Impact: Message is displayed in green color for visual distinction
+    # Parameter: $1 is the success message string
+    
+    echo -e "${GREEN}[SUCCESS]${NC} $message"
+    # Purpose: Outputs formatted success message in green
+    # Why needed: Provides visual confirmation of successful operations
+    # Impact: Success message appears in green for easy identification
+    # Format: [SUCCESS] message in green color
 }
 
 warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
+    # =============================================================================
+    # WARNING FUNCTION
+    # =============================================================================
+    # Logs warning messages with yellow color formatting for cautionary information.
+    # =============================================================================
+    
+    local message="$1"
+    # Purpose: Specifies the warning message to display
+    # Why needed: Provides the warning content to be logged
+    # Impact: Message is displayed in yellow color for attention
+    # Parameter: $1 is the warning message string
+    
+    echo -e "${YELLOW}[WARNING]${NC} $message"
+    # Purpose: Outputs formatted warning message in yellow
+    # Why needed: Provides visual indication of warnings and potential issues
+    # Impact: Warning message appears in yellow for moderate attention
+    # Format: [WARNING] message in yellow color
 }
 
-# Health check result function
+# =============================================================================
+# HEALTH CHECK RESULT TRACKING FUNCTIONS
+# =============================================================================
+# Functions to track and report health check results consistently.
+# =============================================================================
+
 health_result() {
+    # =============================================================================
+    # HEALTH RESULT FUNCTION
+    # =============================================================================
+    # Records and displays health check results with consistent formatting.
+    # =============================================================================
+    
     local check_name="$1"
+    # Purpose: Specifies the name of the health check
+    # Why needed: Provides identification for the health check being reported
+    # Impact: Check name appears in result output for identification
+    # Parameter: $1 is the health check name string
+    
     local result="$2"
+    # Purpose: Specifies the result of the health check (PASS/FAIL/WARN)
+    # Why needed: Indicates whether the health check succeeded or failed
+    # Impact: Determines color and counter updates for the result
+    # Parameter: $2 is the result status string
+    
     local message="$3"
+    # Purpose: Specifies the detailed message for the health check result
+    # Why needed: Provides context and details about the health check outcome
+    # Impact: Message appears with the result for troubleshooting information
+    # Parameter: $3 is the detailed message string
     
     TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
+    # Purpose: Increment total health checks counter
+    # Why needed: Tracks total number of health checks performed
+    # Impact: Used for summary statistics and completion tracking
+    
+    case "$result" in
+        # Purpose: Handle different health check result types
+        # Why needed: Different results require different formatting and counters
+        # Impact: Determines output color and counter updates
+        
+        "PASS")
+            # Purpose: Handle successful health check results
+            # Why needed: Successful checks should be visually distinct and counted
+            # Impact: Displays green success message and increments healthy counter
+            
+            HEALTHY=$((HEALTHY + 1))
+            # Purpose: Increment successful health checks counter
+            # Why needed: Tracks number of passed health checks
+            # Impact: Used for success rate calculation in summary
+            
+            echo -e "${GREEN}[✓ PASS]${NC} $check_name: $message"
+            # Purpose: Display successful health check result in green
+            # Why needed: Provides visual confirmation of successful health check
+            # Impact: User sees green checkmark and success message
+            ;;
+            
+        "FAIL")
+            # Purpose: Handle failed health check results
+            # Why needed: Failed checks should be visually distinct and counted
+            # Impact: Displays red failure message and increments unhealthy counter
+            
+            UNHEALTHY=$((UNHEALTHY + 1))
+            # Purpose: Increment failed health checks counter
+            # Why needed: Tracks number of failed health checks
+            # Impact: Used for failure rate calculation in summary
+            
+            echo -e "${RED}[✗ FAIL]${NC} $check_name: $message"
+            # Purpose: Display failed health check result in red
+            # Why needed: Provides visual indication of failed health check
+            # Impact: User sees red X mark and failure message
+            ;;
+            
+        "WARN")
+            # Purpose: Handle warning health check results
+            # Why needed: Warning checks should be visually distinct but not counted as failures
+            # Impact: Displays yellow warning message without affecting counters
+            
+            echo -e "${YELLOW}[⚠ WARN]${NC} $check_name: $message"
+            # Purpose: Display warning health check result in yellow
+            # Why needed: Provides visual indication of warning condition
+            # Impact: User sees yellow warning symbol and warning message
+            ;;
+            
+        *)
+            # Purpose: Handle unknown health check result types
+            # Why needed: Provides fallback for unexpected result values
+            # Impact: Displays unknown result without specific formatting
+            
+            echo -e "[?] $check_name: $message (Unknown result: $result)"
+            # Purpose: Display unknown health check result
+            # Why needed: Provides feedback for unexpected result types
+            # Impact: User sees question mark and unknown result indication
+            ;;
+    esac
+}
     
     if [[ "$result" == "HEALTHY" ]]; then
         success "✓ $check_name: $message"

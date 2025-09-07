@@ -1,0 +1,253 @@
+# =============================================================================
+# PETCLINIC VELERO BACKUP CONFIGURATION - COMPREHENSIVE DISASTER RECOVERY DOCUMENTATION
+# =============================================================================
+# This file defines backup and disaster recovery strategies for the PetClinic application
+# using Velero, a Kubernetes-native backup and restore solution. Velero provides
+# cluster-level backup capabilities including persistent volumes, Kubernetes resources,
+# and application state preservation.
+#
+# BUSINESS CONTINUITY IMPACT: These backup configurations directly support business
+# continuity by ensuring rapid recovery from data loss, cluster failures, or disasters.
+#
+# COMPLIANCE REQUIREMENTS: Backup retention and recovery procedures often support
+# regulatory compliance (SOX, HIPAA, GDPR) and business audit requirements.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# SCHEDULED BACKUP CONFIGURATION - AUTOMATED DAILY BACKUPS
+# -----------------------------------------------------------------------------
+# API version for Velero Schedule resources
+# velero.io/v1 is the stable API for Velero backup scheduling
+# Velero extends Kubernetes with Custom Resource Definitions (CRDs)
+apiVersion: velero.io/v1
+
+# Resource type: Schedule creates automated, recurring backups
+# Schedules use cron syntax to define backup frequency and timing
+# This provides "set it and forget it" backup automation
+kind: Schedule
+
+# Metadata section for the Schedule resource
+metadata:
+  # Name of the backup schedule - should be descriptive of frequency and scope
+  # Naming convention: <application>-<frequency>-backup
+  name: petclinic-daily-backup
+  
+  # Namespace where Velero is installed (typically 'velero')
+  # Velero schedules must be created in the Velero system namespace
+  # IMPORTANT: This is different from the application namespace being backed up
+  namespace: velero
+
+# Specification section defining the backup schedule parameters
+spec:
+  # Cron schedule expression defining when backups should run
+  # Format: "minute hour day-of-month month day-of-week"
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  # SCHEDULE BREAKDOWN:
+  # 0: Minute (0 = top of the hour)
+  # 2: Hour (2 = 2 AM in 24-hour format)
+  # *: Day of month (any day)
+  # *: Month (any month)
+  # *: Day of week (any day of week)
+  # TIMING RATIONALE: 2 AM chosen for minimal application usage and resource contention
+  
+  # Template section defines the backup configuration to be used for each scheduled backup
+  # This template is applied every time the schedule triggers
+  template:
+    # Namespaces to include in the backup
+    # Array format allows backing up multiple namespaces in a single backup
+    includedNamespaces:
+    - petclinic  # Only backup the PetClinic application namespace
+    # SCOPE CONTROL: Focused backup reduces backup size and restore complexity
+    # SECURITY: Prevents accidental backup of sensitive system namespaces
+    
+    # Storage location where backup data will be stored
+    # References a BackupStorageLocation resource configured separately
+    storageLocation: default
+    # REQUIREMENT: A BackupStorageLocation named 'default' must exist
+    # TYPICAL BACKENDS: AWS S3, Google Cloud Storage, Azure Blob Storage, MinIO
+    
+    # Time-to-live (TTL) for backup retention
+    # Format: hours, minutes, seconds (e.g., 720h0m0s = 720 hours = 30 days)
+    ttl: 720h0m0s  # 30 days retention
+    # RETENTION STRATEGY: 30 days balances storage costs with recovery needs
+    # COMPLIANCE: Meets typical business requirements for point-in-time recovery
+    # COST OPTIMIZATION: Automatic cleanup prevents unlimited storage growth
+
+---
+# Document separator for multiple Velero resources
+
+# -----------------------------------------------------------------------------
+# MANUAL BACKUP CONFIGURATION - ON-DEMAND BACKUP CAPABILITY
+# -----------------------------------------------------------------------------
+# API version for Velero Backup resources
+apiVersion: velero.io/v1
+
+# Resource type: Backup creates immediate, one-time backups
+# Manual backups are useful for pre-maintenance snapshots or ad-hoc recovery points
+# Unlike Schedules, Backup resources execute immediately when created
+kind: Backup
+
+# Metadata for the manual backup resource
+metadata:
+  # Name of the manual backup - should indicate it's for manual/emergency use
+  # Naming convention: <application>-manual-backup or <application>-<purpose>-backup
+  name: petclinic-manual-backup
+  
+  # Same Velero namespace as the scheduled backup
+  namespace: velero
+
+# Specification for the manual backup
+spec:
+  # Same namespace inclusion as the scheduled backup
+  # Consistency ensures manual and scheduled backups have identical scope
+  includedNamespaces:
+  - petclinic
+  # CONSISTENCY: Manual backups should match scheduled backup scope for predictable recovery
+  
+  # Same storage location as scheduled backups
+  # Consistent storage location simplifies backup management and recovery procedures
+  storageLocation: default
+  # OPERATIONAL BENEFIT: Single storage location reduces complexity and potential confusion
+  
+  # Same TTL as scheduled backups
+  # Consistent retention policy across all backup types
+  ttl: 720h0m0s
+  # POLICY ALIGNMENT: Uniform retention simplifies compliance and storage management
+
+# =============================================================================
+# BACKUP STRATEGY ANALYSIS AND DISASTER RECOVERY PLANNING
+# =============================================================================
+#
+# BACKUP COVERAGE ANALYSIS:
+# ✅ KUBERNETES RESOURCES: All PetClinic Kubernetes objects (deployments, services, configmaps, secrets)
+# ✅ PERSISTENT VOLUMES: Database storage and application data volumes
+# ✅ NAMESPACE ISOLATION: Only PetClinic namespace backed up (focused scope)
+# ✅ AUTOMATED SCHEDULING: Daily backups ensure regular recovery points
+# ✅ RETENTION MANAGEMENT: 30-day retention prevents storage bloat
+#
+# RECOVERY TIME OBJECTIVE (RTO) CONSIDERATIONS:
+# - Backup restoration time depends on data volume and network bandwidth
+# - Typical restoration: 15-60 minutes for moderate-sized applications
+# - Network transfer time is often the limiting factor
+#
+# RECOVERY POINT OBJECTIVE (RPO) ANALYSIS:
+# - Daily backups provide maximum 24-hour data loss exposure
+# - For critical applications, consider more frequent backups (hourly/6-hourly)
+# - Manual backups can reduce RPO for planned maintenance windows
+#
+# PRODUCTION ENHANCEMENTS NEEDED:
+#
+# 1. BACKUP STORAGE CONFIGURATION:
+#    # Example BackupStorageLocation for AWS S3
+#    apiVersion: velero.io/v1
+#    kind: BackupStorageLocation
+#    metadata:
+#      name: default
+#      namespace: velero
+#    spec:
+#      provider: aws
+#      objectStorage:
+#        bucket: petclinic-backups
+#        prefix: velero
+#      config:
+#        region: us-west-2
+#        s3ForcePathStyle: "false"
+#
+# 2. VOLUME SNAPSHOT CONFIGURATION:
+#    # Example VolumeSnapshotLocation for AWS EBS
+#    apiVersion: velero.io/v1
+#    kind: VolumeSnapshotLocation
+#    metadata:
+#      name: default
+#      namespace: velero
+#    spec:
+#      provider: aws
+#      config:
+#        region: us-west-2
+#
+# 3. BACKUP VALIDATION AND MONITORING:
+#    - Implement backup success/failure monitoring
+#    - Set up alerts for backup failures
+#    - Regular restore testing (quarterly recommended)
+#    - Backup integrity verification
+#
+# 4. ENHANCED BACKUP STRATEGIES:
+#
+#    # High-frequency backup for critical data
+#    apiVersion: velero.io/v1
+#    kind: Schedule
+#    metadata:
+#      name: petclinic-hourly-backup
+#      namespace: velero
+#    spec:
+#      schedule: "0 * * * *"  # Every hour
+#      template:
+#        includedNamespaces:
+#        - petclinic
+#        includedResources:
+#        - persistentvolumes
+#        - persistentvolumeclaims
+#        storageLocation: default
+#        ttl: 168h0m0s  # 7 days retention for frequent backups
+#
+# 5. CROSS-REGION BACKUP REPLICATION:
+#    - Configure backup replication to secondary regions
+#    - Implement geo-redundant storage for disaster recovery
+#    - Test cross-region restore procedures
+#
+# DISASTER RECOVERY PROCEDURES:
+#
+# 1. FULL CLUSTER RESTORE:
+#    velero restore create --from-backup petclinic-daily-backup-<timestamp>
+#
+# 2. SELECTIVE RESOURCE RESTORE:
+#    velero restore create --from-backup <backup-name> --include-resources deployments,services
+#
+# 3. NAMESPACE RESTORE TO DIFFERENT CLUSTER:
+#    velero restore create --from-backup <backup-name> --namespace-mappings petclinic:petclinic-restored
+#
+# 4. BACKUP VERIFICATION:
+#    velero backup describe <backup-name>
+#    velero backup logs <backup-name>
+#
+# COMPLIANCE AND GOVERNANCE:
+#
+# 1. BACKUP AUDIT TRAIL:
+#    - All backup operations are logged in Velero
+#    - Backup metadata includes timestamps, duration, and success status
+#    - Restore operations are fully auditable
+#
+# 2. DATA RETENTION COMPLIANCE:
+#    - 30-day retention meets most business requirements
+#    - Adjust TTL based on regulatory requirements (GDPR, HIPAA, SOX)
+#    - Consider legal hold requirements for litigation
+#
+# 3. ENCRYPTION AND SECURITY:
+#    - Velero supports backup encryption at rest
+#    - Configure encryption keys through cloud provider KMS
+#    - Implement access controls for backup storage locations
+#
+# MONITORING AND ALERTING RECOMMENDATIONS:
+#
+# 1. BACKUP SUCCESS MONITORING:
+#    - Monitor backup completion status
+#    - Alert on backup failures or timeouts
+#    - Track backup size trends for capacity planning
+#
+# 2. RESTORE TESTING:
+#    - Schedule quarterly restore tests
+#    - Document restore procedures and timings
+#    - Validate application functionality post-restore
+#
+# 3. STORAGE MONITORING:
+#    - Monitor backup storage utilization
+#    - Alert on storage quota approaching limits
+#    - Track backup storage costs for budgeting
+#
+# BUSINESS CONTINUITY INTEGRATION:
+# - Backup strategy should align with overall business continuity plan
+# - Define clear roles and responsibilities for backup/restore operations
+# - Establish communication procedures for disaster scenarios
+# - Regular training for operations teams on restore procedures
+#
+# =============================================================================

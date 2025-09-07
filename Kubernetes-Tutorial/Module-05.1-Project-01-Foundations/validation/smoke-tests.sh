@@ -1,52 +1,293 @@
 #!/bin/bash
-
-# E-commerce Foundation Infrastructure - Smoke Tests
-# This script runs basic smoke tests to verify the application is working correctly
+# =============================================================================
+# SMOKE TESTS VALIDATION SCRIPT
+# =============================================================================
+# This script runs basic smoke tests to verify the e-commerce application is
+# working correctly and all critical functionality is operational.
+# =============================================================================
 
 set -euo pipefail
+# =============================================================================
+# SCRIPT CONFIGURATION
+# =============================================================================
+# set -e: Exit immediately if any command fails
+# set -u: Exit if any undefined variable is used
+# set -o pipefail: Exit if any command in a pipeline fails
+# =============================================================================
 
-# Color codes for output
+# =============================================================================
+# COLOR CODES FOR OUTPUT FORMATTING
+# =============================================================================
+# Define color codes for consistent output formatting throughout the script.
+# =============================================================================
+
 RED='\033[0;31m'
+# Purpose: Red color code for error messages and failed tests
+# Why needed: Provides visual distinction for failed test results
+# Impact: Failed tests are displayed in red color
+# Usage: Used in error() function and failed test results
+
 GREEN='\033[0;32m'
+# Purpose: Green color code for success messages and passed tests
+# Why needed: Provides visual distinction for successful test results
+# Impact: Passed tests are displayed in green color
+# Usage: Used in success() function and passed test results
+
 YELLOW='\033[1;33m'
+# Purpose: Yellow color code for warning messages and skipped tests
+# Why needed: Provides visual distinction for warning test results
+# Impact: Warning tests are displayed in yellow color
+# Usage: Used in warning() function and warning test results
+
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+# Purpose: Blue color code for informational messages
+# Why needed: Provides visual distinction for informational output
+# Impact: Info messages are displayed in blue color
+# Usage: Used in log() function for general information
 
-# Configuration
+NC='\033[0m'
+# Purpose: No Color code to reset terminal color
+# Why needed: Resets terminal color after colored output
+# Impact: Prevents color bleeding to subsequent output
+# Usage: Used at end of all colored message functions
+
+# =============================================================================
+# SMOKE TEST CONFIGURATION VARIABLES
+# =============================================================================
+# Define variables for consistent smoke test configuration throughout the script.
+# =============================================================================
+
 NAMESPACE="ecommerce"
+# Purpose: Specifies the Kubernetes namespace for e-commerce application
+# Why needed: Provides consistent namespace reference for smoke tests
+# Impact: All smoke tests target resources in this namespace
+# Value: 'ecommerce' matches the project's application namespace
+
 APP_NAME="ecommerce-backend"
+# Purpose: Specifies the backend application name for smoke tests
+# Why needed: Provides consistent reference for backend test validation
+# Impact: Backend smoke tests target this application
+# Value: Matches the backend deployment name in manifests
+
 SERVICE_NAME="ecommerce-backend-service"
+# Purpose: Specifies the backend service name for connectivity tests
+# Why needed: Provides consistent reference for service test validation
+# Impact: Service connectivity tests target this service
+# Value: Matches the backend service name in manifests
+
 TEST_TIMEOUT=30
+# Purpose: Specifies the timeout for individual test operations in seconds
+# Why needed: Prevents tests from hanging indefinitely
+# Impact: Tests will timeout after this duration if not completed
+# Value: 30 seconds provides reasonable time for test operations
 
-# Test results
+FRONTEND_SERVICE="ecommerce-frontend-service"
+# Purpose: Specifies the frontend service name for web interface tests
+# Why needed: Provides consistent reference for frontend test validation
+# Impact: Frontend smoke tests target this service
+# Value: Matches the frontend service name in manifests
+
+DATABASE_SERVICE="ecommerce-database-service"
+# Purpose: Specifies the database service name for database connectivity tests
+# Why needed: Provides consistent reference for database test validation
+# Impact: Database connectivity tests target this service
+# Value: Matches the database service name in manifests
+
+# =============================================================================
+# SMOKE TEST TRACKING VARIABLES
+# =============================================================================
+# Variables to track smoke test results and statistics.
+# =============================================================================
+
 TESTS_PASSED=0
-TESTS_FAILED=0
-TOTAL_TESTS=0
+# Purpose: Counter for successful smoke tests
+# Why needed: Tracks number of passed smoke tests
+# Impact: Used for test summary and success rate calculation
+# Initial: 0, incremented for each successful test
 
-# Logging function
+TESTS_FAILED=0
+# Purpose: Counter for failed smoke tests
+# Why needed: Tracks number of failed smoke tests
+# Impact: Used for test summary and failure rate calculation
+# Initial: 0, incremented for each failed test
+
+TOTAL_TESTS=0
+# Purpose: Counter for total smoke tests performed
+# Why needed: Tracks total number of smoke tests executed
+# Impact: Used for test summary and completion percentage
+# Initial: 0, incremented for each smoke test performed
+
+# =============================================================================
+# LOGGING FUNCTIONS
+# =============================================================================
+# Functions for consistent logging and output formatting throughout the script.
+# =============================================================================
+
 log() {
-    echo -e "${BLUE}[$(date +'%Y-%m-%d %H:%M:%S')]${NC} $1"
+    # =============================================================================
+    # LOG FUNCTION
+    # =============================================================================
+    # Logs informational messages with timestamp and blue color formatting.
+    # =============================================================================
+    
+    local message="$1"
+    # Purpose: Specifies the message to log
+    # Why needed: Provides the content to be logged
+    # Impact: Message is displayed with timestamp and formatting
+    # Parameter: $1 is the message string to display
+    
+    echo -e "${BLUE}[$(date +'%Y-%m-%d %H:%M:%S')]${NC} $message"
+    # Purpose: Outputs formatted message with timestamp
+    # Why needed: Provides consistent logging format with timestamp
+    # Impact: Message appears with blue timestamp and normal text
+    # Format: [YYYY-MM-DD HH:MM:SS] message
 }
 
 error() {
-    echo -e "${RED}[ERROR]${NC} $1" >&2
+    # =============================================================================
+    # ERROR FUNCTION
+    # =============================================================================
+    # Logs error messages with red color formatting and outputs to stderr.
+    # =============================================================================
+    
+    local message="$1"
+    # Purpose: Specifies the error message to display
+    # Why needed: Provides the error content to be logged
+    # Impact: Message is displayed in red color and sent to stderr
+    # Parameter: $1 is the error message string
+    
+    echo -e "${RED}[ERROR]${NC} $message" >&2
+    # Purpose: Outputs formatted error message in red to stderr
+    # Why needed: Provides visual indication of errors and proper stream handling
+    # Impact: Error message appears in red and goes to error stream
+    # Format: [ERROR] message in red color to stderr
 }
 
 success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
+    # =============================================================================
+    # SUCCESS FUNCTION
+    # =============================================================================
+    # Logs success messages with green color formatting for positive outcomes.
+    # =============================================================================
+    
+    local message="$1"
+    # Purpose: Specifies the success message to display
+    # Why needed: Provides the success content to be logged
+    # Impact: Message is displayed in green color for visual distinction
+    # Parameter: $1 is the success message string
+    
+    echo -e "${GREEN}[SUCCESS]${NC} $message"
+    # Purpose: Outputs formatted success message in green
+    # Why needed: Provides visual confirmation of successful operations
+    # Impact: Success message appears in green for easy identification
+    # Format: [SUCCESS] message in green color
 }
 
 warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
+    # =============================================================================
+    # WARNING FUNCTION
+    # =============================================================================
+    # Logs warning messages with yellow color formatting for cautionary information.
+    # =============================================================================
+    
+    local message="$1"
+    # Purpose: Specifies the warning message to display
+    # Why needed: Provides the warning content to be logged
+    # Impact: Message is displayed in yellow color for attention
+    # Parameter: $1 is the warning message string
+    
+    echo -e "${YELLOW}[WARNING]${NC} $message"
+    # Purpose: Outputs formatted warning message in yellow
+    # Why needed: Provides visual indication of warnings and potential issues
+    # Impact: Warning message appears in yellow for moderate attention
+    # Format: [WARNING] message in yellow color
 }
 
-# Test result function
+# =============================================================================
+# SMOKE TEST RESULT TRACKING FUNCTIONS
+# =============================================================================
+# Functions to track and report smoke test results consistently.
+# =============================================================================
+
 test_result() {
+    # =============================================================================
+    # TEST RESULT FUNCTION
+    # =============================================================================
+    # Records and displays smoke test results with consistent formatting.
+    # =============================================================================
+    
     local test_name="$1"
+    # Purpose: Specifies the name of the smoke test
+    # Why needed: Provides identification for the test being reported
+    # Impact: Test name appears in result output for identification
+    # Parameter: $1 is the smoke test name string
+    
     local result="$2"
+    # Purpose: Specifies the result of the smoke test (PASS/FAIL)
+    # Why needed: Indicates whether the smoke test succeeded or failed
+    # Impact: Determines color and counter updates for the result
+    # Parameter: $2 is the result status string
+    
     local message="$3"
+    # Purpose: Specifies the detailed message for the smoke test result
+    # Why needed: Provides context and details about the test outcome
+    # Impact: Message appears with the result for troubleshooting information
+    # Parameter: $3 is the detailed message string
     
     TOTAL_TESTS=$((TOTAL_TESTS + 1))
+    # Purpose: Increment total smoke tests counter
+    # Why needed: Tracks total number of smoke tests performed
+    # Impact: Used for summary statistics and completion tracking
+    
+    case "$result" in
+        # Purpose: Handle different smoke test result types
+        # Why needed: Different results require different formatting and counters
+        # Impact: Determines output color and counter updates
+        
+        "PASS")
+            # Purpose: Handle successful smoke test results
+            # Why needed: Successful tests should be visually distinct and counted
+            # Impact: Displays green success message and increments passed counter
+            
+            TESTS_PASSED=$((TESTS_PASSED + 1))
+            # Purpose: Increment successful smoke tests counter
+            # Why needed: Tracks number of passed smoke tests
+            # Impact: Used for success rate calculation in summary
+            
+            echo -e "${GREEN}[✓ PASS]${NC} $test_name: $message"
+            # Purpose: Display successful smoke test result in green
+            # Why needed: Provides visual confirmation of successful test
+            # Impact: User sees green checkmark and success message
+            ;;
+            
+        "FAIL")
+            # Purpose: Handle failed smoke test results
+            # Why needed: Failed tests should be visually distinct and counted
+            # Impact: Displays red failure message and increments failed counter
+            
+            TESTS_FAILED=$((TESTS_FAILED + 1))
+            # Purpose: Increment failed smoke tests counter
+            # Why needed: Tracks number of failed smoke tests
+            # Impact: Used for failure rate calculation in summary
+            
+            echo -e "${RED}[✗ FAIL]${NC} $test_name: $message"
+            # Purpose: Display failed smoke test result in red
+            # Why needed: Provides visual indication of failed test
+            # Impact: User sees red X mark and failure message
+            ;;
+            
+        *)
+            # Purpose: Handle unknown smoke test result types
+            # Why needed: Provides fallback for unexpected result values
+            # Impact: Displays unknown result without specific formatting
+            
+            echo -e "[?] $test_name: $message (Unknown result: $result)"
+            # Purpose: Display unknown smoke test result
+            # Why needed: Provides feedback for unexpected result types
+            # Impact: User sees question mark and unknown result indication
+            ;;
+    esac
+}
     
     if [[ "$result" == "PASS" ]]; then
         success "✓ $test_name: $message"

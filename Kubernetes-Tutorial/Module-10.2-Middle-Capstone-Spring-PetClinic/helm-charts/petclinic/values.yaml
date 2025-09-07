@@ -1,0 +1,60 @@
+global:
+  namespace: petclinic
+  imageRegistry: springcommunity
+  imageTag: "3.2.0"
+
+configServer:
+  enabled: true
+  replicas: 1
+  image: spring-petclinic-config-server
+  port: 8888
+
+discoveryServer:
+  enabled: true
+  replicas: 1
+  image: spring-petclinic-discovery-server
+  port: 8761
+
+apiGateway:
+  enabled: true
+  replicas: 2
+  image: spring-petclinic-api-gateway
+  port: 8080
+  serviceType: LoadBalancer
+
+customersService:
+  enabled: true
+  replicas: 2
+  image: spring-petclinic-customers-service
+  port: 8081
+
+vetsService:
+  enabled: true
+  replicas: 2
+  image: spring-petclinic-vets-service
+  port: 8083
+
+visitsService:
+  enabled: true
+  replicas: 2
+  image: spring-petclinic-visits-service
+  port: 8082
+
+adminServer:
+  enabled: true
+  replicas: 1
+  image: spring-petclinic-admin-server
+  port: 9090
+
+mysql:
+  enabled: true
+  storageSize: 10Gi
+  rootPassword: rootpassword123
+  username: petclinic
+  password: petclinic123
+
+monitoring:
+  prometheus:
+    enabled: true
+  grafana:
+    enabled: true

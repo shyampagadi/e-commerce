@@ -1,0 +1,102 @@
+# =============================================================================
+# PROMETHEUS ALERTING CONFIGURATION
+# =============================================================================
+# Purpose: Additional alerting configuration for Prometheus
+# Why needed: Integrates Prometheus with AlertManager for comprehensive alerting
+# Kubernetes concept: ConfigMap stores additional Prometheus configuration
+# This file should be merged with the main prometheus-config.yaml
+
+apiVersion: v1
+# API Version: v1 is the stable version for ConfigMap resources
+# This is the most commonly used API version for configuration storage
+
+kind: ConfigMap
+# Resource Type: ConfigMap provides configuration data to pods
+# This enables externalized configuration management for Prometheus
+
+metadata:
+  # Metadata section contains identifying information about the resource
+  name: prometheus-alerting-config
+  # Name: Unique identifier for this ConfigMap within the namespace
+  # This name will be used to reference the configuration in Prometheus deployment
+  
+  namespace: ecommerce
+  # Namespace: Specifies which namespace this ConfigMap belongs to
+  # Must match the namespace created in the namespace.yaml file
+  
+  labels:
+    # Labels: Key-value pairs for organizing and selecting resources
+    app: prometheus
+    # app: prometheus - Identifies this ConfigMap as belonging to Prometheus
+    component: monitoring
+    # component: monitoring - Identifies this as a monitoring component
+    tier: observability
+    # tier: observability - Identifies this as observability tier
+    environment: production
+    # environment: production - Indicates this is for production environment
+    managed-by: kubernetes
+    # managed-by: kubernetes - Indicates this resource is managed by Kubernetes
+  
+  annotations:
+    # Annotations: Additional metadata that doesn't affect resource behavior
+    description: "Alerting configuration for Prometheus integration with AlertManager"
+    # description: Human-readable description of the ConfigMap purpose
+    # Used for documentation and operational understanding
+    
+    contact: "platform-engineering@company.com"
+    # contact: Email address for the team responsible for this ConfigMap
+    # Used for incident response and maintenance coordination
+    
+    last-updated: "2024-12-01T00:00:00Z"
+    # last-updated: Timestamp of last modification
+    # Used for change tracking and audit purposes
+    
+    version: "1.0.0"
+    # version: Version identifier for this ConfigMap configuration
+    # Used for version control and rollback purposes
+
+data:
+  # Data section contains the configuration files
+  # Each key represents a configuration file name
+  # Each value represents the configuration file content
+  
+  alerting.yml: |
+    # =============================================================================
+    # ALERTING CONFIGURATION FOR PROMETHEUS
+    # =============================================================================
+    # Purpose: Defines how Prometheus sends alerts to AlertManager
+    # Why needed: Enables alert routing and notification
+    # This configuration should be added to the main prometheus.yml file
+    
+    # =============================================================================
+    # ALERTING CONFIGURATION
+    # =============================================================================
+    alerting:
+      # alerting: Alerting configuration section
+      # Purpose: Defines how Prometheus sends alerts to AlertManager
+      # Impact: Enables alert routing and notification
+      # Production consideration: Critical for incident response and monitoring
+      
+      alertmanagers:
+        # alertmanagers: List of AlertManager instances
+        # Purpose: Specifies where to send alerts
+        # Impact: Alerts are sent to these AlertManager instances
+        # Production consideration: Should include all AlertManager instances
+        
+        - static_configs:
+            # static_configs: Static AlertManager configuration
+            # Purpose: Defines static AlertManager targets
+            # Impact: Prometheus sends alerts to these targets
+            # Production consideration: Simple and reliable for known targets
+            
+            - targets:
+                # targets: List of AlertManager targets
+                # Purpose: Specifies AlertManager endpoints
+                # Impact: Alerts are sent to these endpoints
+                # Production consideration: Should use service names for reliability
+                
+                - alertmanager-service.ecommerce.svc.cluster.local:9093
+                # alertmanager-service.ecommerce.svc.cluster.local:9093 - AlertManager target
+                # Purpose: FQDN of AlertManager service
+                # Impact: Prometheus sends alerts to this AlertManager instance
+                # Production consideration: Uses service FQDN for reliability

@@ -1,0 +1,273 @@
+# =============================================================================
+# ALERTMANAGER CONFIGURATION - COMPREHENSIVE ALERT ROUTING DOCUMENTATION
+# =============================================================================
+# This file defines the AlertManager configuration for the PetClinic monitoring
+# stack, handling alert routing, grouping, inhibition, and notification delivery.
+# AlertManager processes alerts from Prometheus and routes them to appropriate
+# notification channels based on severity, labels, and routing rules.
+#
+# ALERTING PHILOSOPHY: AlertManager implements intelligent alert routing and
+# deduplication to reduce alert fatigue while ensuring critical issues receive
+# immediate attention through appropriate notification channels.
+#
+# OPERATIONAL CRITICALITY: This configuration directly controls how and when
+# operations teams are notified of system issues, making it essential for
+# incident response and system reliability.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# GLOBAL ALERTMANAGER CONFIGURATION - SYSTEM-WIDE SETTINGS
+# -----------------------------------------------------------------------------
+# Global configuration section defines system-wide AlertManager settings
+# These settings apply to all routes and receivers unless overridden
+global:
+  # SMTP server configuration for email notifications
+  smtp_smarthost: 'localhost:587'
+  # SMTP_SMARTHOST: Mail server endpoint for email delivery
+  # LOCALHOST_CONFIG: Development configuration using local mail server
+  # PRODUCTION_NOTE: Replace with enterprise SMTP server (e.g., smtp.company.com:587)
+  
+  # Default sender address for alert emails
+  smtp_from: 'alerts@petclinic.local'
+  # FROM_ADDRESS: Source email address for all alert notifications
+  # BRANDING: Should reflect organization's domain and alert system identity
+  # PRODUCTION_NOTE: Use proper organizational email address
+
+# -----------------------------------------------------------------------------
+# ALERT ROUTING CONFIGURATION - INTELLIGENT ALERT DISTRIBUTION
+# -----------------------------------------------------------------------------
+# Route configuration defines how alerts are grouped, timed, and distributed
+# This is the core logic that determines alert handling behavior
+route:
+  # Alert grouping strategy - groups alerts by alert name
+  group_by: ['alertname']
+  # GROUPING_STRATEGY: Groups similar alerts together to reduce notification volume
+  # ALERTNAME_GROUPING: Alerts with same name are batched into single notification
+  # ALTERNATIVE_STRATEGIES: Can group by ['cluster', 'service'] or ['severity']
+  
+  # Initial wait time before sending first notification for a group
+  group_wait: 10s
+  # GROUP_WAIT: Allows time for related alerts to arrive before sending notification
+  # BATCHING_EFFICIENCY: Reduces notification spam during cascading failures
+  # TIMING_BALANCE: 10 seconds balances responsiveness with grouping effectiveness
+  
+  # Wait time before sending notification about new alerts in existing group
+  group_interval: 10s
+  # GROUP_INTERVAL: Time between notifications for same alert group
+  # UPDATE_FREQUENCY: How often to notify about new alerts in existing groups
+  # OPERATIONAL_BALANCE: Frequent enough for awareness, not too frequent for fatigue
+  
+  # Time before re-sending notification for unresolved alerts
+  repeat_interval: 1h
+  # REPEAT_INTERVAL: Reminder frequency for ongoing issues
+  # PERSISTENCE_STRATEGY: Ensures ongoing issues aren't forgotten
+  # ESCALATION_TIMING: 1-hour intervals provide regular reminders without spam
+  
+  # Default receiver for all alerts
+  receiver: 'web.hook'
+  # DEFAULT_RECEIVER: Fallback notification destination for all alerts
+  # WEBHOOK_INTEGRATION: Uses webhook for flexible notification handling
+  # EXTENSIBILITY: Webhooks can integrate with various notification systems
+
+# -----------------------------------------------------------------------------
+# NOTIFICATION RECEIVERS - ALERT DELIVERY ENDPOINTS
+# -----------------------------------------------------------------------------
+# Receivers define the actual notification endpoints and delivery methods
+# Each receiver can have multiple notification channels (email, webhook, Slack, etc.)
+receivers:
+# Default webhook receiver configuration
+- name: 'web.hook'
+  # RECEIVER_NAME: Unique identifier referenced by routing rules
+  # NAMING_CONVENTION: Descriptive names for operational clarity
+  
+  # Webhook notification configuration
+  webhook_configs:
+  - # Webhook endpoint URL for alert delivery
+    url: 'http://localhost:5001/'
+    # WEBHOOK_URL: HTTP endpoint that receives alert notifications
+    # LOCALHOST_CONFIG: Development configuration using local webhook server
+    # PRODUCTION_INTEGRATION: Replace with actual notification service URL
+    # EXAMPLES: Slack webhook, PagerDuty integration, custom notification service
+    
+    # Send resolved alert notifications
+    send_resolved: true
+    # RESOLVED_NOTIFICATIONS: Notifies when alerts are resolved
+    # CLOSURE_AWARENESS: Keeps teams informed about issue resolution
+    # OPERATIONAL_BENEFIT: Provides complete alert lifecycle visibility
+
+# -----------------------------------------------------------------------------
+# ALERT INHIBITION RULES - INTELLIGENT ALERT SUPPRESSION
+# -----------------------------------------------------------------------------
+# Inhibit rules prevent lower-severity alerts when higher-severity alerts are active
+# This reduces alert noise during major incidents when multiple related alerts fire
+inhibit_rules:
+  # Inhibition rule: Critical alerts suppress warning alerts
+  - # Source match criteria - alerts that trigger inhibition
+    source_match:
+      severity: 'critical'
+      # CRITICAL_ALERTS: High-severity alerts that should suppress lower-severity ones
+      # INCIDENT_FOCUS: During critical incidents, focus on critical alerts only
+    
+    # Target match criteria - alerts that get suppressed
+    target_match:
+      severity: 'warning'
+      # WARNING_SUPPRESSION: Warning alerts suppressed when critical alerts active
+      # NOISE_REDUCTION: Prevents warning alert fatigue during critical incidents
+    
+    # Labels that must match between source and target for inhibition
+    equal: ['alertname', 'dev', 'instance']
+    # MATCHING_CRITERIA: Inhibition only applies to alerts with same alertname, dev, and instance
+    # PRECISION_INHIBITION: Ensures only related alerts are suppressed
+    # LABEL_CORRELATION: Prevents over-broad suppression of unrelated alerts
+
+# =============================================================================
+# ALERTMANAGER CONFIGURATION ANALYSIS AND PRODUCTION ENHANCEMENTS
+# =============================================================================
+#
+# CURRENT CONFIGURATION STRENGTHS:
+# ✅ ALERT GROUPING: Reduces notification volume through intelligent grouping
+# ✅ TIMING OPTIMIZATION: Balanced timing for responsiveness and efficiency
+# ✅ INHIBITION RULES: Prevents alert fatigue during critical incidents
+# ✅ RESOLVED NOTIFICATIONS: Complete alert lifecycle visibility
+# ✅ WEBHOOK INTEGRATION: Flexible notification delivery mechanism
+#
+# PRODUCTION ENHANCEMENTS NEEDED:
+#
+# 1. MULTI-CHANNEL NOTIFICATION CONFIGURATION:
+#    receivers:
+#    - name: 'critical-alerts'
+#      email_configs:
+#      - to: 'oncall@company.com'
+#        subject: 'CRITICAL: {{ .GroupLabels.alertname }}'
+#        body: |
+#          {{ range .Alerts }}
+#          Alert: {{ .Annotations.summary }}
+#          Description: {{ .Annotations.description }}
+#          {{ end }}
+#      slack_configs:
+#      - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+#        channel: '#alerts-critical'
+#        title: 'Critical Alert: {{ .GroupLabels.alertname }}'
+#      pagerduty_configs:
+#      - routing_key: 'YOUR_PAGERDUTY_INTEGRATION_KEY'
+#        description: '{{ .GroupLabels.alertname }}'
+#
+# 2. ADVANCED ROUTING CONFIGURATION:
+#    route:
+#      group_by: ['alertname', 'cluster', 'service']
+#      routes:
+#      - match:
+#          severity: critical
+#        receiver: 'critical-alerts'
+#        group_wait: 5s
+#        repeat_interval: 30m
+#      - match:
+#          severity: warning
+#        receiver: 'warning-alerts'
+#        group_wait: 30s
+#        repeat_interval: 4h
+#      - match:
+#          team: database
+#        receiver: 'database-team'
+#      - match:
+#          service: payment
+#        receiver: 'payment-team'
+#
+# 3. ENHANCED INHIBITION RULES:
+#    inhibit_rules:
+#    - source_match:
+#        alertname: 'ServiceDown'
+#      target_match_re:
+#        alertname: '(HighLatency|HighErrorRate)'
+#      equal: ['service', 'instance']
+#    - source_match:
+#        alertname: 'NodeDown'
+#      target_match_re:
+#        alertname: '(HighCPU|HighMemory|DiskFull)'
+#      equal: ['instance']
+#
+# 4. SECURITY AND AUTHENTICATION:
+#    global:
+#      smtp_auth_username: 'alerts@company.com'
+#      smtp_auth_password_file: '/etc/alertmanager/smtp_password'
+#      smtp_require_tls: true
+#    
+#    # TLS configuration for webhook endpoints
+#    webhook_configs:
+#    - url: 'https://secure-webhook.company.com/alerts'
+#      tls_config:
+#        cert_file: '/etc/alertmanager/client.crt'
+#        key_file: '/etc/alertmanager/client.key'
+#        ca_file: '/etc/alertmanager/ca.crt'
+#
+# NOTIFICATION CHANNEL BEST PRACTICES:
+#
+# 1. SEVERITY-BASED ROUTING:
+#    # Critical: PagerDuty + Slack + Email
+#    # Warning: Slack + Email
+#    # Info: Email only
+#
+# 2. TEAM-BASED ROUTING:
+#    # Route alerts to responsible teams based on service labels
+#    # Escalation paths for unacknowledged critical alerts
+#    # Business hours vs. after-hours notification strategies
+#
+# 3. NOTIFICATION TEMPLATES:
+#    templates:
+#    - '/etc/alertmanager/templates/*.tmpl'
+#    
+#    # Custom email template
+#    {{ define "email.subject" }}
+#    [{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] 
+#    {{ .GroupLabels.SortedPairs.Values | join " " }}
+#    {{ end }}
+#
+# OPERATIONAL PROCEDURES:
+#
+# 1. ALERT TESTING:
+#    # Test alert delivery channels regularly
+#    # Verify escalation procedures
+#    # Validate inhibition rules effectiveness
+#    # Check notification template rendering
+#
+# 2. ALERT TUNING:
+#    # Regular review of alert frequency and relevance
+#    # Adjustment of thresholds based on operational experience
+#    # Optimization of grouping and timing parameters
+#    # Feedback loop from operations teams
+#
+# 3. INCIDENT RESPONSE INTEGRATION:
+#    # Integration with incident management systems
+#    # Automatic ticket creation for critical alerts
+#    # Alert correlation with monitoring dashboards
+#    # Post-incident alert effectiveness review
+#
+# COMPLIANCE AND GOVERNANCE:
+#
+# 1. AUDIT LOGGING:
+#    # Log all alert notifications for compliance
+#    # Track alert acknowledgment and resolution
+#    # Monitor notification delivery success rates
+#    # Maintain alert history for incident analysis
+#
+# 2. SLA MONITORING:
+#    # Track alert notification delivery times
+#    # Monitor mean time to acknowledgment (MTTA)
+#    # Measure mean time to resolution (MTTR)
+#    # Report on alerting system availability
+#
+# DISASTER RECOVERY:
+#
+# 1. ALERTMANAGER HIGH AVAILABILITY:
+#    # Multiple AlertManager instances with clustering
+#    # Shared storage for alert state persistence
+#    # Load balancing across AlertManager instances
+#    # Automatic failover for notification delivery
+#
+# 2. NOTIFICATION REDUNDANCY:
+#    # Multiple notification channels for critical alerts
+#    # Backup notification systems for primary system failures
+#    # Cross-region notification delivery
+#    # Emergency contact procedures for system-wide failures
+#
+# =============================================================================

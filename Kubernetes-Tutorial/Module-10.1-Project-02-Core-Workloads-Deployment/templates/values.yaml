@@ -1,0 +1,749 @@
+# =============================================================================
+# HELM CHART DEFAULT VALUES
+# =============================================================================
+# Purpose: Default values for the e-commerce application Helm chart
+# Why needed: Provides default configuration that can be overridden
+# This file contains all default values for the Helm chart
+
+# =============================================================================
+# GLOBAL CONFIGURATION
+# =============================================================================
+global:
+  # Global configuration settings
+  environment: "development"
+  # environment: development - Default environment
+  # Purpose: Sets the default environment for the application
+  # Impact: Used throughout the application for environment-specific behavior
+  # Production consideration: Override in production values files
+  
+  namespace: "ecommerce"
+  # namespace: ecommerce - Default namespace
+  # Purpose: Sets the default Kubernetes namespace
+  # Impact: All resources are created in this namespace
+  # Production consideration: Override in production values files
+  
+  imageRegistry: "registry.company.com"
+  # imageRegistry: registry.company.com - Default image registry
+  # Purpose: Sets the default container image registry
+  # Impact: All images are pulled from this registry
+  # Production consideration: Override in production values files
+  
+  imageTag: "latest"
+  # imageTag: latest - Default image tag
+  # Purpose: Sets the default image tag
+  # Impact: All images use this tag unless overridden
+  # Production consideration: Override in production values files
+  
+  imagePullPolicy: "IfNotPresent"
+  # imagePullPolicy: IfNotPresent - Default image pull policy
+  # Purpose: Sets the default image pull policy
+  # Impact: Controls when images are pulled from registry
+  # Production consideration: Override in production values files
+
+# =============================================================================
+# E-COMMERCE APPLICATION CONFIGURATION
+# =============================================================================
+ecommerce:
+  # E-commerce application configuration
+  enabled: true
+  # enabled: true - Enable e-commerce application
+  # Purpose: Controls whether to deploy the e-commerce application
+  # Impact: Application is deployed when true
+  # Production consideration: Always true in production
+  
+  # Backend configuration
+  backend:
+    enabled: true
+    # enabled: true - Enable backend service
+    # Purpose: Controls whether to deploy the backend
+    # Impact: Backend is deployed when true
+    # Production consideration: Always true in production
+    
+    image:
+      repository: "ecommerce-backend"
+      # repository: ecommerce-backend - Backend image repository
+      # Purpose: Name of the backend image repository
+      # Impact: Backend image is pulled from this repository
+      # Production consideration: Use consistent naming across environments
+      
+      tag: ""
+      # tag: "" - Backend image tag (empty uses global.imageTag)
+      # Purpose: Specific version of the backend image
+      # Impact: Backend uses this specific image version
+      # Production consideration: Use specific version tags in production
+      
+      pullPolicy: ""
+      # pullPolicy: "" - Backend image pull policy (empty uses global.imagePullPolicy)
+      # Purpose: Controls when to pull the backend image
+      # Impact: Image is pulled based on this policy
+      # Production consideration: Use appropriate policies for different environments
+    
+    replicas: 1
+    # replicas: 1 - Number of backend replicas
+    # Purpose: Controls backend scaling
+    # Impact: Single replica for development
+    # Production consideration: Use multiple replicas in production for high availability
+    
+    resources:
+      # resources: Backend resource requirements and limits
+      # Purpose: Specifies CPU and memory requirements
+      # Impact: Kubernetes schedules pods based on these requirements
+      # Production consideration: Adjust based on actual usage patterns
+      
+      requests:
+        # requests: Minimum resource requirements
+        # Purpose: Specifies minimum resources needed
+        # Impact: Kubernetes ensures these resources are available
+        # Production consideration: Should be based on actual usage
+        
+        cpu: "100m"
+        # cpu: 100m - CPU request
+        # Purpose: Minimum CPU allocation (0.1 cores)
+        # Impact: Backend is guaranteed at least this CPU
+        # Production consideration: Adjust based on actual usage
+        
+        memory: "128Mi"
+        # memory: 128Mi - Memory request
+        # Purpose: Minimum memory allocation (128 megabytes)
+        # Impact: Backend is guaranteed at least this memory
+        # Production consideration: Adjust based on actual usage
+      
+      limits:
+        # limits: Maximum resource usage
+        # Purpose: Specifies maximum resources the backend can use
+        # Impact: Backend cannot exceed these limits
+        # Production consideration: Prevents resource exhaustion
+        
+        cpu: "500m"
+        # cpu: 500m - CPU limit
+        # Purpose: Maximum CPU allocation (0.5 cores)
+        # Impact: Backend cannot use more than this CPU
+        # Production consideration: Adjust based on actual usage
+        
+        memory: "256Mi"
+        # memory: 256Mi - Memory limit
+        # Purpose: Maximum memory allocation (256 megabytes)
+        # Impact: Backend cannot use more than this memory
+        # Production consideration: Adjust based on actual usage
+    
+    service:
+      # service: Backend service configuration
+      # Purpose: Configures how the backend is exposed
+      # Impact: Determines backend accessibility
+      # Production consideration: Use appropriate service types
+      
+      type: "ClusterIP"
+      # type: ClusterIP - Service type
+      # Purpose: Exposes service on cluster-internal IP
+      # Impact: Backend is only accessible within the cluster
+      # Production consideration: Use ClusterIP for security
+      
+      port: 8000
+      # port: 8000 - Service port
+      # Purpose: Port on which the service listens
+      # Impact: Clients connect to this port to access backend
+      # Production consideration: Use standard ports for consistency
+    
+    env:
+      # env: Backend environment variables
+      # Purpose: Provides configuration data to the backend
+      # Impact: Backend behavior is controlled by these variables
+      # Production consideration: Use different values for different environments
+      
+      NODE_ENV: "development"
+      # NODE_ENV: development - Node.js environment
+      # Purpose: Sets the Node.js environment
+      # Impact: Backend runs in development mode
+      # Production consideration: Use production in production environment
+      
+      PORT: "8000"
+      # PORT: 8000 - Backend port
+      # Purpose: Port on which the backend listens
+      # Impact: Backend accepts connections on this port
+      # Production consideration: Use standard ports for consistency
+      
+      LOG_LEVEL: "debug"
+      # LOG_LEVEL: debug - Logging level
+      # Purpose: Controls the verbosity of logging
+      # Impact: Backend logs more information in development
+      # Production consideration: Use info or warn in production
+  
+  # Frontend configuration
+  frontend:
+    enabled: true
+    # enabled: true - Enable frontend service
+    # Purpose: Controls whether to deploy the frontend
+    # Impact: Frontend is deployed when true
+    # Production consideration: Always true in production
+    
+    image:
+      repository: "ecommerce-frontend"
+      # repository: ecommerce-frontend - Frontend image repository
+      # Purpose: Name of the frontend image repository
+      # Impact: Frontend image is pulled from this repository
+      # Production consideration: Use consistent naming across environments
+      
+      tag: ""
+      # tag: "" - Frontend image tag (empty uses global.imageTag)
+      # Purpose: Specific version of the frontend image
+      # Impact: Frontend uses this specific image version
+      # Production consideration: Use specific version tags in production
+      
+      pullPolicy: ""
+      # pullPolicy: "" - Frontend image pull policy (empty uses global.imagePullPolicy)
+      # Purpose: Controls when to pull the frontend image
+      # Impact: Image is pulled based on this policy
+      # Production consideration: Use appropriate policies for different environments
+    
+    replicas: 1
+    # replicas: 1 - Number of frontend replicas
+    # Purpose: Controls frontend scaling
+    # Impact: Single replica for development
+    # Production consideration: Use multiple replicas in production for high availability
+    
+    resources:
+      # resources: Frontend resource requirements and limits
+      # Purpose: Specifies CPU and memory requirements
+      # Impact: Kubernetes schedules pods based on these requirements
+      # Production consideration: Adjust based on actual usage patterns
+      
+      requests:
+        # requests: Minimum resource requirements
+        # Purpose: Specifies minimum resources needed
+        # Impact: Kubernetes ensures these resources are available
+        # Production consideration: Should be based on actual usage
+        
+        cpu: "50m"
+        # cpu: 50m - CPU request
+        # Purpose: Minimum CPU allocation (0.05 cores)
+        # Impact: Frontend is guaranteed at least this CPU
+        # Production consideration: Adjust based on actual usage
+        
+        memory: "64Mi"
+        # memory: 64Mi - Memory request
+        # Purpose: Minimum memory allocation (64 megabytes)
+        # Impact: Frontend is guaranteed at least this memory
+        # Production consideration: Adjust based on actual usage
+      
+      limits:
+        # limits: Maximum resource usage
+        # Purpose: Specifies maximum resources the frontend can use
+        # Impact: Frontend cannot exceed these limits
+        # Production consideration: Prevents resource exhaustion
+        
+        cpu: "200m"
+        # cpu: 200m - CPU limit
+        # Purpose: Maximum CPU allocation (0.2 cores)
+        # Impact: Frontend cannot use more than this CPU
+        # Production consideration: Adjust based on actual usage
+        
+        memory: "128Mi"
+        # memory: 128Mi - Memory limit
+        # Purpose: Maximum memory allocation (128 megabytes)
+        # Impact: Frontend cannot use more than this memory
+        # Production consideration: Adjust based on actual usage
+    
+    service:
+      # service: Frontend service configuration
+      # Purpose: Configures how the frontend is exposed
+      # Impact: Determines frontend accessibility
+      # Production consideration: Use appropriate service types
+      
+      type: "ClusterIP"
+      # type: ClusterIP - Service type
+      # Purpose: Exposes service on cluster-internal IP
+      # Impact: Frontend is only accessible within the cluster
+      # Production consideration: Use ClusterIP for security
+      
+      port: 3000
+      # port: 3000 - Service port
+      # Purpose: Port on which the service listens
+      # Impact: Clients connect to this port to access frontend
+      # Production consideration: Use standard ports for consistency
+    
+    env:
+      # env: Frontend environment variables
+      # Purpose: Provides configuration data to the frontend
+      # Impact: Frontend behavior is controlled by these variables
+      # Production consideration: Use different values for different environments
+      
+      NODE_ENV: "development"
+      # NODE_ENV: development - Node.js environment
+      # Purpose: Sets the Node.js environment
+      # Impact: Frontend runs in development mode
+      # Production consideration: Use production in production environment
+      
+      PORT: "3000"
+      # PORT: 3000 - Frontend port
+      # Purpose: Port on which the frontend listens
+      # Impact: Frontend accepts connections on this port
+      # Production consideration: Use standard ports for consistency
+      
+      REACT_APP_API_BASE_URL: "http://ecommerce-backend-service:8000"
+      # REACT_APP_API_BASE_URL: Backend API URL
+      # Purpose: URL for frontend to access backend API
+      # Impact: Frontend makes API calls to this URL
+      # Production consideration: Use external URLs in production
+  
+  # Database configuration
+  database:
+    enabled: true
+    # enabled: true - Enable database service
+    # Purpose: Controls whether to deploy the database
+    # Impact: Database is deployed when true
+    # Production consideration: Always true in production
+    
+    image:
+      repository: "postgres"
+      # repository: postgres - Database image repository
+      # Purpose: Name of the database image repository
+      # Impact: Database image is pulled from this repository
+      # Production consideration: Use consistent naming across environments
+      
+      tag: "15-alpine"
+      # tag: 15-alpine - Database image tag
+      # Purpose: Specific version of the database image
+      # Impact: Database uses this specific image version
+      # Production consideration: Use specific version tags in production
+      
+      pullPolicy: "IfNotPresent"
+      # pullPolicy: IfNotPresent - Database image pull policy
+      # Purpose: Controls when to pull the database image
+      # Impact: Image is only pulled if not present locally
+      # Production consideration: Use IfNotPresent for stability
+    
+    replicas: 1
+    # replicas: 1 - Number of database replicas
+    # Purpose: Controls database scaling
+    # Impact: Single replica for data consistency
+    # Production consideration: Use single replica for data consistency
+    
+    resources:
+      # resources: Database resource requirements and limits
+      # Purpose: Specifies CPU and memory requirements
+      # Impact: Kubernetes schedules pods based on these requirements
+      # Production consideration: Adjust based on actual usage patterns
+      
+      requests:
+        # requests: Minimum resource requirements
+        # Purpose: Specifies minimum resources needed
+        # Impact: Kubernetes ensures these resources are available
+        # Production consideration: Should be based on actual usage
+        
+        cpu: "100m"
+        # cpu: 100m - CPU request
+        # Purpose: Minimum CPU allocation (0.1 cores)
+        # Impact: Database is guaranteed at least this CPU
+        # Production consideration: Adjust based on actual usage
+        
+        memory: "256Mi"
+        # memory: 256Mi - Memory request
+        # Purpose: Minimum memory allocation (256 megabytes)
+        # Impact: Database is guaranteed at least this memory
+        # Production consideration: Adjust based on actual usage
+      
+      limits:
+        # limits: Maximum resource usage
+        # Purpose: Specifies maximum resources the database can use
+        # Impact: Database cannot exceed these limits
+        # Production consideration: Prevents resource exhaustion
+        
+        cpu: "500m"
+        # cpu: 500m - CPU limit
+        # Purpose: Maximum CPU allocation (0.5 cores)
+        # Impact: Database cannot use more than this CPU
+        # Production consideration: Adjust based on actual usage
+        
+        memory: "512Mi"
+        # memory: 512Mi - Memory limit
+        # Purpose: Maximum memory allocation (512 megabytes)
+        # Impact: Database cannot use more than this memory
+        # Production consideration: Adjust based on actual usage
+    
+    service:
+      # service: Database service configuration
+      # Purpose: Configures how the database is exposed
+      # Impact: Determines database accessibility
+      # Production consideration: Use appropriate service types
+      
+      type: "ClusterIP"
+      # type: ClusterIP - Service type
+      # Purpose: Exposes service on cluster-internal IP
+      # Impact: Database is only accessible within the cluster
+      # Production consideration: Use ClusterIP for security
+      
+      port: 5432
+      # port: 5432 - Service port
+      # Purpose: Port on which the service listens
+      # Impact: Clients connect to this port to access database
+      # Production consideration: Use standard ports for consistency
+    
+    env:
+      # env: Database environment variables
+      # Purpose: Provides configuration data to the database
+      # Impact: Database behavior is controlled by these variables
+      # Production consideration: Use different values for different environments
+      
+      POSTGRES_DB: "ecommerce"
+      # POSTGRES_DB: ecommerce - Database name
+      # Purpose: Name of the database to create
+      # Impact: Database creates this database on startup
+      # Production consideration: Use different names for different environments
+      
+      POSTGRES_USER: "postgres"
+      # POSTGRES_USER: postgres - Database user
+      # Purpose: Username for database access
+      # Impact: Database creates this user on startup
+      # Production consideration: Use different users for different environments
+      
+      POSTGRES_PASSWORD: "password"
+      # POSTGRES_PASSWORD: password - Database password
+      # Purpose: Password for database access
+      # Impact: Database uses this password for authentication
+      # Production consideration: Use strong passwords in production
+    
+    persistence:
+      # persistence: Database persistence configuration
+      # Purpose: Configures data persistence for the database
+      # Impact: Determines how database data is stored
+      # Production consideration: Use appropriate storage classes
+      
+      enabled: true
+      # enabled: true - Enable persistence
+      # Purpose: Controls whether to use persistent storage
+      # Impact: Database data is persisted when true
+      # Production consideration: Always true in production
+      
+      size: "10Gi"
+      # size: 10Gi - Storage size
+      # Purpose: Size of the persistent volume
+      # Impact: Database has this much storage available
+      # Production consideration: Adjust based on actual usage
+      
+      storageClass: "standard"
+      # storageClass: standard - Storage class
+      # Purpose: Kubernetes storage class to use
+      # Impact: Determines storage backend and performance
+      # Production consideration: Use appropriate storage classes for production
+
+# =============================================================================
+# MONITORING CONFIGURATION
+# =============================================================================
+monitoring:
+  # Monitoring stack configuration
+  enabled: true
+  # enabled: true - Enable monitoring stack
+  # Purpose: Controls whether to deploy the monitoring stack
+  # Impact: Monitoring stack is deployed when true
+  # Production consideration: Always true in production
+  
+  # Prometheus configuration
+  prometheus:
+    enabled: true
+    # enabled: true - Enable Prometheus
+    # Purpose: Controls whether to deploy Prometheus
+    # Impact: Prometheus is deployed when true
+    # Production consideration: Always true in production
+    
+    image:
+      repository: "prom/prometheus"
+      # repository: prom/prometheus - Prometheus image repository
+      # Purpose: Name of the Prometheus image repository
+      # Impact: Prometheus image is pulled from this repository
+      # Production consideration: Use consistent naming across environments
+      
+      tag: "v2.45.0"
+      # tag: v2.45.0 - Prometheus image tag
+      # Purpose: Specific version of the Prometheus image
+      # Impact: Prometheus uses this specific image version
+      # Production consideration: Use specific version tags in production
+      
+      pullPolicy: "IfNotPresent"
+      # pullPolicy: IfNotPresent - Prometheus image pull policy
+      # Purpose: Controls when to pull the Prometheus image
+      # Impact: Image is only pulled if not present locally
+      # Production consideration: Use IfNotPresent for stability
+    
+    replicas: 1
+    # replicas: 1 - Number of Prometheus replicas
+    # Purpose: Controls Prometheus scaling
+    # Impact: Single replica for data consistency
+    # Production consideration: Use single replica for data consistency
+    
+    resources:
+      # resources: Prometheus resource requirements and limits
+      # Purpose: Specifies CPU and memory requirements
+      # Impact: Kubernetes schedules pods based on these requirements
+      # Production consideration: Adjust based on actual usage patterns
+      
+      requests:
+        # requests: Minimum resource requirements
+        # Purpose: Specifies minimum resources needed
+        # Impact: Kubernetes ensures these resources are available
+        # Production consideration: Should be based on actual usage
+        
+        cpu: "200m"
+        # cpu: 200m - CPU request
+        # Purpose: Minimum CPU allocation (0.2 cores)
+        # Impact: Prometheus is guaranteed at least this CPU
+        # Production consideration: Adjust based on actual usage
+        
+        memory: "512Mi"
+        # memory: 512Mi - Memory request
+        # Purpose: Minimum memory allocation (512 megabytes)
+        # Impact: Prometheus is guaranteed at least this memory
+        # Production consideration: Adjust based on actual usage
+      
+      limits:
+        # limits: Maximum resource usage
+        # Purpose: Specifies maximum resources Prometheus can use
+        # Impact: Prometheus cannot exceed these limits
+        # Production consideration: Prevents resource exhaustion
+        
+        cpu: "1000m"
+        # cpu: 1000m - CPU limit
+        # Purpose: Maximum CPU allocation (1 core)
+        # Impact: Prometheus cannot use more than this CPU
+        # Production consideration: Adjust based on actual usage
+        
+        memory: "2Gi"
+        # memory: 2Gi - Memory limit
+        # Purpose: Maximum memory allocation (2 gigabytes)
+        # Impact: Prometheus cannot use more than this memory
+        # Production consideration: Adjust based on actual usage
+    
+    persistence:
+      # persistence: Prometheus persistence configuration
+      # Purpose: Configures data persistence for Prometheus
+      # Impact: Determines how Prometheus data is stored
+      # Production consideration: Use appropriate storage classes
+      
+      enabled: true
+      # enabled: true - Enable persistence
+      # Purpose: Controls whether to use persistent storage
+      # Impact: Prometheus data is persisted when true
+      # Production consideration: Always true in production
+      
+      size: "20Gi"
+      # size: 20Gi - Storage size
+      # Purpose: Size of the persistent volume
+      # Impact: Prometheus has this much storage available
+      # Production consideration: Adjust based on actual usage
+      
+      storageClass: "standard"
+      # storageClass: standard - Storage class
+      # Purpose: Kubernetes storage class to use
+      # Impact: Determines storage backend and performance
+      # Production consideration: Use appropriate storage classes for production
+  
+  # Grafana configuration
+  grafana:
+    enabled: true
+    # enabled: true - Enable Grafana
+    # Purpose: Controls whether to deploy Grafana
+    # Impact: Grafana is deployed when true
+    # Production consideration: Always true in production
+    
+    image:
+      repository: "grafana/grafana"
+      # repository: grafana/grafana - Grafana image repository
+      # Purpose: Name of the Grafana image repository
+      # Impact: Grafana image is pulled from this repository
+      # Production consideration: Use consistent naming across environments
+      
+      tag: "10.1.0"
+      # tag: 10.1.0 - Grafana image tag
+      # Purpose: Specific version of the Grafana image
+      # Impact: Grafana uses this specific image version
+      # Production consideration: Use specific version tags in production
+      
+      pullPolicy: "IfNotPresent"
+      # pullPolicy: IfNotPresent - Grafana image pull policy
+      # Purpose: Controls when to pull the Grafana image
+      # Impact: Image is only pulled if not present locally
+      # Production consideration: Use IfNotPresent for stability
+    
+    replicas: 1
+    # replicas: 1 - Number of Grafana replicas
+    # Purpose: Controls Grafana scaling
+    # Impact: Single replica for data consistency
+    # Production consideration: Use single replica for data consistency
+    
+    resources:
+      # resources: Grafana resource requirements and limits
+      # Purpose: Specifies CPU and memory requirements
+      # Impact: Kubernetes schedules pods based on these requirements
+      # Production consideration: Adjust based on actual usage patterns
+      
+      requests:
+        # requests: Minimum resource requirements
+        # Purpose: Specifies minimum resources needed
+        # Impact: Kubernetes ensures these resources are available
+        # Production consideration: Should be based on actual usage
+        
+        cpu: "100m"
+        # cpu: 100m - CPU request
+        # Purpose: Minimum CPU allocation (0.1 cores)
+        # Impact: Grafana is guaranteed at least this CPU
+        # Production consideration: Adjust based on actual usage
+        
+        memory: "128Mi"
+        # memory: 128Mi - Memory request
+        # Purpose: Minimum memory allocation (128 megabytes)
+        # Impact: Grafana is guaranteed at least this memory
+        # Production consideration: Adjust based on actual usage
+      
+      limits:
+        # limits: Maximum resource usage
+        # Purpose: Specifies maximum resources Grafana can use
+        # Impact: Grafana cannot exceed these limits
+        # Production consideration: Prevents resource exhaustion
+        
+        cpu: "500m"
+        # cpu: 500m - CPU limit
+        # Purpose: Maximum CPU allocation (0.5 cores)
+        # Impact: Grafana cannot use more than this CPU
+        # Production consideration: Adjust based on actual usage
+        
+        memory: "512Mi"
+        # memory: 512Mi - Memory limit
+        # Purpose: Maximum memory allocation (512 megabytes)
+        # Impact: Grafana cannot use more than this memory
+        # Production consideration: Adjust based on actual usage
+    
+    persistence:
+      # persistence: Grafana persistence configuration
+      # Purpose: Configures data persistence for Grafana
+      # Impact: Determines how Grafana data is stored
+      # Production consideration: Use appropriate storage classes
+      
+      enabled: true
+      # enabled: true - Enable persistence
+      # Purpose: Controls whether to use persistent storage
+      # Impact: Grafana data is persisted when true
+      # Production consideration: Always true in production
+      
+      size: "5Gi"
+      # size: 5Gi - Storage size
+      # Purpose: Size of the persistent volume
+      # Impact: Grafana has this much storage available
+      # Production consideration: Adjust based on actual usage
+      
+      storageClass: "standard"
+      # storageClass: standard - Storage class
+      # Purpose: Kubernetes storage class to use
+      # Impact: Determines storage backend and performance
+      # Production consideration: Use appropriate storage classes for production
+    
+    admin:
+      # admin: Grafana admin configuration
+      # Purpose: Configures admin user for Grafana
+      # Impact: Determines admin access to Grafana
+      # Production consideration: Use strong passwords in production
+      
+      user: "admin"
+      # user: admin - Admin username
+      # Purpose: Username for Grafana admin
+      # Impact: Admin logs in with this username
+      # Production consideration: Use different usernames for different environments
+      
+      password: "admin"
+      # password: admin - Admin password
+      # Purpose: Password for Grafana admin
+      # Impact: Admin logs in with this password
+      # Production consideration: Use strong passwords in production
+
+# =============================================================================
+# SECURITY CONFIGURATION
+# =============================================================================
+security:
+  # Security configuration
+  enabled: true
+  # enabled: true - Enable security features
+  # Purpose: Controls whether to enable security features
+  # Impact: Security features are enabled when true
+  # Production consideration: Always true in production
+  
+  # Network policies
+  networkPolicies:
+    enabled: true
+    # enabled: true - Enable network policies
+    # Purpose: Controls whether to create network policies
+    # Impact: Network policies are created when true
+    # Production consideration: Always true in production
+  
+  # Pod security policies
+  podSecurityPolicies:
+    enabled: true
+    # enabled: true - Enable pod security policies
+    # Purpose: Controls whether to create pod security policies
+    # Impact: Pod security policies are created when true
+    # Production consideration: Always true in production
+  
+  # Resource quotas
+  resourceQuotas:
+    enabled: true
+    # enabled: true - Enable resource quotas
+    # Purpose: Controls whether to create resource quotas
+    # Impact: Resource quotas are created when true
+    # Production consideration: Always true in production
+  
+  # Limit ranges
+  limitRanges:
+    enabled: true
+    # enabled: true - Enable limit ranges
+    # Purpose: Controls whether to create limit ranges
+    # Impact: Limit ranges are created when true
+    # Production consideration: Always true in production
+
+# =============================================================================
+# INGRESS CONFIGURATION
+# =============================================================================
+ingress:
+  # Ingress configuration
+  enabled: false
+  # enabled: false - Disable ingress by default
+  # Purpose: Controls whether to create ingress resources
+  # Impact: Ingress resources are not created when false
+  # Production consideration: Enable in production for external access
+  
+  className: "nginx"
+  # className: nginx - Ingress class name
+  # Purpose: Specifies which ingress controller to use
+  # Impact: Routes traffic through nginx ingress controller
+  # Production consideration: Use appropriate ingress controller
+  
+  annotations:
+    # annotations: Ingress annotations
+    # Purpose: Additional configuration for ingress
+    # Impact: Configures ingress behavior
+    # Production consideration: Use appropriate annotations for production
+    nginx.ingress.kubernetes.io/rewrite-target: "/"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  
+  hosts:
+    # hosts: Ingress hosts
+    # Purpose: Hostnames for ingress
+    # Impact: Determines which hostnames are handled
+    # Production consideration: Use appropriate hostnames for production
+    - host: "ecommerce.local"
+      paths:
+        - path: "/"
+          pathType: "Prefix"
+          service:
+            name: "ecommerce-frontend-service"
+            port: 3000
+        - path: "/api"
+          pathType: "Prefix"
+          service:
+            name: "ecommerce-backend-service"
+            port: 8000
+  
+  tls:
+    # tls: TLS configuration
+    # Purpose: Configures SSL/TLS termination
+    # Impact: Enables encrypted communication
+    # Production consideration: Use proper certificates in production
+    - secretName: "ecommerce-tls"
+      hosts:
+        - "ecommerce.local"

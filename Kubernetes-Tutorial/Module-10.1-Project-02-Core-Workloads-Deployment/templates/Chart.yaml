@@ -1,0 +1,181 @@
+# =============================================================================
+# HELM CHART METADATA
+# =============================================================================
+# Purpose: Defines the Helm chart metadata and dependencies
+# Why needed: Provides chart information for Helm package management
+# This file contains the chart metadata and dependency information
+
+apiVersion: v2
+# apiVersion: v2 - Helm chart API version
+# Purpose: Specifies the Helm chart API version to use
+# Impact: Determines which Helm features are available
+# Production consideration: Use v2 for modern Helm charts
+
+name: ecommerce-application
+# name: ecommerce-application - Chart name
+# Purpose: Unique identifier for this Helm chart
+# Impact: Used when installing, upgrading, or managing the chart
+# Production consideration: Use descriptive names for clarity
+
+description: "E-commerce Application with 3-tier architecture (Frontend, Backend, Database) and comprehensive monitoring stack"
+# description: Chart description
+# Purpose: Provides a human-readable description of the chart
+# Impact: Helps users understand what the chart deploys
+# Production consideration: Use clear, descriptive text
+
+type: application
+# type: application - Chart type
+# Purpose: Specifies the type of Helm chart
+# Impact: Determines how Helm treats the chart
+# Production consideration: Use application for deployable applications
+
+version: 1.0.0
+# version: 1.0.0 - Chart version
+# Purpose: Semantic version of the chart
+# Impact: Used for versioning and dependency management
+# Production consideration: Follow semantic versioning (major.minor.patch)
+
+appVersion: "1.0.0"
+# appVersion: 1.0.0 - Application version
+# Purpose: Version of the application being deployed
+# Impact: Used to track application versions
+# Production consideration: Keep in sync with application releases
+
+home: "https://github.com/company/ecommerce-application"
+# home: Chart homepage URL
+# Purpose: URL to the project homepage
+# Impact: Provides users with project information
+# Production consideration: Use actual project URLs
+
+sources:
+  # sources: Source code URLs
+  # Purpose: Links to source code repositories
+  # Impact: Helps users find and contribute to the project
+  # Production consideration: Use actual repository URLs
+  - "https://github.com/company/ecommerce-application"
+  - "https://github.com/company/ecommerce-backend"
+  - "https://github.com/company/ecommerce-frontend"
+
+maintainers:
+  # maintainers: Chart maintainers
+  # Purpose: Lists people responsible for maintaining the chart
+  # Impact: Provides contact information for chart issues
+  # Production consideration: Include actual maintainer information
+  - name: "Platform Engineering Team"
+    email: "platform-engineering@company.com"
+    url: "https://github.com/company/platform-engineering"
+  - name: "DevOps Team"
+    email: "devops@company.com"
+    url: "https://github.com/company/devops"
+
+keywords:
+  # keywords: Chart keywords
+  # Purpose: Keywords for chart discovery and categorization
+  # Impact: Helps users find the chart in repositories
+  # Production consideration: Use relevant, searchable keywords
+  - "ecommerce"
+  - "web-application"
+  - "3-tier-architecture"
+  - "kubernetes"
+  - "microservices"
+  - "monitoring"
+  - "prometheus"
+  - "grafana"
+  - "postgresql"
+  - "react"
+  - "fastapi"
+  - "nginx"
+
+annotations:
+  # annotations: Chart annotations
+  # Purpose: Additional metadata for the chart
+  # Impact: Provides additional information about the chart
+  # Production consideration: Use relevant annotations for your use case
+  category: "Application"
+  licenses: "MIT"
+  images: |
+    - name: ecommerce-backend
+      image: registry.company.com/ecommerce-backend:1.0.0
+    - name: ecommerce-frontend
+      image: registry.company.com/ecommerce-frontend:1.0.0
+    - name: postgres
+      image: postgres:15-alpine
+    - name: prometheus
+      image: prom/prometheus:v2.45.0
+    - name: grafana
+      image: grafana/grafana:10.1.0
+    - name: alertmanager
+      image: prom/alertmanager:v0.25.0
+
+dependencies:
+  # dependencies: Chart dependencies
+  # Purpose: Lists other Helm charts this chart depends on
+  # Impact: Helm will install dependencies before installing this chart
+  # Production consideration: Only include necessary dependencies
+  - name: postgresql
+    version: "12.1.2"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: ecommerce.database.enabled
+    # condition: ecommerce.database.enabled - Dependency condition
+    # Purpose: Controls when this dependency is installed
+    # Impact: Only installs PostgreSQL if database is enabled
+    # Production consideration: Use conditions to make dependencies optional
+  
+  - name: prometheus
+    version: "25.8.4"
+    repository: "https://prometheus-community.github.io/helm-charts"
+    condition: monitoring.prometheus.enabled
+    # condition: monitoring.prometheus.enabled - Dependency condition
+    # Purpose: Controls when this dependency is installed
+    # Impact: Only installs Prometheus if monitoring is enabled
+    # Production consideration: Use conditions to make dependencies optional
+  
+  - name: grafana
+    version: "7.0.17"
+    repository: "https://grafana.github.io/helm-charts"
+    condition: monitoring.grafana.enabled
+    # condition: monitoring.grafana.enabled - Dependency condition
+    # Purpose: Controls when this dependency is installed
+    # Impact: Only installs Grafana if monitoring is enabled
+    # Production consideration: Use conditions to make dependencies optional
+
+# =============================================================================
+# CHART CONFIGURATION
+# =============================================================================
+
+# Chart configuration options
+config:
+  # config: Chart configuration
+  # Purpose: Additional configuration for the chart
+  # Impact: Provides chart-specific configuration options
+  # Production consideration: Use for chart-specific settings
+  
+  # Minimum Kubernetes version required
+  minKubernetesVersion: "1.21.0"
+  # minKubernetesVersion: 1.21.0 - Minimum Kubernetes version
+  # Purpose: Specifies the minimum Kubernetes version required
+  # Impact: Helm will check Kubernetes version before installation
+  # Production consideration: Set based on features used in the chart
+  
+  # Chart installation notes
+  notes: |
+    E-commerce Application has been installed successfully!
+    
+    To get started:
+    1. Check the status of your deployment:
+       kubectl get pods -n {{ .Release.Namespace }}
+    
+    2. Access the application:
+       - Frontend: http://ecommerce-frontend-service.{{ .Release.Namespace }}.svc.cluster.local:3000
+       - Backend API: http://ecommerce-backend-service.{{ .Release.Namespace }}.svc.cluster.local:8000
+       - Database: ecommerce-database-service.{{ .Release.Namespace }}.svc.cluster.local:5432
+    
+    3. Access monitoring (if enabled):
+       - Grafana: http://grafana-service.{{ .Release.Namespace }}.svc.cluster.local:3000
+       - Prometheus: http://prometheus-service.{{ .Release.Namespace }}.svc.cluster.local:9090
+    
+    4. Check logs:
+       kubectl logs -f deployment/ecommerce-backend-deployment -n {{ .Release.Namespace }}
+       kubectl logs -f deployment/ecommerce-frontend-deployment -n {{ .Release.Namespace }}
+    
+    For more information, visit: https://github.com/company/ecommerce-application

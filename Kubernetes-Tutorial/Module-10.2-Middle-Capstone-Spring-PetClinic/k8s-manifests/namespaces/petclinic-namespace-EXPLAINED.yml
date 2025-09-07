@@ -1,0 +1,324 @@
+# =============================================================================
+# PETCLINIC NAMESPACE CONFIGURATION - COMPREHENSIVE RESOURCE GOVERNANCE DOCUMENTATION
+# =============================================================================
+# This file establishes the foundational namespace and resource management framework
+# for the PetClinic microservices platform. It implements multi-tenancy, resource
+# isolation, and governance controls that are essential for production Kubernetes deployments.
+#
+# GOVERNANCE IMPACT: This configuration directly controls resource allocation, cost
+# management, and operational boundaries for the entire PetClinic application stack.
+#
+# PRODUCTION SIGNIFICANCE: Proper namespace configuration prevents resource contention,
+# enables cost attribution, and provides security isolation boundaries.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# NAMESPACE DEFINITION - APPLICATION BOUNDARY AND ISOLATION
+# -----------------------------------------------------------------------------
+# API version for core Kubernetes namespace resources
+# v1 is the stable API for namespaces, available since Kubernetes 1.0
+apiVersion: v1
+
+# Resource type: Namespace provides logical isolation and resource scoping
+# Namespaces create virtual clusters within a physical Kubernetes cluster
+# They enable multi-tenancy, resource isolation, and access control boundaries
+kind: Namespace
+
+# Metadata section containing namespace identification and classification
+metadata:
+  # Primary identifier for the namespace
+  # Must be DNS-compliant (lowercase, alphanumeric, hyphens only)
+  name: petclinic
+  # NAMING STRATEGY: Simple, descriptive names improve operational clarity
+  
+  # Labels provide metadata for namespace classification and selection
+  # Labels enable automated tooling, monitoring, and policy application
+  labels:
+    # Self-referential label required by NetworkPolicies
+    # This label is referenced in network-policies.yml for traffic control
+    name: petclinic
+    # SECURITY DEPENDENCY: NetworkPolicies use this label for namespace selection
+    
+    # Environment classification for deployment pipeline management
+    # Enables environment-specific policies and resource allocation
+    environment: development
+    # LIFECYCLE MANAGEMENT: Supports dev/staging/prod environment strategies
+    
+    # Project association for cost allocation and resource tracking
+    # Enables chargeback, resource reporting, and project-based governance
+    project: spring-petclinic-microservices
+    # FINANCIAL GOVERNANCE: Supports cost center allocation and budgeting
+    
+    # Version tracking for namespace configuration management
+    # Enables configuration versioning and change tracking
+    version: "1.0.0"
+    # CHANGE MANAGEMENT: Supports configuration drift detection and auditing
+  
+  # Annotations provide additional metadata that doesn't affect Kubernetes behavior
+  # Used for documentation, tooling integration, and operational information
+  annotations:
+    # Human-readable description of the namespace purpose
+    description: "Spring PetClinic Microservices Platform"
+    # DOCUMENTATION: Provides context for operators and developers
+    
+    # Contact information for namespace ownership and support
+    # Critical for incident response and operational escalation
+    contact: "senior-java-architect@company.com"
+    # OPERATIONAL SUPPORT: Enables rapid escalation during incidents
+    
+    # Creation source tracking for audit and compliance
+    # Documents the automation or process that created this namespace
+    created-by: "kubernetes-tutorial-module-10.2"
+    # AUDIT TRAIL: Supports compliance and change tracking requirements
+
+---
+# Document separator for multiple related resources
+
+# -----------------------------------------------------------------------------
+# RESOURCE QUOTA - NAMESPACE-LEVEL RESOURCE LIMITS AND GOVERNANCE
+# -----------------------------------------------------------------------------
+# API version for ResourceQuota objects
+apiVersion: v1
+
+# Resource type: ResourceQuota enforces aggregate resource consumption limits
+# Prevents any single namespace from consuming excessive cluster resources
+# Essential for multi-tenant environments and cost control
+kind: ResourceQuota
+
+# Metadata for the ResourceQuota
+metadata:
+  # Name of the quota object - should indicate its scope and purpose
+  name: petclinic-quota
+  
+  # Namespace where this quota applies
+  # ResourceQuotas are namespace-scoped and only affect their target namespace
+  namespace: petclinic
+
+# Specification defining the resource limits
+spec:
+  # Hard limits section defines non-negotiable resource constraints
+  # These limits are enforced by the Kubernetes API server
+  hard:
+    # CPU request quota - total CPU requests across all pods in namespace
+    # Format: CPU cores (1 = 1 CPU core, 500m = 0.5 CPU cores)
+    requests.cpu: "4"
+    # CAPACITY PLANNING: Allows up to 4 CPU cores worth of guaranteed CPU
+    # COST CONTROL: Prevents runaway CPU resource allocation
+    
+    # Memory request quota - total memory requests across all pods
+    # Format: Bytes with standard suffixes (Ki, Mi, Gi, Ti)
+    requests.memory: 8Gi
+    # CAPACITY PLANNING: Allows up to 8GB of guaranteed memory allocation
+    # STABILITY: Prevents memory over-subscription that could cause node pressure
+    
+    # CPU limit quota - total CPU limits across all pods in namespace
+    # Represents maximum CPU that can be consumed under peak load
+    limits.cpu: "8"
+    # BURST CAPACITY: Allows up to 8 CPU cores during peak usage
+    # NOISY NEIGHBOR PROTECTION: Prevents CPU starvation of other namespaces
+    
+    # Memory limit quota - total memory limits across all pods
+    # Represents maximum memory that can be consumed
+    limits.memory: 16Gi
+    # BURST CAPACITY: Allows up to 16GB memory during peak usage
+    # OOM PROTECTION: Prevents memory exhaustion affecting other workloads
+    
+    # Persistent Volume Claim quota - maximum number of PVCs
+    # Controls storage resource allocation and prevents storage sprawl
+    persistentvolumeclaims: "10"
+    # STORAGE GOVERNANCE: Limits database and storage proliferation
+    # COST CONTROL: Prevents unlimited storage resource creation
+    
+    # Service quota - maximum number of Service objects
+    # Controls network resource allocation and load balancer usage
+    services: "20"
+    # NETWORK GOVERNANCE: Prevents excessive load balancer costs
+    # ARCHITECTURE CONTROL: Encourages service consolidation
+    
+    # Secret quota - maximum number of Secret objects
+    # Controls sensitive data storage and prevents secret sprawl
+    secrets: "10"
+    # SECURITY GOVERNANCE: Encourages secret consolidation and management
+    # COMPLIANCE: Supports secret lifecycle management requirements
+    
+    # ConfigMap quota - maximum number of ConfigMap objects
+    # Controls configuration data storage and prevents configuration sprawl
+    configmaps: "10"
+    # CONFIGURATION GOVERNANCE: Encourages configuration consolidation
+    # OPERATIONAL EFFICIENCY: Reduces configuration management complexity
+
+---
+# Document separator for the next resource
+
+# -----------------------------------------------------------------------------
+# LIMIT RANGE - DEFAULT RESOURCE LIMITS AND REQUESTS
+# -----------------------------------------------------------------------------
+# API version for LimitRange objects
+apiVersion: v1
+
+# Resource type: LimitRange provides default resource limits and requests
+# Automatically applies resource constraints to pods that don't specify them
+# Ensures consistent resource allocation and prevents resource starvation
+kind: LimitRange
+
+# Metadata for the LimitRange
+metadata:
+  # Name of the limit range - should indicate its scope
+  name: petclinic-limits
+  
+  # Namespace where this LimitRange applies
+  namespace: petclinic
+
+# Specification defining the default limits and requests
+spec:
+  # Limits array defines different types of resource constraints
+  limits:
+  # Container-level limits and requests
+  - # Default resource limits applied when containers don't specify limits
+    # These are maximum resources a container can consume
+    default:
+      # Default CPU limit for containers without explicit limits
+      # 500m = 0.5 CPU cores maximum per container
+      cpu: "500m"
+      # PERFORMANCE: Prevents individual containers from monopolizing CPU
+      # STABILITY: Ensures predictable performance characteristics
+      
+      # Default memory limit for containers without explicit limits
+      # 1Gi = 1 gigabyte maximum memory per container
+      memory: "1Gi"
+      # STABILITY: Prevents memory leaks from affecting other containers
+      # RESOURCE PLANNING: Enables predictable memory allocation
+    
+    # Default resource requests applied when containers don't specify requests
+    # These are guaranteed resources allocated to containers
+    defaultRequest:
+      # Default CPU request for containers without explicit requests
+      # 250m = 0.25 CPU cores guaranteed per container
+      cpu: "250m"
+      # SCHEDULING: Ensures containers get minimum CPU for basic operation
+      # QUALITY OF SERVICE: Establishes baseline performance guarantees
+      
+      # Default memory request for containers without explicit requests
+      # 512Mi = 512 megabytes guaranteed memory per container
+      memory: "512Mi"
+      # SCHEDULING: Ensures containers get minimum memory for operation
+      # STABILITY: Prevents memory starvation during resource contention
+    
+    # Resource type this limit applies to
+    type: Container
+    # SCOPE: These limits apply to individual containers within pods
+  
+  # Persistent Volume Claim limits
+  - # Default storage allocation for PVCs without explicit size
+    default:
+      # Default storage size for PVCs without explicit requests
+      # 10Gi = 10 gigabytes default storage allocation
+      storage: "10Gi"
+      # COST CONTROL: Prevents accidentally large storage allocations
+      # OPERATIONAL EFFICIENCY: Provides reasonable default for most use cases
+    
+    # Resource type this limit applies to
+    type: PersistentVolumeClaim
+    # SCOPE: These limits apply to storage requests
+
+# =============================================================================
+# RESOURCE MANAGEMENT ANALYSIS AND PRODUCTION CONSIDERATIONS
+# =============================================================================
+#
+# RESOURCE ALLOCATION STRATEGY:
+# 
+# NAMESPACE QUOTAS:
+# ✅ CPU Requests: 4 cores (guaranteed baseline performance)
+# ✅ CPU Limits: 8 cores (burst capacity for peak loads)
+# ✅ Memory Requests: 8Gi (guaranteed memory allocation)
+# ✅ Memory Limits: 16Gi (burst capacity for memory-intensive operations)
+# ✅ Storage: 10 PVCs maximum (controlled storage proliferation)
+# ✅ Network: 20 services maximum (controlled network resource usage)
+#
+# CONTAINER DEFAULTS:
+# ✅ CPU: 250m request, 500m limit (2:1 burst ratio)
+# ✅ Memory: 512Mi request, 1Gi limit (2:1 burst ratio)
+# ✅ Storage: 10Gi default PVC size
+#
+# CAPACITY PLANNING ANALYSIS:
+# - Total namespace can support ~16 typical containers (4 cores ÷ 250m)
+# - Memory allocation supports ~16 containers (8Gi ÷ 512Mi)
+# - Burst capacity allows 2x resource consumption during peaks
+# - Storage allocation supports moderate database and file storage needs
+#
+# PRODUCTION RECOMMENDATIONS:
+#
+# 1. ENVIRONMENT-SPECIFIC QUOTAS:
+#    # Production namespace with higher limits
+#    apiVersion: v1
+#    kind: ResourceQuota
+#    metadata:
+#      name: petclinic-prod-quota
+#      namespace: petclinic-prod
+#    spec:
+#      hard:
+#        requests.cpu: "8"      # Double the development allocation
+#        requests.memory: 16Gi  # Double the development allocation
+#        limits.cpu: "16"       # Higher burst capacity
+#        limits.memory: 32Gi    # Higher burst capacity
+#
+# 2. MONITORING AND ALERTING:
+#    - Monitor quota utilization with Prometheus metrics
+#    - Alert when quota usage exceeds 80% threshold
+#    - Track resource efficiency and right-sizing opportunities
+#    - Monitor for quota violations and resource contention
+#
+# 3. COST OPTIMIZATION:
+#    - Regular review of actual vs. allocated resources
+#    - Implement vertical pod autoscaling for right-sizing
+#    - Use node affinity for cost-effective instance types
+#    - Implement cluster autoscaling for dynamic capacity
+#
+# 4. SECURITY ENHANCEMENTS:
+#    - Implement Pod Security Standards alongside resource limits
+#    - Use NetworkPolicies with namespace labels for traffic control
+#    - Implement RBAC with namespace-scoped permissions
+#    - Add resource-based admission controllers
+#
+# 5. OPERATIONAL PROCEDURES:
+#    - Document quota increase procedures for capacity planning
+#    - Establish resource request review processes
+#    - Implement automated resource optimization recommendations
+#    - Create runbooks for quota exhaustion scenarios
+#
+# COMPLIANCE AND GOVERNANCE:
+#
+# 1. FINANCIAL GOVERNANCE:
+#    - Resource quotas enable accurate cost allocation
+#    - Labels support chargeback and cost center reporting
+#    - Quota limits prevent budget overruns
+#    - Resource tracking supports financial planning
+#
+# 2. OPERATIONAL GOVERNANCE:
+#    - Contact annotations enable rapid incident response
+#    - Version labels support change management processes
+#    - Environment labels enable policy automation
+#    - Project labels support multi-tenant operations
+#
+# 3. SECURITY GOVERNANCE:
+#    - Namespace isolation provides security boundaries
+#    - Resource limits prevent denial-of-service attacks
+#    - Quota enforcement prevents resource exhaustion
+#    - Labels enable security policy automation
+#
+# TROUBLESHOOTING RESOURCE ISSUES:
+#
+# 1. CHECK QUOTA UTILIZATION:
+#    kubectl describe quota petclinic-quota -n petclinic
+#
+# 2. CHECK LIMIT RANGE APPLICATION:
+#    kubectl describe limitrange petclinic-limits -n petclinic
+#
+# 3. MONITOR RESOURCE CONSUMPTION:
+#    kubectl top pods -n petclinic
+#    kubectl top nodes
+#
+# 4. IDENTIFY RESOURCE CONSTRAINTS:
+#    kubectl get events -n petclinic --field-selector reason=FailedScheduling
+#
+# =============================================================================

@@ -1,0 +1,198 @@
+# Enhanced E-commerce Backend Deployment
+# This manifest deploys the e-commerce backend application with enhanced security and resource management
+
+# =============================================================================
+# ENHANCED DEPLOYMENT OVERVIEW
+# =============================================================================
+# Purpose: Deploys and manages the e-commerce backend application with security enhancements
+# Why Enhanced: Provides production-ready security, resource limits, and health checks
+# Kubernetes concept: Enhanced Deployment with security context and resource management
+
+apiVersion: apps/v1
+# API Version: apps/v1 is the stable version for Deployment resources
+# This version includes features like rolling updates and rollback capabilities
+
+kind: Deployment
+# Resource Type: Deployment manages a set of identical pods
+# Provides declarative updates for Pods and ReplicaSets
+
+metadata:
+  # Metadata section contains identifying information about the deployment
+  name: ecommerce-backend-enhanced
+  # Name: Unique identifier for the enhanced deployment within the namespace
+  # This name will be used to reference the deployment in other resources
+  
+  namespace: ecommerce
+  # Namespace: Specifies which namespace this deployment belongs to
+  # Must match the namespace created in namespace.yaml
+  
+  labels:
+    # Labels: Key-value pairs for organizing and selecting resources
+    app: ecommerce-backend
+    # app: ecommerce-backend - Identifies this as the backend application
+    version: enhanced
+    # version: enhanced - Indicates this is the enhanced version with security features
+    tier: backend
+    # tier: backend - Identifies this as the backend tier
+    component: backend
+    # component: backend - Identifies this as the backend component
+  
+  annotations:
+    # Annotations: Additional metadata for tools and libraries
+    deployment.kubernetes.io/revision: "1"
+    # revision: Tracks deployment revision for rollback purposes
+    kubernetes.io/description: "Enhanced e-commerce backend with security and resource management"
+    # description: Human-readable description of the deployment
+
+spec:
+  # Deployment specification defines the desired state
+  replicas: 3
+  # replicas: Number of pod instances to maintain
+  # 3 replicas provide high availability and load distribution
+  
+  selector:
+    # Selector: Defines how the deployment finds which pods to manage
+    matchLabels:
+      app: ecommerce-backend
+      version: enhanced
+      # Must match the labels in the pod template below
+  
+  template:
+    # Pod template: Defines the pods that will be created
+    metadata:
+      labels:
+        # Labels: Must match the selector above
+        app: ecommerce-backend
+        version: enhanced
+        tier: backend
+        component: backend
+    
+    spec:
+      # Pod specification defines the pod's desired state
+      securityContext:
+        # Pod-level security context for enhanced security
+        runAsNonRoot: true
+        # runAsNonRoot: Ensures the container runs as a non-root user
+        runAsUser: 1000
+        # runAsUser: Specifies the user ID to run the container
+        runAsGroup: 1000
+        # runAsGroup: Specifies the group ID to run the container
+        fsGroup: 1000
+        # fsGroup: Defines the filesystem group for volume ownership
+      
+      containers:
+      - name: backend
+        # Container name: Identifies the container within the pod
+        image: your-registry/ecommerce-backend:v1.0.0
+        # image: Container image to run
+        # Update with your actual registry and image
+        imagePullPolicy: Always
+        # imagePullPolicy: Always pull the latest image
+        
+        ports:
+        - containerPort: 8080
+          # containerPort: Port the container listens on
+          name: http
+          # name: Named port for service reference
+        
+        securityContext:
+          # Container-level security context
+          runAsNonRoot: true
+          # runAsNonRoot: Container must run as non-root user
+          runAsUser: 1000
+          # runAsUser: User ID for the container process
+          allowPrivilegeEscalation: false
+          # allowPrivilegeEscalation: Prevents privilege escalation
+          readOnlyRootFilesystem: true
+          # readOnlyRootFilesystem: Makes root filesystem read-only
+          capabilities:
+            # capabilities: Linux capabilities management
+            drop:
+            - ALL
+            # drop: ALL - Removes all capabilities for security
+        
+        resources:
+          # Resource management for the container
+          requests:
+            # requests: Minimum resources guaranteed to the container
+            memory: "256Mi"
+            # memory: 256MB minimum memory allocation
+            cpu: "250m"
+            # cpu: 250 millicores (0.25 CPU) minimum allocation
+          limits:
+            # limits: Maximum resources the container can use
+            memory: "512Mi"
+            # memory: 512MB maximum memory usage
+            cpu: "500m"
+            # cpu: 500 millicores (0.5 CPU) maximum usage
+        
+        livenessProbe:
+          # Liveness probe: Checks if the container is running
+          httpGet:
+            path: /health
+            # path: Health check endpoint
+            port: 8080
+            # port: Port for health check
+          initialDelaySeconds: 30
+          # initialDelaySeconds: Wait 30 seconds before first check
+          periodSeconds: 10
+          # periodSeconds: Check every 10 seconds
+          timeoutSeconds: 5
+          # timeoutSeconds: Timeout after 5 seconds
+          failureThreshold: 3
+          # failureThreshold: Restart after 3 consecutive failures
+        
+        readinessProbe:
+          # Readiness probe: Checks if the container is ready to serve traffic
+          httpGet:
+            path: /ready
+            # path: Readiness check endpoint
+            port: 8080
+            # port: Port for readiness check
+          initialDelaySeconds: 5
+          # initialDelaySeconds: Wait 5 seconds before first check
+          periodSeconds: 5
+          # periodSeconds: Check every 5 seconds
+          timeoutSeconds: 3
+          # timeoutSeconds: Timeout after 3 seconds
+          failureThreshold: 3
+          # failureThreshold: Mark unready after 3 consecutive failures
+        
+        env:
+        # Environment variables for the container
+        - name: DATABASE_URL
+          # DATABASE_URL: Database connection string
+          valueFrom:
+            secretKeyRef:
+              name: database-secret
+              key: url
+              # Reference to secret containing database URL
+        - name: JWT_SECRET
+          # JWT_SECRET: Secret key for JWT token signing
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: jwt-secret
+              # Reference to secret containing JWT secret
+        
+        volumeMounts:
+        # Volume mounts for the container
+        - name: tmp
+          # tmp: Temporary directory mount
+          mountPath: /tmp
+          # mountPath: Where to mount the volume in the container
+        - name: cache
+          # cache: Cache directory mount
+          mountPath: /app/cache
+          # mountPath: Application cache directory
+      
+      volumes:
+      # Volumes available to the pod
+      - name: tmp
+        # tmp: Temporary storage volume
+        emptyDir: {}
+        # emptyDir: Temporary directory that exists for the life of the pod
+      - name: cache
+        # cache: Cache storage volume
+        emptyDir: {}
+        # emptyDir: Temporary directory for application cache

@@ -1,0 +1,87 @@
+# Velero Backup Configuration for Disaster Recovery
+---
+apiVersion: velero.io/v1
+kind: Schedule
+metadata:
+  name: ecommerce-daily-backup
+  namespace: velero
+spec:
+  schedule: "0 2 * * *"  # Daily at 2 AM UTC
+  template:
+    includedNamespaces:
+    - ecommerce
+    - monitoring
+    excludedResources:
+    - events
+    - events.events.k8s.io
+    storageLocation: default
+    ttl: 720h0m0s  # 30 days retention
+    metadata:
+      labels:
+        backup-type: scheduled
+        environment: production
+
+---
+apiVersion: velero.io/v1
+kind: Schedule
+metadata:
+  name: ecommerce-weekly-backup
+  namespace: velero
+spec:
+  schedule: "0 3 * * 0"  # Weekly on Sunday at 3 AM UTC
+  template:
+    includedNamespaces:
+    - ecommerce
+    - monitoring
+    - kube-system
+    storageLocation: default
+    ttl: 2160h0m0s  # 90 days retention
+    metadata:
+      labels:
+        backup-type: weekly
+        environment: production
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backup-scripts
+  namespace: ecommerce
+data:
+  database-backup.sh: |
+    #!/bin/bash
+    set -euo pipefail
+    
+    BACKUP_DIR="/tmp/backups/$(date +%Y%m%d)"
+    mkdir -p $BACKUP_DIR
+    
+    # Create database dump
+    pg_dump -h ecommerce-database -U postgres ecommerce > $BACKUP_DIR/ecommerce-$(date +%H%M).sql
+    
+    # Compress backup
+    gzip $BACKUP_DIR/ecommerce-$(date +%H%M).sql
+    
+    echo "Database backup completed: $BACKUP_DIR"
+  
+  restore-database.sh: |
+    #!/bin/bash
+    set -euo pipefail
+    
+    BACKUP_FILE=${1:-latest}
+    
+    echo "Restoring database from: $BACKUP_FILE"
+    
+    # Stop backend services
+    kubectl scale deployment ecommerce-backend --replicas=0
+    
+    # Restore database
+    if [[ $BACKUP_FILE == *.gz ]]; then
+      gunzip -c $BACKUP_FILE | psql -h ecommerce-database -U postgres ecommerce
+    else
+      psql -h ecommerce-database -U postgres ecommerce < $BACKUP_FILE
+    fi
+    
+    # Restart backend services
+    kubectl scale deployment ecommerce-backend --replicas=3
+    
+    echo "Database restoration completed"

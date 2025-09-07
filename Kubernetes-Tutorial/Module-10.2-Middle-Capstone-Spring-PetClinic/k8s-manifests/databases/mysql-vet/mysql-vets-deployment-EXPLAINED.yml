@@ -1,0 +1,460 @@
+# =============================================================================
+# MYSQL VETS DATABASE STATEFULSET - COMPREHENSIVE PERSISTENCE DOCUMENTATION
+# =============================================================================
+# This file defines the MySQL database deployment for the Vets microservice using
+# StatefulSet for persistent, ordered deployment with stable network identities.
+# StatefulSets are essential for stateful applications requiring persistent storage,
+# stable network identities, and ordered deployment/scaling operations.
+#
+# DATA CRITICALITY: This database stores veterinarian information, which is core
+# business data requiring high availability, data persistence, and backup strategies.
+#
+# PRODUCTION IMPACT: Database availability directly affects the Vets service and
+# overall application functionality, making this a critical infrastructure component.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# MYSQL STATEFULSET - PERSISTENT DATABASE DEPLOYMENT
+# -----------------------------------------------------------------------------
+# API version for StatefulSet resources
+# apps/v1 is the stable API for StatefulSets, available since Kubernetes 1.9
+apiVersion: apps/v1
+
+# Resource type: StatefulSet provides ordered, persistent pod deployment
+# StatefulSets are designed for stateful applications requiring:
+# - Stable, unique network identifiers
+# - Stable, persistent storage
+# - Ordered, graceful deployment and scaling
+kind: StatefulSet
+
+# Metadata section for the StatefulSet
+metadata:
+  # Name of the StatefulSet - should indicate the service and database type
+  name: mysql-vets
+  # NAMING CONVENTION: <database-type>-<service-name> for clarity
+  
+  # Namespace for database isolation and resource management
+  namespace: petclinic
+  
+  # Labels for resource identification and selection
+  labels:
+    # Application identifier for service grouping
+    app: mysql-vets
+    # SELECTOR COMPATIBILITY: Must match selector labels for proper targeting
+    
+    # Component classification for architectural organization
+    component: database
+    # ARCHITECTURE CLARITY: Distinguishes database from application components
+    
+    # Tier classification for network policies and resource allocation
+    tier: data
+    # SECURITY SEGMENTATION: Enables data tier-specific security policies
+
+# StatefulSet specification
+spec:
+  # Service name for stable network identity
+  # Creates DNS entries: <pod-name>.<service-name>.<namespace>.svc.cluster.local
+  serviceName: mysql-vets
+  # STABLE IDENTITY: Enables predictable database connection endpoints
+  # REQUIREMENT: A headless service with this name must exist
+  
+  # Number of database replicas
+  # For MySQL, typically 1 for single-master or 3+ for high availability
+  replicas: 1
+  # SINGLE INSTANCE: Suitable for development, consider clustering for production
+  # SCALING CONSIDERATION: MySQL requires special handling for multi-replica setups
+  
+  # Selector for pod targeting - must match template labels
+  selector:
+    matchLabels:
+      app: mysql-vets
+      # CONSISTENCY: Must exactly match pod template labels
+  
+  # Pod template defining the database container specification
+  template:
+    metadata:
+      # Labels applied to each pod created by this StatefulSet
+      labels:
+        app: mysql-vets
+        component: database
+        tier: data
+        # LABEL CONSISTENCY: Matches StatefulSet and selector labels
+    
+    # Pod specification
+    spec:
+      # Container array - StatefulSets typically run single containers
+      containers:
+      - # Container name for identification and logging
+        name: mysql
+        
+        # MySQL container image with specific version for stability
+        image: mysql:8.0
+        # VERSION PINNING: Specific version prevents unexpected updates
+        # MYSQL 8.0: Latest stable version with enhanced security and performance
+        
+        # Container ports configuration
+        ports:
+        - # MySQL standard port
+          containerPort: 3306
+          # Port name for service targeting and monitoring
+          name: mysql
+          # STANDARD PORT: MySQL default port for client connections
+        
+        # Environment variables for MySQL configuration
+        env:
+        # Root password from Kubernetes Secret for security
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              # Secret containing database credentials
+              name: mysql-credentials
+              # Key within the secret containing root password
+              key: root-password
+          # SECURITY: Passwords stored in Secrets, not plain text
+          # REQUIREMENT: mysql-credentials Secret must exist
+        
+        # Database name to create on initialization
+        - name: MYSQL_DATABASE
+          value: "petclinic"
+          # INITIALIZATION: Creates application database on first startup
+        
+        # Application user from Secret
+        - name: MYSQL_USER
+          valueFrom:
+            secretKeyRef:
+              name: mysql-credentials
+              key: username
+          # PRINCIPLE OF LEAST PRIVILEGE: Separate user for application access
+        
+        # Application user password from Secret
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-credentials
+              key: password
+          # SECURITY: All credentials managed through Kubernetes Secrets
+        
+        # Resource allocation for performance and stability
+        resources:
+          # Guaranteed resources for consistent performance
+          requests:
+            # Memory request for database operations
+            memory: "512Mi"
+            # BASELINE: Minimum memory for MySQL operation with small datasets
+            
+            # CPU request for query processing
+            cpu: "250m"
+            # BASELINE: Quarter CPU core for moderate database load
+          
+          # Maximum resources to prevent resource monopolization
+          limits:
+            # Memory limit to prevent OOM on node
+            memory: "1Gi"
+            # BURST CAPACITY: 2x memory for peak operations
+            
+            # CPU limit for fair resource sharing
+            cpu: "500m"
+            # BURST CAPACITY: Half CPU core for peak query processing
+        
+        # Volume mounts for persistent data storage
+        volumeMounts:
+        - # Volume name matching volumeClaimTemplate
+          name: mysql-vets-storage
+          # MySQL data directory mount point
+          mountPath: /var/lib/mysql
+          # PERSISTENCE: MySQL data files stored on persistent volume
+          # DATA SAFETY: Survives pod restarts and rescheduling
+        
+        # Liveness probe to detect unhealthy containers
+        livenessProbe:
+          # Command-based probe using mysqladmin
+          exec:
+            command:
+            - mysqladmin  # MySQL administration utility
+            - ping        # Simple connectivity test
+            - -h          # Host flag
+            - localhost   # Local connection
+          # HEALTH CHECK: Verifies MySQL daemon is responding
+          
+          # Delay before first probe to allow startup
+          initialDelaySeconds: 30
+          # STARTUP TIME: MySQL needs time to initialize on first run
+          
+          # Frequency of liveness checks
+          periodSeconds: 10
+          # MONITORING FREQUENCY: Check every 10 seconds
+          
+          # Timeout for each probe attempt
+          timeoutSeconds: 5
+          # RESPONSIVENESS: 5 seconds max for health check
+          
+          # Failures before pod restart
+          failureThreshold: 3
+          # STABILITY: 3 consecutive failures trigger restart
+        
+        # Readiness probe to detect when container is ready for traffic
+        readinessProbe:
+          # SQL query execution to verify database readiness
+          exec:
+            command:
+            - mysql       # MySQL client
+            - -h          # Host flag
+            - localhost   # Local connection
+            - -u          # Username flag
+            - root        # Root user
+            - -p$MYSQL_ROOT_PASSWORD  # Password from environment
+            - -e          # Execute flag
+            - "SELECT 1"  # Simple query to test database functionality
+          # READINESS CHECK: Verifies database can accept connections and queries
+          
+          # Delay before first readiness check
+          initialDelaySeconds: 20
+          # INITIALIZATION: Less delay than liveness (database starts faster)
+          
+          # Frequency of readiness checks
+          periodSeconds: 5
+          # RESPONSIVENESS: More frequent than liveness for traffic routing
+          
+          # Timeout for readiness probe
+          timeoutSeconds: 3
+          # QUICK RESPONSE: Faster timeout for readiness decisions
+          
+          # Failures before marking unready
+          failureThreshold: 3
+          # TRAFFIC CONTROL: 3 failures remove from service endpoints
+  
+  # Volume claim templates for persistent storage
+  # StatefulSets create unique PVCs for each pod replica
+  volumeClaimTemplates:
+  - # Metadata for the PVC template
+    metadata:
+      # PVC name template - combined with pod ordinal for uniqueness
+      name: mysql-vets-storage
+      # NAMING: Creates mysql-vets-storage-0, mysql-vets-storage-1, etc.
+    
+    # PVC specification
+    spec:
+      # Access modes for the persistent volume
+      accessModes: ["ReadWriteOnce"]
+      # RWO: Single node read-write access (suitable for MySQL)
+      # STORAGE PATTERN: MySQL requires exclusive access to data files
+      
+      # Storage resource requirements
+      resources:
+        requests:
+          # Storage size allocation
+          storage: 10Gi
+          # CAPACITY: 10GB suitable for moderate veterinary data
+          # SCALING: Can be expanded based on data growth
+
+---
+# Document separator for the Service resource
+
+# -----------------------------------------------------------------------------
+# HEADLESS SERVICE - STABLE NETWORK IDENTITY FOR STATEFULSET
+# -----------------------------------------------------------------------------
+# API version for Service resources
+apiVersion: v1
+
+# Resource type: Service provides network access to pods
+kind: Service
+
+# Service metadata
+metadata:
+  # Service name matching StatefulSet serviceName
+  name: mysql-vets
+  # REQUIREMENT: Must match StatefulSet serviceName for DNS resolution
+  
+  # Namespace matching StatefulSet
+  namespace: petclinic
+  
+  # Labels for service identification
+  labels:
+    app: mysql-vets
+    component: database
+    # CONSISTENCY: Matches StatefulSet labels for management
+
+# Service specification
+spec:
+  # Selector to target StatefulSet pods
+  selector:
+    app: mysql-vets
+    # TARGETING: Selects pods created by the StatefulSet
+  
+  # Port configuration for database access
+  ports:
+  - # Service port for client connections
+    port: 3306
+    # Target port on the pods
+    targetPort: 3306
+    # Port name for identification
+    name: mysql
+    # STANDARD MYSQL: Port 3306 for database connections
+  
+  # Service type for internal cluster access
+  type: ClusterIP
+  # INTERNAL ACCESS: Only accessible within the cluster
+  
+  # Headless service configuration
+  clusterIP: None
+  # HEADLESS SERVICE: No load balancing, direct pod access
+  # STATEFULSET REQUIREMENT: Enables stable network identities
+  # DNS RESOLUTION: Creates individual DNS records for each pod
+
+# =============================================================================
+# DATABASE ARCHITECTURE ANALYSIS AND PRODUCTION CONSIDERATIONS
+# =============================================================================
+#
+# STATEFULSET BENEFITS FOR MYSQL:
+# ✅ PERSISTENT STORAGE: Data survives pod restarts and rescheduling
+# ✅ STABLE NETWORK IDENTITY: Predictable DNS names for database connections
+# ✅ ORDERED DEPLOYMENT: Controlled startup sequence for database initialization
+# ✅ UNIQUE STORAGE: Each replica gets dedicated persistent volume
+# ✅ GRACEFUL SCALING: Ordered scaling operations for database safety
+#
+# MYSQL CONFIGURATION ANALYSIS:
+# ✅ VERSION STABILITY: MySQL 8.0 provides latest features and security
+# ✅ SECURITY: All credentials managed through Kubernetes Secrets
+# ✅ RESOURCE ALLOCATION: Appropriate limits for moderate workloads
+# ✅ HEALTH MONITORING: Both liveness and readiness probes configured
+# ✅ PERSISTENT STORAGE: 10Gi storage with ReadWriteOnce access
+#
+# PRODUCTION ENHANCEMENTS NEEDED:
+#
+# 1. HIGH AVAILABILITY CONFIGURATION:
+#    # MySQL Master-Slave or Group Replication setup
+#    spec:
+#      replicas: 3  # Odd number for quorum
+#      podManagementPolicy: Parallel  # For faster startup
+#      updateStrategy:
+#        type: RollingUpdate
+#        rollingUpdate:
+#          partition: 0
+#
+# 2. ENHANCED MYSQL CONFIGURATION:
+#    # Custom MySQL configuration via ConfigMap
+#    apiVersion: v1
+#    kind: ConfigMap
+#    metadata:
+#      name: mysql-vets-config
+#    data:
+#      my.cnf: |
+#        [mysqld]
+#        innodb_buffer_pool_size = 512M
+#        max_connections = 200
+#        slow_query_log = 1
+#        long_query_time = 2
+#        binlog_format = ROW
+#        server-id = 1
+#
+# 3. BACKUP AND RECOVERY STRATEGY:
+#    # Scheduled backup CronJob
+#    apiVersion: batch/v1
+#    kind: CronJob
+#    metadata:
+#      name: mysql-vets-backup
+#    spec:
+#      schedule: "0 2 * * *"  # Daily at 2 AM
+#      jobTemplate:
+#        spec:
+#          template:
+#            spec:
+#              containers:
+#              - name: mysql-backup
+#                image: mysql:8.0
+#                command:
+#                - /bin/bash
+#                - -c
+#                - mysqldump -h mysql-vets -u root -p$MYSQL_ROOT_PASSWORD petclinic > /backup/vets-$(date +%Y%m%d).sql
+#
+# 4. MONITORING AND OBSERVABILITY:
+#    # MySQL Exporter for Prometheus monitoring
+#    - name: mysql-exporter
+#      image: prom/mysqld-exporter:latest
+#      ports:
+#      - containerPort: 9104
+#        name: metrics
+#      env:
+#      - name: DATA_SOURCE_NAME
+#        value: "root:$(MYSQL_ROOT_PASSWORD)@(localhost:3306)/"
+#
+# 5. SECURITY ENHANCEMENTS:
+#    # Pod Security Context
+#    spec:
+#      securityContext:
+#        runAsNonRoot: true
+#        runAsUser: 999  # mysql user
+#        fsGroup: 999
+#      containers:
+#      - name: mysql
+#        securityContext:
+#          allowPrivilegeEscalation: false
+#          readOnlyRootFilesystem: false
+#          capabilities:
+#            drop:
+#            - ALL
+#
+# STORAGE CONSIDERATIONS:
+#
+# 1. STORAGE CLASS OPTIMIZATION:
+#    volumeClaimTemplates:
+#    - metadata:
+#        name: mysql-vets-storage
+#      spec:
+#        storageClassName: fast-ssd  # High-performance storage
+#        accessModes: ["ReadWriteOnce"]
+#        resources:
+#          requests:
+#            storage: 50Gi  # Production-sized storage
+#
+# 2. BACKUP STORAGE:
+#    # Separate PVC for backups
+#    - metadata:
+#        name: mysql-vets-backup
+#      spec:
+#        storageClassName: standard
+#        accessModes: ["ReadWriteOnce"]
+#        resources:
+#          requests:
+#            storage: 100Gi  # Larger for backup retention
+#
+# DISASTER RECOVERY PROCEDURES:
+#
+# 1. DATA BACKUP VERIFICATION:
+#    kubectl exec mysql-vets-0 -- mysqldump -u root -p$MYSQL_ROOT_PASSWORD petclinic > backup.sql
+#
+# 2. POINT-IN-TIME RECOVERY:
+#    # Enable binary logging for point-in-time recovery
+#    # Configure backup retention policies
+#    # Test restore procedures regularly
+#
+# 3. CROSS-REGION REPLICATION:
+#    # Set up MySQL replication to secondary regions
+#    # Implement automated failover procedures
+#    # Test disaster recovery scenarios
+#
+# PERFORMANCE OPTIMIZATION:
+#
+# 1. RESOURCE TUNING:
+#    resources:
+#      requests:
+#        memory: "2Gi"    # Increased for production workloads
+#        cpu: "1"         # Full CPU core for better performance
+#      limits:
+#        memory: "4Gi"    # Higher limits for peak operations
+#        cpu: "2"         # Multiple cores for concurrent queries
+#
+# 2. MYSQL TUNING:
+#    # Optimize innodb_buffer_pool_size based on available memory
+#    # Configure appropriate connection limits
+#    # Enable query cache for read-heavy workloads
+#    # Optimize table indexes for query patterns
+#
+# COMPLIANCE AND GOVERNANCE:
+# - Implement database encryption at rest
+# - Configure audit logging for compliance requirements
+# - Establish data retention and purging policies
+# - Document backup and recovery procedures
+# - Implement access controls and user management
+#
+# =============================================================================

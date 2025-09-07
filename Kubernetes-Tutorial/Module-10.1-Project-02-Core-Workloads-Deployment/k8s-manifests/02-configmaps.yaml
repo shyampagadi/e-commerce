@@ -1,0 +1,879 @@
+# =============================================================================
+# CONFIGMAPS FOR CORE WORKLOADS DEPLOYMENT
+# =============================================================================
+# Purpose: Externalizes application configuration from container images
+# Why needed: Enables configuration management without rebuilding images,
+# supports environment-specific configurations, and facilitates configuration updates
+# Kubernetes concept: ConfigMaps store non-sensitive configuration data
+# that can be consumed by pods as environment variables, command-line arguments,
+# or configuration files in volumes
+
+# =============================================================================
+# APPLICATION CONFIGURATION CONFIGMAP
+# =============================================================================
+# Purpose: Stores application-specific configuration settings
+# Why needed: Separates configuration from code, enables environment-specific configs
+# Kubernetes concept: ConfigMaps provide a way to inject configuration data into pods
+
+apiVersion: v1
+# API Version: v1 is the stable version for ConfigMap resources
+# This is the most commonly used API version for configuration management
+
+kind: ConfigMap
+# Resource Type: ConfigMap stores non-sensitive configuration data
+# This provides a way to decouple configuration from application code
+# ConfigMaps can be consumed by pods in multiple ways
+
+metadata:
+  # Metadata section contains identifying information about the resource
+  name: ecommerce-app-config
+  # Name: Unique identifier for this ConfigMap within the namespace
+  # This name will be used to reference the ConfigMap in pod specifications
+  
+  namespace: ecommerce
+  # Namespace: Specifies which namespace this ConfigMap belongs to
+  # Must match the namespace created in the namespace.yaml file
+  
+  labels:
+    # Labels: Key-value pairs for organizing and selecting resources
+    app: ecommerce
+    # app: ecommerce - Identifies this ConfigMap as belonging to the e-commerce app
+    component: configuration
+    # component: configuration - Identifies this as a configuration component
+    tier: application
+    # tier: application - Identifies this as application tier
+    environment: production
+    # environment: production - Indicates this is for production environment
+    managed-by: kubernetes
+    # managed-by: kubernetes - Indicates this resource is managed by Kubernetes
+  
+  annotations:
+    # Annotations: Additional metadata that doesn't affect resource behavior
+    description: "Application configuration for e-commerce Core Workloads Deployment"
+    # description: Human-readable description of the ConfigMap purpose
+    # Used for documentation and operational understanding
+    
+    contact: "platform-engineering@company.com"
+    # contact: Email address for the team responsible for this ConfigMap
+    # Used for incident response and maintenance coordination
+    
+    last-updated: "2024-12-01T00:00:00Z"
+    # last-updated: Timestamp of last configuration update
+    # Used for change tracking and audit trails
+    
+    version: "1.0.0"
+    # version: Version of the configuration
+    # Used for configuration versioning and rollback
+
+data:
+  # data: Contains the actual configuration key-value pairs
+  # Each key becomes a file name when mounted as a volume
+  # Each value becomes the file content when mounted as a volume
+  
+  # =============================================================================
+  # DATABASE CONFIGURATION
+  # =============================================================================
+  database.host: "postgresql-service"
+  # database.host: Database server hostname
+  # Value: postgresql-service - Kubernetes service name for database
+  # Purpose: Enables service discovery for database connections
+  # Impact: Applications can connect to database using service name
+  # Production consideration: Uses Kubernetes service discovery instead of hardcoded IPs
+  
+  database.port: "5432"
+  # database.port: Database server port
+  # Value: 5432 - Standard PostgreSQL port
+  # Purpose: Specifies the port for database connections
+  # Impact: Applications connect to database on correct port
+  # Production consideration: Standard port for PostgreSQL database
+  
+  database.name: "ecommerce_production"
+  # database.name: Database name
+  # Value: ecommerce_production - Production database name
+  # Purpose: Specifies which database to connect to
+  # Impact: Applications connect to correct database
+  # Production consideration: Environment-specific database naming
+  
+  database.ssl_mode: "require"
+  # database.ssl_mode: SSL connection mode
+  # Value: require - Requires SSL connection
+  # Purpose: Ensures encrypted database connections
+  # Impact: All database connections are encrypted
+  # Security benefit: Prevents data interception and ensures data privacy
+  
+  database.pool_size: "20"
+  # database.pool_size: Connection pool size
+  # Value: 20 - Maximum number of database connections
+  # Purpose: Controls database connection pooling
+  # Impact: Limits concurrent database connections
+  # Production consideration: Prevents database overload and manages resources
+  
+  database.timeout: "30"
+  # database.timeout: Connection timeout in seconds
+  # Value: 30 - 30 second timeout
+  # Purpose: Prevents hanging database connections
+  # Impact: Connections timeout after 30 seconds
+  # Production consideration: Balances responsiveness with reliability
+  
+  # =============================================================================
+  # CACHE CONFIGURATION
+  # =============================================================================
+  cache.host: "redis-service"
+  # cache.host: Cache server hostname
+  # Value: redis-service - Kubernetes service name for Redis
+  # Purpose: Enables service discovery for cache connections
+  # Impact: Applications can connect to cache using service name
+  # Production consideration: Uses Kubernetes service discovery for cache
+  
+  cache.port: "6379"
+  # cache.port: Cache server port
+  # Value: 6379 - Standard Redis port
+  # Purpose: Specifies the port for cache connections
+  # Impact: Applications connect to cache on correct port
+  # Production consideration: Standard port for Redis cache
+  
+  cache.database: "0"
+  # cache.database: Redis database number
+  # Value: 0 - Default Redis database
+  # Purpose: Specifies which Redis database to use
+  # Impact: Applications use correct Redis database
+  # Production consideration: Separates different application data
+  
+  cache.ttl: "3600"
+  # cache.ttl: Cache time-to-live in seconds
+  # Value: 3600 - 1 hour cache duration
+  # Purpose: Controls how long data is cached
+  # Impact: Cached data expires after 1 hour
+  # Production consideration: Balances performance with data freshness
+  
+  cache.max_memory: "256mb"
+  # cache.max_memory: Maximum memory usage
+  # Value: 256mb - 256 megabytes maximum
+  # Purpose: Limits Redis memory consumption
+  # Impact: Redis uses maximum 256MB memory
+  # Production consideration: Prevents memory exhaustion and manages resources
+  
+  # =============================================================================
+  # MESSAGE QUEUE CONFIGURATION
+  # =============================================================================
+  message_queue.host: "rabbitmq-service"
+  # message_queue.host: Message queue server hostname
+  # Value: rabbitmq-service - Kubernetes service name for RabbitMQ
+  # Purpose: Enables service discovery for message queue connections
+  # Impact: Applications can connect to message queue using service name
+  # Production consideration: Uses Kubernetes service discovery for messaging
+  
+  message_queue.port: "5672"
+  # message_queue.port: Message queue server port
+  # Value: 5672 - Standard RabbitMQ AMQP port
+  # Purpose: Specifies the port for message queue connections
+  # Impact: Applications connect to message queue on correct port
+  # Production consideration: Standard port for RabbitMQ AMQP
+  
+  message_queue.vhost: "/ecommerce"
+  # message_queue.vhost: Virtual host
+  # Value: /ecommerce - Application-specific virtual host
+  # Purpose: Isolates message queue traffic by application
+  # Impact: Applications use dedicated virtual host
+  # Production consideration: Provides logical separation and security
+  
+  message_queue.exchange: "ecommerce.exchange"
+  # message_queue.exchange: Exchange name
+  # Value: ecommerce.exchange - Application-specific exchange
+  # Purpose: Routes messages to appropriate queues
+  # Impact: Messages are routed correctly
+  # Production consideration: Enables flexible message routing
+  
+  # =============================================================================
+  # APPLICATION CONFIGURATION
+  # =============================================================================
+  app.name: "E-commerce Core Workloads"
+  # app.name: Application name
+  # Value: E-commerce Core Workloads - Human-readable application name
+  # Purpose: Identifies the application in logs and monitoring
+  # Impact: Application appears with correct name in monitoring
+  # Production consideration: Enables proper application identification
+  
+  app.version: "1.0.0"
+  # app.version: Application version
+  # Value: 1.0.0 - Semantic version number
+  # Purpose: Tracks application version for deployment and rollback
+  # Impact: Enables version-specific behavior and troubleshooting
+  # Production consideration: Enables proper version management
+  
+  app.environment: "production"
+  # app.environment: Environment name
+  # Value: production - Production environment
+  # Purpose: Enables environment-specific behavior
+  # Impact: Application behaves according to environment
+  # Production consideration: Enables environment-specific configurations
+  
+  app.debug: "false"
+  # app.debug: Debug mode flag
+  # Value: false - Debug mode disabled
+  # Purpose: Controls debug logging and development features
+  # Impact: Application runs in production mode
+  # Production consideration: Disables debug features for security and performance
+  
+  app.log_level: "info"
+  # app.log_level: Logging level
+  # Value: info - Information level logging
+  # Purpose: Controls verbosity of application logs
+  # Impact: Application logs at info level and above
+  # Production consideration: Balances log detail with performance
+  
+  # =============================================================================
+  # API CONFIGURATION
+  # =============================================================================
+  api.host: "0.0.0.0"
+  # api.host: API server host
+  # Value: 0.0.0.0 - Listen on all interfaces
+  # Purpose: Enables API server to accept connections from any interface
+  # Impact: API is accessible from within the cluster
+  # Production consideration: Allows load balancer and service mesh access
+  
+  api.port: "8080"
+  # api.port: API server port
+  # Value: 8080 - Standard application port
+  # Purpose: Specifies the port for API server
+  # Impact: API server listens on port 8080
+  # Production consideration: Standard port for web applications
+  
+  api.timeout: "30"
+  # api.timeout: Request timeout in seconds
+  # Value: 30 - 30 second timeout
+  # Purpose: Prevents hanging API requests
+  # Impact: API requests timeout after 30 seconds
+  # Production consideration: Balances responsiveness with reliability
+  
+  api.rate_limit: "1000"
+  # api.rate_limit: Requests per minute
+  # Value: 1000 - 1000 requests per minute
+  # Purpose: Prevents API abuse and ensures fair usage
+  # Impact: API accepts maximum 1000 requests per minute
+  # Production consideration: Protects against DDoS and ensures stability
+  
+  # =============================================================================
+  # MONITORING CONFIGURATION
+  # =============================================================================
+  monitoring.enabled: "true"
+  # monitoring.enabled: Enable monitoring
+  # Value: true - Monitoring is enabled
+  # Purpose: Controls whether monitoring features are active
+  # Impact: Application exposes metrics and health checks
+  # Production consideration: Enables observability and troubleshooting
+  
+  monitoring.metrics_port: "9090"
+  # monitoring.metrics_port: Metrics server port
+  # Value: 9090 - Standard Prometheus metrics port
+  # Purpose: Specifies port for metrics collection
+  # Impact: Metrics are available on port 9090
+  # Production consideration: Standard port for Prometheus scraping
+  
+  monitoring.health_check_interval: "30"
+  # monitoring.health_check_interval: Health check interval in seconds
+  # Value: 30 - 30 second interval
+  # Purpose: Controls frequency of health checks
+  # Impact: Health checks run every 30 seconds
+  # Production consideration: Balances monitoring frequency with performance
+  
+  monitoring.log_format: "json"
+  # monitoring.log_format: Log output format
+  # Value: json - JSON format for structured logging
+  # Purpose: Enables structured log processing
+  # Impact: Logs are output in JSON format
+  # Production consideration: Enables log aggregation and analysis
+  
+  # =============================================================================
+  # SECURITY CONFIGURATION
+  # =============================================================================
+  security.cors_enabled: "true"
+  # security.cors_enabled: Enable CORS
+  # Value: true - CORS is enabled
+  # Purpose: Enables Cross-Origin Resource Sharing
+  # Impact: Web applications can make cross-origin requests
+  # Production consideration: Enables frontend-backend communication
+  
+  security.cors_origins: "https://ecommerce.company.com,https://admin.company.com"
+  # security.cors_origins: Allowed CORS origins
+  # Value: Specific domains - Only allowed domains can make requests
+  # Purpose: Restricts cross-origin requests to trusted domains
+  # Impact: Only specified domains can access the API
+  # Security benefit: Prevents unauthorized cross-origin requests
+  
+  security.session_timeout: "3600"
+  # security.session_timeout: Session timeout in seconds
+  # Value: 3600 - 1 hour session timeout
+  # Purpose: Controls how long user sessions remain active
+  # Impact: User sessions expire after 1 hour
+  # Production consideration: Balances security with user experience
+  
+  security.password_min_length: "8"
+  # security.password_min_length: Minimum password length
+  # Value: 8 - Minimum 8 characters
+  # Purpose: Enforces strong password requirements
+  # Impact: Passwords must be at least 8 characters
+  # Security benefit: Prevents weak passwords and improves security
+
+---
+# =============================================================================
+# FRONTEND CONFIGURATION CONFIGMAP
+# =============================================================================
+# Purpose: Stores frontend-specific configuration settings
+# Why needed: Enables frontend configuration management and environment-specific settings
+# Kubernetes concept: ConfigMaps can be consumed by frontend applications
+# through environment variables or mounted configuration files
+
+apiVersion: v1
+# API Version: v1 is the stable version for ConfigMap resources
+
+kind: ConfigMap
+# Resource Type: ConfigMap stores non-sensitive configuration data
+
+metadata:
+  # Metadata section contains identifying information about the resource
+  name: ecommerce-frontend-config
+  # Name: Unique identifier for this ConfigMap within the namespace
+  # This name will be used to reference the ConfigMap in pod specifications
+  
+  namespace: ecommerce
+  # Namespace: Specifies which namespace this ConfigMap belongs to
+  # Must match the namespace created in the namespace.yaml file
+  
+  labels:
+    # Labels: Key-value pairs for organizing and selecting resources
+    app: ecommerce
+    # app: ecommerce - Identifies this ConfigMap as belonging to the e-commerce app
+    component: frontend
+    # component: frontend - Identifies this as a frontend component
+    tier: application
+    # tier: application - Identifies this as application tier
+    environment: production
+    # environment: production - Indicates this is for production environment
+    managed-by: kubernetes
+    # managed-by: kubernetes - Indicates this resource is managed by Kubernetes
+  
+  annotations:
+    # Annotations: Additional metadata that doesn't affect resource behavior
+    description: "Frontend configuration for e-commerce Core Workloads Deployment"
+    # description: Human-readable description of the ConfigMap purpose
+    # Used for documentation and operational understanding
+    
+    contact: "platform-engineering@company.com"
+    # contact: Email address for the team responsible for this ConfigMap
+    # Used for incident response and maintenance coordination
+    
+    last-updated: "2024-12-01T00:00:00Z"
+    # last-updated: Timestamp of last configuration update
+    # Used for change tracking and audit trails
+    
+    version: "1.0.0"
+    # version: Version of the configuration
+    # Used for configuration versioning and rollback
+
+data:
+  # data: Contains the actual configuration key-value pairs
+  # Each key becomes a file name when mounted as a volume
+  # Each value becomes the file content when mounted as a volume
+  
+  # =============================================================================
+  # API ENDPOINT CONFIGURATION
+  # =============================================================================
+  REACT_APP_API_URL: "https://api.ecommerce.company.com"
+  # REACT_APP_API_URL: Backend API URL
+  # Value: https://api.ecommerce.company.com - Production API endpoint
+  # Purpose: Enables frontend to connect to backend API
+  # Impact: Frontend makes API calls to correct endpoint
+  # Production consideration: Uses production API endpoint with HTTPS
+  
+  REACT_APP_API_VERSION: "v1"
+  # REACT_APP_API_VERSION: API version
+  # Value: v1 - API version 1
+  # Purpose: Specifies which API version to use
+  # Impact: Frontend uses correct API version
+  # Production consideration: Enables API versioning and backward compatibility
+  
+  REACT_APP_WS_URL: "wss://ws.ecommerce.company.com"
+  # REACT_APP_WS_URL: WebSocket URL
+  # Value: wss://ws.ecommerce.company.com - Secure WebSocket endpoint
+  # Purpose: Enables real-time communication
+  # Impact: Frontend can establish WebSocket connections
+  # Production consideration: Uses secure WebSocket for real-time features
+  
+  # =============================================================================
+  # APPLICATION CONFIGURATION
+  # =============================================================================
+  REACT_APP_NAME: "E-commerce Store"
+  # REACT_APP_NAME: Application name
+  # Value: E-commerce Store - Human-readable application name
+  # Purpose: Displays application name in UI
+  # Impact: Users see correct application name
+  # Production consideration: Branding and user experience
+  
+  REACT_APP_VERSION: "1.0.0"
+  # REACT_APP_VERSION: Application version
+  # Value: 1.0.0 - Semantic version number
+  # Purpose: Tracks frontend version for debugging and support
+  # Impact: Enables version-specific behavior and troubleshooting
+  # Production consideration: Enables proper version management
+  
+  REACT_APP_ENVIRONMENT: "production"
+  # REACT_APP_ENVIRONMENT: Environment name
+  # Value: production - Production environment
+  # Purpose: Enables environment-specific behavior
+  # Impact: Frontend behaves according to environment
+  # Production consideration: Enables environment-specific configurations
+  
+  # =============================================================================
+  # FEATURE FLAGS
+  # =============================================================================
+  REACT_APP_FEATURE_PAYMENTS: "true"
+  # REACT_APP_FEATURE_PAYMENTS: Enable payment features
+  # Value: true - Payment features are enabled
+  # Purpose: Controls payment functionality visibility
+  # Impact: Users can access payment features
+  # Production consideration: Enables payment processing features
+  
+  REACT_APP_FEATURE_REVIEWS: "true"
+  # REACT_APP_FEATURE_REVIEWS: Enable review features
+  # Value: true - Review features are enabled
+  # Purpose: Controls review functionality visibility
+  # Impact: Users can access review features
+  # Production consideration: Enables customer review features
+  
+  REACT_APP_FEATURE_WISHLIST: "true"
+  # REACT_APP_FEATURE_WISHLIST: Enable wishlist features
+  # Value: true - Wishlist features are enabled
+  # Purpose: Controls wishlist functionality visibility
+  # Impact: Users can access wishlist features
+  # Production consideration: Enables customer wishlist features
+  
+  # =============================================================================
+  # ANALYTICS CONFIGURATION
+  # =============================================================================
+  REACT_APP_GA_TRACKING_ID: "UA-123456789-1"
+  # REACT_APP_GA_TRACKING_ID: Google Analytics tracking ID
+  # Value: UA-123456789-1 - Production tracking ID
+  # Purpose: Enables website analytics and tracking
+  # Impact: User behavior is tracked for analytics
+  # Production consideration: Enables business intelligence and optimization
+  
+  REACT_APP_ANALYTICS_ENABLED: "true"
+  # REACT_APP_ANALYTICS_ENABLED: Enable analytics
+  # Value: true - Analytics are enabled
+  # Purpose: Controls analytics data collection
+  # Impact: Analytics data is collected
+  # Production consideration: Enables data-driven decision making
+  
+  # =============================================================================
+  # PERFORMANCE CONFIGURATION
+  # =============================================================================
+  REACT_APP_LAZY_LOADING: "true"
+  # REACT_APP_LAZY_LOADING: Enable lazy loading
+  # Value: true - Lazy loading is enabled
+  # Purpose: Improves initial page load performance
+  # Impact: Pages load faster by loading content on demand
+  # Production consideration: Improves user experience and performance
+  
+  REACT_APP_CACHE_TTL: "300"
+  # REACT_APP_CACHE_TTL: Cache time-to-live in seconds
+  # Value: 300 - 5 minute cache duration
+  # Purpose: Controls client-side caching
+  # Impact: Data is cached for 5 minutes
+  # Production consideration: Balances performance with data freshness
+  
+  # =============================================================================
+  # SECURITY CONFIGURATION
+  # =============================================================================
+  REACT_APP_HTTPS_ONLY: "true"
+  # REACT_APP_HTTPS_ONLY: Force HTTPS
+  # Value: true - HTTPS is required
+  # Purpose: Ensures secure connections
+  # Impact: All connections use HTTPS
+  # Security benefit: Prevents data interception and ensures data privacy
+  
+  REACT_APP_CSP_ENABLED: "true"
+  # REACT_APP_CSP_ENABLED: Enable Content Security Policy
+  # Value: true - CSP is enabled
+  # Purpose: Prevents XSS attacks
+  # Impact: Content Security Policy is enforced
+  # Security benefit: Protects against cross-site scripting attacks
+
+---
+# =============================================================================
+# MONITORING CONFIGURATION CONFIGMAP
+# =============================================================================
+# Purpose: Stores monitoring and observability configuration settings
+# Why needed: Enables centralized monitoring configuration and environment-specific settings
+# Kubernetes concept: ConfigMaps can be consumed by monitoring applications
+# to configure metrics collection, alerting, and dashboards
+
+apiVersion: v1
+# API Version: v1 is the stable version for ConfigMap resources
+
+kind: ConfigMap
+# Resource Type: ConfigMap stores non-sensitive configuration data
+
+metadata:
+  # Metadata section contains identifying information about the resource
+  name: ecommerce-monitoring-config
+  # Name: Unique identifier for this ConfigMap within the namespace
+  # This name will be used to reference the ConfigMap in pod specifications
+  
+  namespace: ecommerce
+  # Namespace: Specifies which namespace this ConfigMap belongs to
+  # Must match the namespace created in the namespace.yaml file
+  
+  labels:
+    # Labels: Key-value pairs for organizing and selecting resources
+    app: ecommerce
+    # app: ecommerce - Identifies this ConfigMap as belonging to the e-commerce app
+    component: monitoring
+    # component: monitoring - Identifies this as a monitoring component
+    tier: infrastructure
+    # tier: infrastructure - Identifies this as infrastructure tier
+    environment: production
+    # environment: production - Indicates this is for production environment
+    managed-by: kubernetes
+    # managed-by: kubernetes - Indicates this resource is managed by Kubernetes
+  
+  annotations:
+    # Annotations: Additional metadata that doesn't affect resource behavior
+    description: "Monitoring configuration for e-commerce Core Workloads Deployment"
+    # description: Human-readable description of the ConfigMap purpose
+    # Used for documentation and operational understanding
+    
+    contact: "platform-engineering@company.com"
+    # contact: Email address for the team responsible for this ConfigMap
+    # Used for incident response and maintenance coordination
+    
+    last-updated: "2024-12-01T00:00:00Z"
+    # last-updated: Timestamp of last configuration update
+    # Used for change tracking and audit trails
+    
+    version: "1.0.0"
+    # version: Version of the configuration
+    # Used for configuration versioning and rollback
+
+data:
+  # data: Contains the actual configuration key-value pairs
+  # Each key becomes a file name when mounted as a volume
+  # Each value becomes the file content when mounted as a volume
+  
+  # =============================================================================
+  # PROMETHEUS CONFIGURATION
+  # =============================================================================
+  prometheus.yml: |
+    # Prometheus configuration file
+    # This configuration defines how Prometheus scrapes metrics
+    # and stores time-series data for monitoring and alerting
+    
+    global:
+      # Global configuration settings
+      scrape_interval: 15s
+      # scrape_interval: How often to scrape targets
+      # Value: 15s - Scrape every 15 seconds
+      # Purpose: Balances data freshness with resource usage
+      # Impact: Metrics are collected every 15 seconds
+      # Production consideration: Standard interval for production monitoring
+      
+      evaluation_interval: 15s
+      # evaluation_interval: How often to evaluate rules
+      # Value: 15s - Evaluate rules every 15 seconds
+      # Purpose: Controls alert evaluation frequency
+      # Impact: Alerts are evaluated every 15 seconds
+      # Production consideration: Enables responsive alerting
+      
+      external_labels:
+        # external_labels: Labels added to all metrics
+        cluster: 'ecommerce-production'
+        # cluster: Cluster identifier
+        # Value: ecommerce-production - Production cluster name
+        # Purpose: Identifies metrics from this cluster
+        # Impact: All metrics are tagged with cluster name
+        # Production consideration: Enables multi-cluster monitoring
+        
+        environment: 'production'
+        # environment: Environment identifier
+        # Value: production - Production environment
+        # Purpose: Identifies metrics from production environment
+        # Impact: All metrics are tagged with environment
+        # Production consideration: Enables environment-specific monitoring
+    
+    rule_files:
+      # rule_files: List of rule files to load
+      - "/etc/prometheus/rules/*.yml"
+      # Path to rule files directory
+      # Purpose: Loads alerting and recording rules
+      # Impact: Alerting rules are loaded from specified directory
+      # Production consideration: Enables centralized rule management
+    
+    scrape_configs:
+      # scrape_configs: List of targets to scrape
+      - job_name: 'prometheus'
+        # job_name: Name of the scraping job
+        # Value: prometheus - Prometheus self-monitoring
+        # Purpose: Monitors Prometheus itself
+        # Impact: Prometheus metrics are collected
+        # Production consideration: Enables Prometheus health monitoring
+        
+        static_configs:
+          # static_configs: Static target configuration
+          - targets: ['localhost:9090']
+            # targets: List of targets to scrape
+            # Value: localhost:9090 - Prometheus server itself
+            # Purpose: Scrapes Prometheus server metrics
+            # Impact: Prometheus self-monitoring is enabled
+            # Production consideration: Enables Prometheus health monitoring
+      
+      - job_name: 'kubernetes-pods'
+        # job_name: Name of the scraping job
+        # Value: kubernetes-pods - Kubernetes pod monitoring
+        # Purpose: Monitors all pods in the cluster
+        # Impact: Pod metrics are collected
+        # Production consideration: Enables comprehensive pod monitoring
+        
+        kubernetes_sd_configs:
+          # kubernetes_sd_configs: Kubernetes service discovery
+          - role: pod
+            # role: pod - Discover pods
+            # Purpose: Automatically discovers pods
+            # Impact: All pods are automatically discovered
+            # Production consideration: Enables dynamic pod monitoring
+        
+        relabel_configs:
+          # relabel_configs: Metric relabeling rules
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            # source_labels: Source labels for relabeling
+            # Purpose: Filters pods with prometheus.io/scrape annotation
+            # Impact: Only annotated pods are scraped
+            # Production consideration: Enables selective pod monitoring
+            
+            action: keep
+            # action: keep - Keep matching targets
+            # Purpose: Keeps only pods with scrape annotation
+            # Impact: Reduces scraping overhead
+            # Production consideration: Improves performance and reduces noise
+          
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            # source_labels: Source labels for relabeling
+            # Purpose: Uses custom metrics path from annotation
+            # Impact: Pods can specify custom metrics path
+            # Production consideration: Enables flexible metrics endpoints
+            
+            target_label: __metrics_path__
+            # target_label: Target label for relabeling
+            # Purpose: Sets the metrics path
+            # Impact: Metrics are scraped from correct path
+            # Production consideration: Enables custom metrics endpoints
+          
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            # source_labels: Source labels for relabeling
+            # Purpose: Constructs target address with custom port
+            # Impact: Metrics are scraped from correct address and port
+            # Production consideration: Enables custom port configuration
+            
+            action: replace
+            # action: replace - Replace target label
+            # Purpose: Replaces target address with custom port
+            # Impact: Correct target address is used
+            # Production consideration: Enables flexible port configuration
+            
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            # regex: Regular expression for matching
+            # Purpose: Matches address and port patterns
+            # Impact: Correct address and port are extracted
+            # Production consideration: Enables flexible address parsing
+            
+            replacement: $1:$2
+            # replacement: Replacement pattern
+            # Purpose: Constructs new target address
+            # Impact: Target address includes custom port
+            # Production consideration: Enables proper target addressing
+            
+            target_label: __address__
+            # target_label: Target label for relabeling
+            # Purpose: Sets the target address
+            # Impact: Correct target address is used
+            # Production consideration: Enables proper target addressing
+      
+      - job_name: 'kubernetes-nodes'
+        # job_name: Name of the scraping job
+        # Value: kubernetes-nodes - Kubernetes node monitoring
+        # Purpose: Monitors all nodes in the cluster
+        # Impact: Node metrics are collected
+        # Production consideration: Enables comprehensive node monitoring
+        
+        kubernetes_sd_configs:
+          # kubernetes_sd_configs: Kubernetes service discovery
+          - role: node
+            # role: node - Discover nodes
+            # Purpose: Automatically discovers nodes
+            # Impact: All nodes are automatically discovered
+            # Production consideration: Enables dynamic node monitoring
+        
+        relabel_configs:
+          # relabel_configs: Metric relabeling rules
+          - action: labelmap
+            # action: labelmap - Map labels
+            # Purpose: Maps Kubernetes labels to Prometheus labels
+            # Impact: Kubernetes labels are available in Prometheus
+            # Production consideration: Enables rich labeling and filtering
+            
+            regex: __meta_kubernetes_node_label_(.+)
+            # regex: Regular expression for matching
+            # Purpose: Matches Kubernetes node labels
+            # Impact: Node labels are mapped to Prometheus labels
+            # Production consideration: Enables node-based filtering and grouping
+  
+  # =============================================================================
+  # GRAFANA CONFIGURATION
+  # =============================================================================
+  grafana.ini: |
+    # Grafana configuration file
+    # This configuration defines Grafana server settings
+    # and enables various features for monitoring dashboards
+    
+    [server]
+    # Server configuration section
+    http_port = 3000
+    # http_port: HTTP server port
+    # Value: 3000 - Standard Grafana port
+    # Purpose: Specifies the port for Grafana web interface
+    # Impact: Grafana is accessible on port 3000
+    # Production consideration: Standard port for Grafana web interface
+    
+    root_url = https://grafana.ecommerce.company.com
+    # root_url: Root URL for Grafana
+    # Value: https://grafana.ecommerce.company.com - Production URL
+    # Purpose: Sets the public URL for Grafana
+    # Impact: Grafana is accessible via production URL
+    # Production consideration: Enables external access and proper redirects
+    
+    [security]
+    # Security configuration section
+    admin_user = admin
+    # admin_user: Default admin username
+    # Value: admin - Standard admin username
+    # Purpose: Sets the default admin username
+    # Impact: Admin user is created with specified username
+    # Production consideration: Standard admin username for Grafana
+    
+    admin_password = ${GRAFANA_ADMIN_PASSWORD}
+    # admin_password: Admin password from environment variable
+    # Value: ${GRAFANA_ADMIN_PASSWORD} - Environment variable reference
+    # Purpose: Sets admin password from environment variable
+    # Impact: Admin password is set from environment
+    # Security benefit: Prevents hardcoded passwords and enables secure configuration
+    
+    [auth.anonymous]
+    # Anonymous authentication configuration
+    enabled = false
+    # enabled: Enable anonymous access
+    # Value: false - Anonymous access disabled
+    # Purpose: Requires authentication for all access
+    # Impact: All users must authenticate
+    # Security benefit: Prevents unauthorized access to monitoring data
+    
+    [datasources]
+    # Data sources configuration
+    default_datasource = prometheus
+    # default_datasource: Default data source
+    # Value: prometheus - Prometheus as default data source
+    # Purpose: Sets Prometheus as default data source
+    # Impact: Dashboards use Prometheus by default
+    # Production consideration: Enables Prometheus-based monitoring
+  
+  # =============================================================================
+  # ALERT MANAGER CONFIGURATION
+  # =============================================================================
+  alertmanager.yml: |
+    # AlertManager configuration file
+    # This configuration defines how alerts are processed
+    # and routed to various notification channels
+    
+    global:
+      # Global configuration settings
+      smtp_smarthost: 'smtp.company.com:587'
+      # smtp_smarthost: SMTP server for email notifications
+      # Value: smtp.company.com:587 - Production SMTP server
+      # Purpose: Enables email notifications
+      # Impact: Alerts can be sent via email
+      # Production consideration: Uses production SMTP server
+      
+      smtp_from: 'alerts@company.com'
+      # smtp_from: From address for email notifications
+      # Value: alerts@company.com - Alerts email address
+      # Purpose: Sets the sender address for alerts
+      # Impact: Alerts are sent from specified address
+      # Production consideration: Uses dedicated alerts email address
+    
+    route:
+      # Alert routing configuration
+      group_by: ['alertname', 'cluster', 'service']
+      # group_by: Group alerts by these labels
+      # Purpose: Groups related alerts together
+      # Impact: Related alerts are grouped in notifications
+      # Production consideration: Reduces notification noise and improves organization
+      
+      group_wait: 10s
+      # group_wait: Wait time before sending grouped alerts
+      # Value: 10s - Wait 10 seconds
+      # Purpose: Allows time for related alerts to arrive
+      # Impact: Alerts are grouped for 10 seconds
+      # Production consideration: Balances responsiveness with grouping
+      
+      group_interval: 10s
+      # group_interval: Interval between sending grouped alerts
+      # Value: 10s - Send every 10 seconds
+      # Purpose: Controls frequency of grouped alert notifications
+      # Impact: Grouped alerts are sent every 10 seconds
+      # Production consideration: Balances notification frequency with noise reduction
+      
+      repeat_interval: 1h
+      # repeat_interval: Repeat interval for unresolved alerts
+      # Value: 1h - Repeat every hour
+      # Purpose: Resends unresolved alerts
+      # Impact: Unresolved alerts are resent every hour
+      # Production consideration: Ensures critical alerts are not missed
+      
+      receiver: 'default'
+      # receiver: Default receiver for alerts
+      # Value: default - Default notification channel
+      # Purpose: Routes alerts to default receiver
+      # Impact: Alerts are sent to default receiver
+      # Production consideration: Ensures all alerts have a destination
+    
+    receivers:
+      # Alert receivers configuration
+      - name: 'default'
+        # name: Receiver name
+        # Value: default - Default receiver
+        # Purpose: Defines default notification channel
+        # Impact: Alerts are sent to this receiver
+        # Production consideration: Central notification channel
+        
+        email_configs:
+          # email_configs: Email notification configuration
+          - to: 'platform-engineering@company.com'
+            # to: Email recipient
+            # Value: platform-engineering@company.com - Team email
+            # Purpose: Sends alerts to platform engineering team
+            # Impact: Team receives alert notifications
+            # Production consideration: Ensures alerts reach responsible team
+            
+            subject: '[E-commerce Production] {{ .GroupLabels.alertname }}'
+            # subject: Email subject template
+            # Purpose: Creates descriptive email subjects
+            # Impact: Email subjects include alert name
+            # Production consideration: Enables quick alert identification
+            
+            body: |
+              {{ range .Alerts }}
+              Alert: {{ .Annotations.summary }}
+              Description: {{ .Annotations.description }}
+              {{ end }}
+            # body: Email body template
+            # Purpose: Creates detailed email content
+            # Impact: Emails include alert details
+            # Production consideration: Enables comprehensive alert information

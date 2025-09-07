@@ -1,0 +1,1470 @@
+# =============================================================================
+# DEPLOYMENTS FOR CORE WORKLOADS DEPLOYMENT
+# =============================================================================
+# Purpose: Defines application workloads and their deployment strategies
+# Why needed: Manages application lifecycle, scaling, and updates
+# Kubernetes concept: Deployments provide declarative updates to Pods and ReplicaSets
+# This file will be built section by section to avoid token limits
+
+---
+# =============================================================================
+# BACKEND API DEPLOYMENT
+# =============================================================================
+# Purpose: Deploys the e-commerce backend API service
+# Why needed: Provides REST API endpoints for frontend and external clients
+# Kubernetes concept: Deployment manages the backend API pods and ensures availability
+
+apiVersion: apps/v1
+# API Version: apps/v1 is the stable version for Deployment resources
+# This is the most commonly used API version for application deployments
+
+kind: Deployment
+# Resource Type: Deployment manages ReplicaSets and provides declarative updates
+# This enables rolling updates, rollbacks, and scaling of application pods
+
+metadata:
+  # Metadata section contains identifying information about the resource
+  name: ecommerce-backend-deployment
+  # Name: Unique identifier for this Deployment within the namespace
+  # This name will be used to reference the Deployment in services and other resources
+  
+  namespace: ecommerce
+  # Namespace: Specifies which namespace this Deployment belongs to
+  # Must match the namespace created in the namespace.yaml file
+  
+  labels:
+    # Labels: Key-value pairs for organizing and selecting resources
+    app: ecommerce
+    # app: ecommerce - Identifies this Deployment as belonging to the e-commerce app
+    component: backend
+    # component: backend - Identifies this as a backend component
+    tier: application
+    # tier: application - Identifies this as application tier
+    environment: production
+    # environment: production - Indicates this is for production environment
+    managed-by: kubernetes
+    # managed-by: kubernetes - Indicates this resource is managed by Kubernetes
+  
+  annotations:
+    # Annotations: Additional metadata that doesn't affect resource behavior
+    description: "E-commerce backend API deployment for Core Workloads Deployment"
+    # description: Human-readable description of the Deployment purpose
+    # Used for documentation and operational understanding
+    
+    contact: "platform-engineering@company.com"
+    # contact: Email address for the team responsible for this Deployment
+    # Used for incident response and maintenance coordination
+    
+    last-updated: "2024-12-01T00:00:00Z"
+    # last-updated: Timestamp of last deployment update
+    # Used for change tracking and audit trails
+    
+    version: "1.0.0"
+    # version: Version of the deployment configuration
+    # Used for deployment versioning and rollback
+
+spec:
+  # Specification section defines the actual deployment configuration
+  
+  # =============================================================================
+  # REPLICA CONFIGURATION
+  # =============================================================================
+  replicas: 3
+  # replicas: 3 - Number of pod replicas to maintain
+  # Value: 3 - Three backend API pods
+  # Purpose: Ensures high availability and load distribution
+  # Impact: Three backend pods will be running simultaneously
+  # Production consideration: Provides redundancy and load balancing
+  
+  # =============================================================================
+  # SELECTOR CONFIGURATION
+  # =============================================================================
+  selector:
+    # selector: Defines which pods this Deployment manages
+    matchLabels:
+      # matchLabels: Pods must have all these labels to be managed
+      app: ecommerce
+      # app: ecommerce - Pods must have this label
+      component: backend
+      # component: backend - Pods must have this label
+      tier: application
+      # tier: application - Pods must have this label
+      # Purpose: Ensures only backend pods are managed by this Deployment
+      # Impact: Only pods with these labels will be managed
+      # Production consideration: Prevents management of wrong pods
+  
+  # =============================================================================
+  # DEPLOYMENT STRATEGY
+  # =============================================================================
+  strategy:
+    # strategy: Defines how pods are updated
+    type: RollingUpdate
+    # type: RollingUpdate - Use rolling update strategy
+    # Purpose: Enables zero-downtime deployments
+    # Impact: New pods are created before old ones are terminated
+    # Production consideration: Ensures continuous service availability
+    
+    rollingUpdate:
+      # rollingUpdate: Configuration for rolling updates
+      maxUnavailable: 1
+      # maxUnavailable: 1 - Maximum unavailable pods during update
+      # Value: 1 - At most 1 pod can be unavailable
+      # Purpose: Ensures service availability during updates
+      # Impact: At least 2 pods remain available during updates
+      # Production consideration: Balances update speed with availability
+      
+      maxSurge: 1
+      # maxSurge: 1 - Maximum additional pods during update
+      # Value: 1 - At most 1 additional pod can be created
+      # Purpose: Controls resource usage during updates
+      # Impact: Maximum 4 pods can exist during updates (3 + 1)
+      # Production consideration: Prevents resource exhaustion during updates
+  
+  # =============================================================================
+  # POD TEMPLATE CONFIGURATION
+  # =============================================================================
+  template:
+    # template: Defines the pod template for this Deployment
+    # This template is used to create new pods when needed
+    
+    metadata:
+      # Metadata section for the pod template
+      labels:
+        # Labels: Key-value pairs for organizing and selecting pods
+        app: ecommerce
+        # app: ecommerce - Identifies this pod as belonging to the e-commerce app
+        component: backend
+        # component: backend - Identifies this as a backend pod
+        tier: application
+        # tier: application - Identifies this as application tier
+        environment: production
+        # environment: production - Indicates this is for production environment
+        version: "1.0.0"
+        # version: 1.0.0 - Pod version for tracking
+        # Purpose: Enables version-specific pod management
+        # Impact: Pods are tagged with specific version
+        # Production consideration: Enables version tracking and rollback
+      
+      annotations:
+        # Annotations: Additional metadata for the pod template
+        prometheus.io/scrape: "true"
+        # prometheus.io/scrape: Enable Prometheus scraping
+        # Value: true - Prometheus will scrape this pod
+        # Purpose: Enables metrics collection for monitoring
+        # Impact: Pod metrics are collected by Prometheus
+        # Production consideration: Enables application monitoring
+        
+        prometheus.io/port: "9090"
+        # prometheus.io/port: Port for Prometheus scraping
+        # Value: 9090 - Metrics are available on port 9090
+        # Purpose: Specifies metrics endpoint port
+        # Impact: Prometheus scrapes metrics from port 9090
+        # Production consideration: Standard port for Prometheus metrics
+        
+        prometheus.io/path: "/metrics"
+        # prometheus.io/path: Path for Prometheus scraping
+        # Value: /metrics - Metrics are available at /metrics path
+        # Purpose: Specifies metrics endpoint path
+        # Impact: Prometheus scrapes metrics from /metrics path
+        # Production consideration: Standard path for Prometheus metrics
+    
+    spec:
+      # Specification section defines the pod configuration
+      
+      # =============================================================================
+      # CONTAINER CONFIGURATION
+      # =============================================================================
+      containers:
+        # containers: Array of containers in this pod
+        - name: ecommerce-backend
+          # name: ecommerce-backend - Container name
+          # Purpose: Identifies this container within the pod
+          # Impact: Container is referenced by this name
+          # Production consideration: Clear naming for operational management
+          
+          image: ecommerce-backend:v1.0.0
+          # image: ecommerce-backend:v1.0.0 - Container image
+          # Value: ecommerce-backend:v1.0.0 - FastAPI backend image with version tag
+          # Purpose: Specifies which container image to run
+          # Impact: Pod runs the specified FastAPI backend image
+          # Production consideration: Versioned images enable rollback and tracking
+          
+          imagePullPolicy: IfNotPresent
+          # imagePullPolicy: IfNotPresent - Image pull policy
+          # Value: IfNotPresent - Pull image only if not present locally
+          # Purpose: Controls when to pull the container image
+          # Impact: Reduces image pull overhead for existing images
+          # Production consideration: Balances image freshness with performance
+          
+          ports:
+            # ports: Array of ports exposed by this container
+            - name: http
+              # name: http - Port name
+              # Purpose: Identifies this port for service discovery
+              # Impact: Port can be referenced by name in services
+              # Production consideration: Enables clear port identification
+              
+              containerPort: 8000
+              # containerPort: 8000 - Port number
+              # Value: 8000 - FastAPI backend port
+              # Purpose: Exposes the FastAPI backend port
+              # Impact: FastAPI backend is accessible on port 8000
+              # Production consideration: Standard port for FastAPI applications
+              
+              protocol: TCP
+              # protocol: TCP - Port protocol
+              # Value: TCP - Transmission Control Protocol
+              # Purpose: Specifies the network protocol
+              # Impact: Port uses TCP protocol
+              # Production consideration: Standard protocol for web services
+            
+            - name: metrics
+              # name: metrics - Port name
+              # Purpose: Identifies this port for metrics collection
+              # Impact: Port can be referenced by name for monitoring
+              # Production consideration: Enables metrics collection
+              
+              containerPort: 9090
+              # containerPort: 9090 - Port number
+              # Value: 9090 - Prometheus metrics port
+              # Purpose: Exposes the metrics port
+              # Impact: Metrics are accessible on port 9090
+              # Production consideration: Standard port for Prometheus metrics
+              
+              protocol: TCP
+              # protocol: TCP - Port protocol
+              # Value: TCP - Transmission Control Protocol
+              # Purpose: Specifies the network protocol
+              # Impact: Port uses TCP protocol
+              # Production consideration: Standard protocol for metrics
+          
+          # =============================================================================
+          # ENVIRONMENT VARIABLES
+          # =============================================================================
+          env:
+            # env: Array of environment variables for this container
+            - name: ENVIRONMENT
+              # name: ENVIRONMENT - Environment variable name
+              # Purpose: Sets the Python runtime environment
+              value: "production"
+              # value: production - Production environment
+              # Purpose: Configures FastAPI for production mode
+              # Impact: Application runs in production mode
+              # Production consideration: Enables production optimizations
+            
+            - name: PORT
+              # name: PORT - Environment variable name
+              # Purpose: Sets the application port
+              value: "8000"
+              # value: 8000 - Application port
+              # Purpose: Configures the application to listen on port 8000
+              # Impact: Application listens on port 8000
+              # Production consideration: Matches container port configuration
+            
+            - name: DATABASE_URL
+              # name: DATABASE_URL - Environment variable name
+              # Purpose: Database connection string
+              valueFrom:
+                # valueFrom: Get value from another source
+                secretKeyRef:
+                  # secretKeyRef: Reference to a secret key
+                  name: postgresql-secrets
+                  # name: postgresql-secrets - Secret name
+                  # Purpose: References the PostgreSQL secrets
+                  # Impact: Uses database credentials from secrets
+                  # Security benefit: Database credentials are encrypted
+                  key: DATABASE_URL
+                  # key: DATABASE_URL - Secret key name
+                  # Purpose: Gets the database URL from secrets
+                  # Impact: Application connects to database using secret
+                  # Production consideration: Secure credential management
+            
+            - name: REDIS_URL
+              # name: REDIS_URL - Environment variable name
+              # Purpose: Redis connection string
+              valueFrom:
+                # valueFrom: Get value from another source
+                secretKeyRef:
+                  # secretKeyRef: Reference to a secret key
+                  name: redis-secrets
+                  # name: redis-secrets - Secret name
+                  # Purpose: References the Redis secrets
+                  # Impact: Uses cache credentials from secrets
+                  # Security benefit: Cache credentials are encrypted
+                  key: REDIS_URL
+                  # key: REDIS_URL - Secret key name
+                  # Purpose: Gets the Redis URL from secrets
+                  # Impact: Application connects to cache using secret
+                  # Production consideration: Secure credential management
+            
+            - name: RABBITMQ_URL
+              # name: RABBITMQ_URL - Environment variable name
+              # Purpose: RabbitMQ connection string
+              valueFrom:
+                # valueFrom: Get value from another source
+                secretKeyRef:
+                  # secretKeyRef: Reference to a secret key
+                  name: rabbitmq-secrets
+                  # name: rabbitmq-secrets - Secret name
+                  # Purpose: References the RabbitMQ secrets
+                  # Impact: Uses message queue credentials from secrets
+                  # Security benefit: Message queue credentials are encrypted
+                  key: RABBITMQ_URL
+                  # key: RABBITMQ_URL - Secret key name
+                  # Purpose: Gets the RabbitMQ URL from secrets
+                  # Impact: Application connects to message queue using secret
+                  # Production consideration: Secure credential management
+            
+            - name: JWT_SECRET
+              # name: JWT_SECRET - Environment variable name
+              # Purpose: JWT signing secret
+              valueFrom:
+                # valueFrom: Get value from another source
+                secretKeyRef:
+                  # secretKeyRef: Reference to a secret key
+                  name: ecommerce-app-secrets
+                  # name: ecommerce-app-secrets - Secret name
+                  # Purpose: References the application secrets
+                  # Impact: Uses JWT secret from secrets
+                  # Security benefit: JWT secret is encrypted
+                  key: JWT_SECRET
+                  # key: JWT_SECRET - Secret key name
+                  # Purpose: Gets the JWT secret from secrets
+                  # Impact: Application signs JWT tokens using secret
+                  # Production consideration: Secure JWT token management
+          
+          # =============================================================================
+          # RESOURCE CONFIGURATION
+          # =============================================================================
+          resources:
+            # resources: Resource requests and limits for this container
+            requests:
+              # requests: Minimum resources required by this container
+              cpu: "200m"
+              # cpu: 200m - CPU request
+              # Value: 200 millicores (0.2 CPU cores)
+              # Purpose: Guarantees minimum CPU allocation
+              # Impact: Container is guaranteed 200m CPU
+              # Production consideration: Ensures consistent performance
+              
+              memory: "256Mi"
+              # memory: 256Mi - Memory request
+              # Value: 256 Mebibytes
+              # Purpose: Guarantees minimum memory allocation
+              # Impact: Container is guaranteed 256Mi memory
+              # Production consideration: Ensures consistent performance
+            
+            limits:
+              # limits: Maximum resources this container can use
+              cpu: "500m"
+              # cpu: 500m - CPU limit
+              # Value: 500 millicores (0.5 CPU cores)
+              # Purpose: Prevents container from using too much CPU
+              # Impact: Container cannot use more than 500m CPU
+              # Production consideration: Prevents resource starvation
+              
+              memory: "512Mi"
+              # memory: 512Mi - Memory limit
+              # Value: 512 Mebibytes
+              # Purpose: Prevents container from using too much memory
+              # Impact: Container cannot use more than 512Mi memory
+              # Production consideration: Prevents memory exhaustion
+          
+          # =============================================================================
+          # HEALTH CHECKS
+          # =============================================================================
+          livenessProbe:
+            # livenessProbe: Checks if the container is alive
+            # Purpose: Determines if the container should be restarted
+            httpGet:
+              # httpGet: HTTP GET request for health check
+              path: /health
+              # path: /health - Health check endpoint
+              # Purpose: Application health check endpoint
+              # Impact: Kubernetes checks this endpoint for liveness
+              # Production consideration: Standard health check endpoint
+              
+              port: 8000
+              # port: 8000 - Health check port
+              # Purpose: Port to check for health
+              # Impact: Health check is performed on port 8000
+              # Production consideration: Matches application port
+              
+              scheme: HTTP
+              # scheme: HTTP - Protocol scheme
+              # Purpose: Use HTTP protocol for health check
+              # Impact: Health check uses HTTP protocol
+              # Production consideration: Standard protocol for health checks
+            
+            initialDelaySeconds: 30
+            # initialDelaySeconds: 30 - Initial delay before first check
+            # Value: 30 - Wait 30 seconds before first check
+            # Purpose: Allows application time to start up
+            # Impact: First health check happens after 30 seconds
+            # Production consideration: Prevents premature restarts during startup
+            
+            periodSeconds: 10
+            # periodSeconds: 10 - Check interval
+            # Value: 10 - Check every 10 seconds
+            # Purpose: Controls frequency of health checks
+            # Impact: Health check runs every 10 seconds
+            # Production consideration: Balances responsiveness with resource usage
+            
+            timeoutSeconds: 5
+            # timeoutSeconds: 5 - Check timeout
+            # Value: 5 - Timeout after 5 seconds
+            # Purpose: Prevents hanging health checks
+            # Impact: Health check times out after 5 seconds
+            # Production consideration: Prevents resource waste from hanging checks
+            
+            failureThreshold: 3
+            # failureThreshold: 3 - Consecutive failures before restart
+            # Value: 3 - Restart after 3 consecutive failures
+            # Purpose: Prevents restarts from temporary issues
+            # Impact: Container restarts after 3 failed health checks
+            # Production consideration: Balances availability with stability
+          
+          readinessProbe:
+            # readinessProbe: Checks if the container is ready to serve traffic
+            # Purpose: Determines if the container should receive traffic
+            httpGet:
+              # httpGet: HTTP GET request for readiness check
+              path: /ready
+              # path: /ready - Readiness check endpoint
+              # Purpose: Application readiness check endpoint
+              # Impact: Kubernetes checks this endpoint for readiness
+              # Production consideration: Standard readiness check endpoint
+              
+              port: 8000
+              # port: 8000 - Readiness check port
+              # Purpose: Port to check for readiness
+              # Impact: Readiness check is performed on port 8000
+              # Production consideration: Matches application port
+              
+              scheme: HTTP
+              # scheme: HTTP - Protocol scheme
+              # Purpose: Use HTTP protocol for readiness check
+              # Impact: Readiness check uses HTTP protocol
+              # Production consideration: Standard protocol for readiness checks
+            
+            initialDelaySeconds: 5
+            # initialDelaySeconds: 5 - Initial delay before first check
+            # Value: 5 - Wait 5 seconds before first check
+            # Purpose: Allows application time to initialize
+            # Impact: First readiness check happens after 5 seconds
+            # Production consideration: Quick readiness detection
+            
+            periodSeconds: 5
+            # periodSeconds: 5 - Check interval
+            # Value: 5 - Check every 5 seconds
+            # Purpose: Controls frequency of readiness checks
+            # Impact: Readiness check runs every 5 seconds
+            # Production consideration: Responsive readiness detection
+            
+            timeoutSeconds: 3
+            # timeoutSeconds: 3 - Check timeout
+            # Value: 3 - Timeout after 3 seconds
+            # Purpose: Prevents hanging readiness checks
+            # Impact: Readiness check times out after 3 seconds
+            # Production consideration: Prevents resource waste from hanging checks
+            
+            failureThreshold: 3
+            # failureThreshold: 3 - Consecutive failures before marking not ready
+            # Value: 3 - Mark not ready after 3 consecutive failures
+            # Purpose: Prevents traffic removal from temporary issues
+            # Impact: Container marked not ready after 3 failed checks
+            # Production consideration: Balances availability with stability
+          
+          # =============================================================================
+          # VOLUME MOUNTS
+          # =============================================================================
+          volumeMounts:
+            # volumeMounts: Array of volumes to mount in this container
+            - name: app-config
+              # name: app-config - Volume name
+              # Purpose: References the app-config volume
+              # Impact: Mounts application configuration
+              # Production consideration: Enables configuration management
+              
+              mountPath: /etc/app/config
+              # mountPath: /etc/app/config - Mount path
+              # Purpose: Directory where config is mounted
+              # Impact: Configuration files are available at /etc/app/config
+              # Production consideration: Standard configuration directory
+              
+              readOnly: true
+              # readOnly: true - Read-only mount
+              # Purpose: Prevents modification of configuration
+              # Impact: Configuration files are read-only
+              # Security benefit: Prevents configuration tampering
+            
+            - name: frontend-config
+              # name: frontend-config - Volume name
+              # Purpose: References the frontend-config volume
+              # Impact: Mounts frontend configuration
+              # Production consideration: Enables frontend configuration management
+              
+              mountPath: /etc/app/frontend
+              # mountPath: /etc/app/frontend - Mount path
+              # Purpose: Directory where frontend config is mounted
+              # Impact: Frontend configuration files are available at /etc/app/frontend
+              # Production consideration: Standard frontend configuration directory
+              
+              readOnly: true
+              # readOnly: true - Read-only mount
+              # Purpose: Prevents modification of frontend configuration
+              # Impact: Frontend configuration files are read-only
+              # Security benefit: Prevents configuration tampering
+      
+      # =============================================================================
+      # VOLUMES
+      # =============================================================================
+      volumes:
+        # volumes: Array of volumes available to this pod
+        - name: app-config
+          # name: app-config - Volume name
+          # Purpose: Identifies this volume for mounting
+          # Impact: Volume can be referenced by name
+          # Production consideration: Clear naming for operational management
+          
+          configMap:
+            # configMap: Volume source type
+            # Purpose: Creates volume from ConfigMap
+            # Impact: Configuration data is available as files
+            # Production consideration: Enables configuration management
+            name: ecommerce-app-config
+            # name: ecommerce-app-config - ConfigMap name
+            # Purpose: References the application ConfigMap
+            # Impact: Mounts application configuration
+            # Production consideration: Uses centralized configuration
+        
+        - name: frontend-config
+          # name: frontend-config - Volume name
+          # Purpose: Identifies this volume for mounting
+          # Impact: Volume can be referenced by name
+          # Production consideration: Clear naming for operational management
+          
+          configMap:
+            # configMap: Volume source type
+            # Purpose: Creates volume from ConfigMap
+            # Impact: Configuration data is available as files
+            # Production consideration: Enables configuration management
+            name: ecommerce-frontend-config
+            # name: ecommerce-frontend-config - ConfigMap name
+            # Purpose: References the frontend ConfigMap
+            # Impact: Mounts frontend configuration
+            # Production consideration: Uses centralized configuration
+
+---
+# =============================================================================
+# FRONTEND DEPLOYMENT
+# =============================================================================
+# Purpose: Deploys the e-commerce frontend React application
+# Why needed: Provides user interface for the e-commerce platform
+# Kubernetes concept: Deployment manages the frontend pods and ensures availability
+
+apiVersion: apps/v1
+# API Version: apps/v1 is the stable version for Deployment resources
+# This is the most commonly used API version for application deployments
+
+kind: Deployment
+# Resource Type: Deployment manages ReplicaSets and provides declarative updates
+# This enables rolling updates, rollbacks, and scaling of frontend pods
+
+metadata:
+  # Metadata section contains identifying information about the resource
+  name: ecommerce-frontend-deployment
+  # Name: Unique identifier for this Deployment within the namespace
+  # This name will be used to reference the Deployment in services and other resources
+  
+  namespace: ecommerce
+  # Namespace: Specifies which namespace this Deployment belongs to
+  # Must match the namespace created in the namespace.yaml file
+  
+  labels:
+    # Labels: Key-value pairs for organizing and selecting resources
+    app: ecommerce
+    # app: ecommerce - Identifies this Deployment as belonging to the e-commerce app
+    component: frontend
+    # component: frontend - Identifies this as a frontend component
+    tier: presentation
+    # tier: presentation - Identifies this as presentation tier
+    environment: production
+    # environment: production - Indicates this is for production environment
+    managed-by: kubernetes
+    # managed-by: kubernetes - Indicates this resource is managed by Kubernetes
+  
+  annotations:
+    # Annotations: Additional metadata that doesn't affect resource behavior
+    description: "E-commerce frontend React application deployment for Core Workloads Deployment"
+    # description: Human-readable description of the Deployment purpose
+    # Used for documentation and operational understanding
+    
+    contact: "frontend-team@company.com"
+    # contact: Email address for the team responsible for this Deployment
+    # Used for incident response and maintenance coordination
+    
+    last-updated: "2024-12-01T00:00:00Z"
+    # last-updated: Timestamp of last deployment update
+    # Used for change tracking and audit trails
+    
+    version: "1.0.0"
+    # version: Version of the deployment configuration
+    # Used for deployment versioning and rollback
+
+spec:
+  # Specification section defines the actual deployment configuration
+  
+  # =============================================================================
+  # REPLICA CONFIGURATION
+  # =============================================================================
+  replicas: 2
+  # replicas: 2 - Number of pod replicas to maintain
+  # Value: 2 - Two frontend pods
+  # Purpose: Ensures high availability and load distribution
+  # Impact: Two frontend pods will be running simultaneously
+  # Production consideration: Provides redundancy and load balancing
+  
+  # =============================================================================
+  # SELECTOR CONFIGURATION
+  # =============================================================================
+  selector:
+    # selector: Defines which pods this Deployment manages
+    matchLabels:
+      # matchLabels: Pods must have all these labels to be managed
+      app: ecommerce
+      # app: ecommerce - Pods must have this label
+      component: frontend
+      # component: frontend - Pods must have this label
+      tier: presentation
+      # tier: presentation - Pods must have this label
+      # Purpose: Ensures only frontend pods are managed by this Deployment
+      # Impact: Only pods with these labels will be managed
+      # Production consideration: Prevents management of wrong pods
+  
+  # =============================================================================
+  # DEPLOYMENT STRATEGY
+  # =============================================================================
+  strategy:
+    # strategy: Defines how pods are updated
+    type: RollingUpdate
+    # type: RollingUpdate - Use rolling update strategy
+    # Purpose: Enables zero-downtime deployments
+    # Impact: New pods are created before old ones are terminated
+    # Production consideration: Ensures continuous service availability
+    
+    rollingUpdate:
+      # rollingUpdate: Configuration for rolling updates
+      maxUnavailable: 1
+      # maxUnavailable: 1 - Maximum unavailable pods during update
+      # Value: 1 - At most 1 pod can be unavailable
+      # Purpose: Ensures service availability during updates
+      # Impact: At least 1 pod remains available during updates
+      # Production consideration: Balances update speed with availability
+      
+      maxSurge: 1
+      # maxSurge: 1 - Maximum additional pods during update
+      # Value: 1 - At most 1 additional pod can be created
+      # Purpose: Controls resource usage during updates
+      # Impact: Maximum 3 pods can exist during updates (2 + 1)
+      # Production consideration: Prevents resource exhaustion during updates
+  
+  # =============================================================================
+  # POD TEMPLATE CONFIGURATION
+  # =============================================================================
+  template:
+    # template: Defines the pod template for this Deployment
+    # This template is used to create new pods when needed
+    
+    metadata:
+      # Metadata section for the pod template
+      labels:
+        # Labels: Key-value pairs for organizing and selecting pods
+        app: ecommerce
+        # app: ecommerce - Identifies this pod as belonging to the e-commerce app
+        component: frontend
+        # component: frontend - Identifies this as a frontend pod
+        tier: presentation
+        # tier: presentation - Identifies this as presentation tier
+        environment: production
+        # environment: production - Indicates this is for production environment
+        version: "1.0.0"
+        # version: 1.0.0 - Pod version for tracking
+        # Purpose: Enables version-specific pod management
+        # Impact: Pods are tagged with specific version
+        # Production consideration: Enables version tracking and rollback
+      
+      annotations:
+        # Annotations: Additional metadata for the pod template
+        prometheus.io/scrape: "true"
+        # prometheus.io/scrape: Enable Prometheus scraping
+        # Value: true - Prometheus will scrape this pod
+        # Purpose: Enables metrics collection for monitoring
+        # Impact: Pod metrics are collected by Prometheus
+        # Production consideration: Enables application monitoring
+        
+        prometheus.io/port: "9090"
+        # prometheus.io/port: Port for Prometheus scraping
+        # Value: 9090 - Metrics are available on port 9090
+        # Purpose: Specifies metrics endpoint port
+        # Impact: Prometheus scrapes metrics from port 9090
+        # Production consideration: Standard port for Prometheus metrics
+        
+        prometheus.io/path: "/metrics"
+        # prometheus.io/path: Path for Prometheus scraping
+        # Value: /metrics - Metrics are available at /metrics path
+        # Purpose: Specifies metrics endpoint path
+        # Impact: Prometheus scrapes metrics from /metrics path
+        # Production consideration: Standard path for Prometheus metrics
+    
+    spec:
+      # Specification section defines the pod configuration
+      
+      # =============================================================================
+      # CONTAINER CONFIGURATION
+      # =============================================================================
+      containers:
+        # containers: Array of containers in this pod
+        - name: ecommerce-frontend
+          # name: ecommerce-frontend - Container name
+          # Purpose: Identifies this container within the pod
+          # Impact: Container is referenced by this name
+          # Production consideration: Clear naming for operational management
+          
+          image: ecommerce-frontend:v1.0.0
+          # image: ecommerce-frontend:v1.0.0 - Container image
+          # Value: ecommerce-frontend:v1.0.0 - Frontend React image with version tag
+          # Purpose: Specifies which container image to run
+          # Impact: Pod runs the specified frontend React image
+          # Production consideration: Versioned images enable rollback and tracking
+          
+          imagePullPolicy: IfNotPresent
+          # imagePullPolicy: IfNotPresent - Image pull policy
+          # Value: IfNotPresent - Pull image only if not present locally
+          # Purpose: Controls when to pull the container image
+          # Impact: Reduces image pull overhead for existing images
+          # Production consideration: Balances image freshness with performance
+          
+          ports:
+            # ports: Array of ports exposed by this container
+            - name: http
+              # name: http - Port name
+              # Purpose: Identifies this port for service discovery
+              # Impact: Port can be referenced by name in services
+              # Production consideration: Enables clear port identification
+              
+              containerPort: 3000
+              # containerPort: 3000 - Port number
+              # Value: 3000 - Frontend React port
+              # Purpose: Exposes the frontend React port
+              # Impact: Frontend React is accessible on port 3000
+              # Production consideration: Standard port for React development server
+              
+              protocol: TCP
+              # protocol: TCP - Port protocol
+              # Value: TCP - Transmission Control Protocol
+              # Purpose: Specifies the network protocol
+              # Impact: Port uses TCP protocol
+              # Production consideration: Standard protocol for web services
+            
+            - name: metrics
+              # name: metrics - Port name
+              # Purpose: Identifies this port for metrics collection
+              # Impact: Port can be referenced by name for monitoring
+              # Production consideration: Enables metrics collection
+              
+              containerPort: 9090
+              # containerPort: 9090 - Port number
+              # Value: 9090 - Prometheus metrics port
+              # Purpose: Exposes the metrics port
+              # Impact: Metrics are accessible on port 9090
+              # Production consideration: Standard port for Prometheus metrics
+              
+              protocol: TCP
+              # protocol: TCP - Port protocol
+              # Value: TCP - Transmission Control Protocol
+              # Purpose: Specifies the network protocol
+              # Impact: Port uses TCP protocol
+              # Production consideration: Standard protocol for metrics
+          
+          # =============================================================================
+          # ENVIRONMENT VARIABLES
+          # =============================================================================
+          env:
+            # env: Array of environment variables for this container
+            - name: NODE_ENV
+              # name: NODE_ENV - Environment variable name
+              # Purpose: Sets the Node.js runtime environment
+              value: "production"
+              # value: production - Production environment
+              # Purpose: Configures Node.js for production mode
+              # Impact: Application runs in production mode
+              # Production consideration: Enables production optimizations
+            
+            - name: PORT
+              # name: PORT - Environment variable name
+              # Purpose: Sets the application port
+              value: "3000"
+              # value: 3000 - Application port
+              # Purpose: Configures the application to listen on port 3000
+              # Impact: Application listens on port 3000
+              # Production consideration: Matches container port configuration
+            
+            - name: REACT_APP_API_BASE_URL
+              # name: REACT_APP_API_BASE_URL - Environment variable name
+              # Purpose: Backend API base URL for frontend
+              valueFrom:
+                # valueFrom: Get value from another source
+                configMapKeyRef:
+                  # configMapKeyRef: Reference to a ConfigMap key
+                  name: ecommerce-frontend-config
+                  # name: ecommerce-frontend-config - ConfigMap name
+                  # Purpose: References the frontend ConfigMap
+                  # Impact: Uses frontend configuration from ConfigMap
+                  # Production consideration: Centralized configuration management
+                  key: API_BASE_URL
+                  # key: API_BASE_URL - ConfigMap key name
+                  # Purpose: Gets the API base URL from ConfigMap
+                  # Impact: Frontend connects to backend using ConfigMap value
+                  # Production consideration: Environment-specific configuration
+            
+            - name: REACT_APP_ENVIRONMENT
+              # name: REACT_APP_ENVIRONMENT - Environment variable name
+              # Purpose: Frontend environment identifier
+              value: "production"
+              # value: production - Production environment
+              # Purpose: Configures frontend for production mode
+              # Impact: Frontend runs in production mode
+              # Production consideration: Enables production optimizations
+            
+            - name: REACT_APP_VERSION
+              # name: REACT_APP_VERSION - Environment variable name
+              # Purpose: Frontend version identifier
+              value: "1.0.0"
+              # value: 1.0.0 - Frontend version
+              # Purpose: Tracks frontend version
+              # Impact: Frontend displays version information
+              # Production consideration: Version tracking and debugging
+          
+          # =============================================================================
+          # RESOURCE CONFIGURATION
+          # =============================================================================
+          resources:
+            # resources: Resource requests and limits for this container
+            requests:
+              # requests: Minimum resources required by this container
+              cpu: "100m"
+              # cpu: 100m - CPU request
+              # Value: 100 millicores (0.1 CPU cores)
+              # Purpose: Guarantees minimum CPU allocation
+              # Impact: Container is guaranteed 100m CPU
+              # Production consideration: Ensures consistent performance
+              
+              memory: "128Mi"
+              # memory: 128Mi - Memory request
+              # Value: 128 Mebibytes
+              # Purpose: Guarantees minimum memory allocation
+              # Impact: Container is guaranteed 128Mi memory
+              # Production consideration: Ensures consistent performance
+            
+            limits:
+              # limits: Maximum resources this container can use
+              cpu: "300m"
+              # cpu: 300m - CPU limit
+              # Value: 300 millicores (0.3 CPU cores)
+              # Purpose: Prevents container from using too much CPU
+              # Impact: Container cannot use more than 300m CPU
+              # Production consideration: Prevents resource starvation
+              
+              memory: "256Mi"
+              # memory: 256Mi - Memory limit
+              # Value: 256 Mebibytes
+              # Purpose: Prevents container from using too much memory
+              # Impact: Container cannot use more than 256Mi memory
+              # Production consideration: Prevents memory exhaustion
+          
+          # =============================================================================
+          # HEALTH CHECKS
+          # =============================================================================
+          livenessProbe:
+            # livenessProbe: Checks if the container is alive
+            # Purpose: Determines if the container should be restarted
+            httpGet:
+              # httpGet: HTTP GET request for health check
+              path: /health
+              # path: /health - Health check endpoint
+              # Purpose: Application health check endpoint
+              # Impact: Kubernetes checks this endpoint for liveness
+              # Production consideration: Standard health check endpoint
+              
+              port: 3000
+              # port: 3000 - Health check port
+              # Purpose: Port to check for health
+              # Impact: Health check is performed on port 3000
+              # Production consideration: Matches application port
+              
+              scheme: HTTP
+              # scheme: HTTP - Protocol scheme
+              # Purpose: Use HTTP protocol for health check
+              # Impact: Health check uses HTTP protocol
+              # Production consideration: Standard protocol for health checks
+            
+            initialDelaySeconds: 30
+            # initialDelaySeconds: 30 - Initial delay before first check
+            # Value: 30 - Wait 30 seconds before first check
+            # Purpose: Allows application time to start up
+            # Impact: First health check happens after 30 seconds
+            # Production consideration: Prevents premature restarts during startup
+            
+            periodSeconds: 10
+            # periodSeconds: 10 - Check interval
+            # Value: 10 - Check every 10 seconds
+            # Purpose: Controls frequency of health checks
+            # Impact: Health check runs every 10 seconds
+            # Production consideration: Balances responsiveness with resource usage
+            
+            timeoutSeconds: 5
+            # timeoutSeconds: 5 - Check timeout
+            # Value: 5 - Timeout after 5 seconds
+            # Purpose: Prevents hanging health checks
+            # Impact: Health check times out after 5 seconds
+            # Production consideration: Prevents resource waste from hanging checks
+            
+            failureThreshold: 3
+            # failureThreshold: 3 - Consecutive failures before restart
+            # Value: 3 - Restart after 3 consecutive failures
+            # Purpose: Prevents restarts from temporary issues
+            # Impact: Container restarts after 3 failed health checks
+            # Production consideration: Balances availability with stability
+          
+          readinessProbe:
+            # readinessProbe: Checks if the container is ready to serve traffic
+            # Purpose: Determines if the container should receive traffic
+            httpGet:
+              # httpGet: HTTP GET request for readiness check
+              path: /ready
+              # path: /ready - Readiness check endpoint
+              # Purpose: Application readiness check endpoint
+              # Impact: Kubernetes checks this endpoint for readiness
+              # Production consideration: Standard readiness check endpoint
+              
+              port: 3000
+              # port: 3000 - Readiness check port
+              # Purpose: Port to check for readiness
+              # Impact: Readiness check is performed on port 3000
+              # Production consideration: Matches application port
+              
+              scheme: HTTP
+              # scheme: HTTP - Protocol scheme
+              # Purpose: Use HTTP protocol for readiness check
+              # Impact: Readiness check uses HTTP protocol
+              # Production consideration: Standard protocol for readiness checks
+            
+            initialDelaySeconds: 5
+            # initialDelaySeconds: 5 - Initial delay before first check
+            # Value: 5 - Wait 5 seconds before first check
+            # Purpose: Allows application time to initialize
+            # Impact: First readiness check happens after 5 seconds
+            # Production consideration: Quick readiness detection
+            
+            periodSeconds: 5
+            # periodSeconds: 5 - Check interval
+            # Value: 5 - Check every 5 seconds
+            # Purpose: Controls frequency of readiness checks
+            # Impact: Readiness check runs every 5 seconds
+            # Production consideration: Responsive readiness detection
+            
+            timeoutSeconds: 3
+            # timeoutSeconds: 3 - Check timeout
+            # Value: 3 - Timeout after 3 seconds
+            # Purpose: Prevents hanging readiness checks
+            # Impact: Readiness check times out after 3 seconds
+            # Production consideration: Prevents resource waste from hanging checks
+            
+            failureThreshold: 3
+            # failureThreshold: 3 - Consecutive failures before marking not ready
+            # Value: 3 - Mark not ready after 3 consecutive failures
+            # Purpose: Prevents traffic removal from temporary issues
+            # Impact: Container marked not ready after 3 failed checks
+            # Production consideration: Balances availability with stability
+          
+          # =============================================================================
+          # VOLUME MOUNTS
+          # =============================================================================
+          volumeMounts:
+            # volumeMounts: Array of volumes to mount in this container
+            - name: frontend-config
+              # name: frontend-config - Volume name
+              # Purpose: References the frontend-config volume
+              # Impact: Mounts frontend configuration
+              # Production consideration: Enables configuration management
+              
+              mountPath: /etc/app/frontend
+              # mountPath: /etc/app/frontend - Mount path
+              # Purpose: Directory where frontend config is mounted
+              # Impact: Frontend configuration files are available at /etc/app/frontend
+              # Production consideration: Standard frontend configuration directory
+              
+              readOnly: true
+              # readOnly: true - Read-only mount
+              # Purpose: Prevents modification of frontend configuration
+              # Impact: Frontend configuration files are read-only
+              # Security benefit: Prevents configuration tampering
+      
+      # =============================================================================
+      # VOLUMES
+      # =============================================================================
+      volumes:
+        # volumes: Array of volumes available to this pod
+        - name: frontend-config
+          # name: frontend-config - Volume name
+          # Purpose: Identifies this volume for mounting
+          # Impact: Volume can be referenced by name
+          # Production consideration: Clear naming for operational management
+          
+          configMap:
+            # configMap: Volume source type
+            # Purpose: Creates volume from ConfigMap
+            # Impact: Configuration data is available as files
+            # Production consideration: Enables configuration management
+            name: ecommerce-frontend-config
+            # name: ecommerce-frontend-config - ConfigMap name
+            # Purpose: References the frontend ConfigMap
+            # Impact: Mounts frontend configuration
+            # Production consideration: Uses centralized configuration
+
+---
+# =============================================================================
+# DATABASE DEPLOYMENT
+# =============================================================================
+# Purpose: Deploys the PostgreSQL database for the e-commerce application
+# Why needed: Provides persistent data storage for the e-commerce platform
+# Kubernetes concept: Deployment manages the database pods and ensures availability
+
+apiVersion: apps/v1
+# API Version: apps/v1 is the stable version for Deployment resources
+# This is the most commonly used API version for application deployments
+
+kind: Deployment
+# Resource Type: Deployment manages ReplicaSets and provides declarative updates
+# This enables rolling updates, rollbacks, and scaling of database pods
+
+metadata:
+  # Metadata section contains identifying information about the resource
+  name: ecommerce-database-deployment
+  # Name: Unique identifier for this Deployment within the namespace
+  # This name will be used to reference the Deployment in services and other resources
+  
+  namespace: ecommerce
+  # Namespace: Specifies which namespace this Deployment belongs to
+  # Must match the namespace created in the namespace.yaml file
+  
+  labels:
+    # Labels: Key-value pairs for organizing and selecting resources
+    app: ecommerce
+    # app: ecommerce - Identifies this Deployment as belonging to the e-commerce app
+    component: database
+    # component: database - Identifies this as a database component
+    tier: data
+    # tier: data - Identifies this as data tier
+    environment: production
+    # environment: production - Indicates this is for production environment
+    managed-by: kubernetes
+    # managed-by: kubernetes - Indicates this resource is managed by Kubernetes
+  
+  annotations:
+    # Annotations: Additional metadata that doesn't affect resource behavior
+    description: "E-commerce PostgreSQL database deployment for Core Workloads Deployment"
+    # description: Human-readable description of the Deployment purpose
+    # Used for documentation and operational understanding
+    
+    contact: "database-team@company.com"
+    # contact: Email address for the team responsible for this Deployment
+    # Used for incident response and maintenance coordination
+    
+    last-updated: "2024-12-01T00:00:00Z"
+    # last-updated: Timestamp of last deployment update
+    # Used for change tracking and audit trails
+    
+    version: "1.0.0"
+    # version: Version of the deployment configuration
+    # Used for deployment versioning and rollback
+
+spec:
+  # Specification section defines the actual deployment configuration
+  
+  # =============================================================================
+  # REPLICA CONFIGURATION
+  # =============================================================================
+  replicas: 1
+  # replicas: 1 - Number of pod replicas to maintain
+  # Value: 1 - One database pod (single instance for data consistency)
+  # Purpose: Ensures data consistency and avoids split-brain scenarios
+  # Impact: One database pod will be running
+  # Production consideration: Database replication handled at application level
+  
+  # =============================================================================
+  # SELECTOR CONFIGURATION
+  # =============================================================================
+  selector:
+    # selector: Defines which pods this Deployment manages
+    matchLabels:
+      # matchLabels: Pods must have all these labels to be managed
+      app: ecommerce
+      # app: ecommerce - Pods must have this label
+      component: database
+      # component: database - Pods must have this label
+      tier: data
+      # tier: data - Pods must have this label
+      # Purpose: Ensures only database pods are managed by this Deployment
+      # Impact: Only pods with these labels will be managed
+      # Production consideration: Prevents management of wrong pods
+  
+  # =============================================================================
+  # DEPLOYMENT STRATEGY
+  # =============================================================================
+  strategy:
+    # strategy: Defines how pods are updated
+    type: Recreate
+    # type: Recreate - Use recreate strategy for database
+    # Purpose: Ensures data consistency during updates
+    # Impact: Old pod is terminated before new pod is created
+    # Production consideration: Prevents data corruption from concurrent instances
+  
+  # =============================================================================
+  # POD TEMPLATE CONFIGURATION
+  # =============================================================================
+  template:
+    # template: Defines the pod template for this Deployment
+    # This template is used to create new pods when needed
+    
+    metadata:
+      # Metadata section for the pod template
+      labels:
+        # Labels: Key-value pairs for organizing and selecting pods
+        app: ecommerce
+        # app: ecommerce - Identifies this pod as belonging to the e-commerce app
+        component: database
+        # component: database - Identifies this as a database pod
+        tier: data
+        # tier: data - Identifies this as data tier
+        environment: production
+        # environment: production - Indicates this is for production environment
+        version: "1.0.0"
+        # version: 1.0.0 - Pod version for tracking
+        # Purpose: Enables version-specific pod management
+        # Impact: Pods are tagged with specific version
+        # Production consideration: Enables version tracking and rollback
+      
+      annotations:
+        # Annotations: Additional metadata for the pod template
+        prometheus.io/scrape: "true"
+        # prometheus.io/scrape: Enable Prometheus scraping
+        # Value: true - Prometheus will scrape this pod
+        # Purpose: Enables metrics collection for monitoring
+        # Impact: Pod metrics are collected by Prometheus
+        # Production consideration: Enables application monitoring
+        
+        prometheus.io/port: "9187"
+        # prometheus.io/port: Port for Prometheus scraping
+        # Value: 9187 - PostgreSQL metrics port
+        # Purpose: Specifies metrics endpoint port
+        # Impact: Prometheus scrapes metrics from port 9187
+        # Production consideration: Standard port for PostgreSQL metrics
+        
+        prometheus.io/path: "/metrics"
+        # prometheus.io/path: Path for Prometheus scraping
+        # Value: /metrics - Metrics are available at /metrics path
+        # Purpose: Specifies metrics endpoint path
+        # Impact: Prometheus scrapes metrics from /metrics path
+        # Production consideration: Standard path for Prometheus metrics
+    
+    spec:
+      # Specification section defines the pod configuration
+      
+      # =============================================================================
+      # CONTAINER CONFIGURATION
+      # =============================================================================
+      containers:
+        # containers: Array of containers in this pod
+        - name: postgresql
+          # name: postgresql - Container name
+          # Purpose: Identifies this container within the pod
+          # Impact: Container is referenced by this name
+          # Production consideration: Clear naming for operational management
+          
+          image: postgres:15-alpine
+          # image: postgres:15-alpine - Container image
+          # Value: postgres:15-alpine - PostgreSQL 15 with Alpine Linux
+          # Purpose: Specifies which container image to run
+          # Impact: Pod runs the specified PostgreSQL image
+          # Production consideration: Alpine reduces image size and security surface
+          
+          imagePullPolicy: IfNotPresent
+          # imagePullPolicy: IfNotPresent - Image pull policy
+          # Value: IfNotPresent - Pull image only if not present locally
+          # Purpose: Controls when to pull the container image
+          # Impact: Reduces image pull overhead for existing images
+          # Production consideration: Balances image freshness with performance
+          
+          ports:
+            # ports: Array of ports exposed by this container
+            - name: postgres
+              # name: postgres - Port name
+              # Purpose: Identifies this port for service discovery
+              # Impact: Port can be referenced by name in services
+              # Production consideration: Enables clear port identification
+              
+              containerPort: 5432
+              # containerPort: 5432 - Port number
+              # Value: 5432 - PostgreSQL default port
+              # Purpose: Exposes the PostgreSQL port
+              # Impact: PostgreSQL is accessible on port 5432
+              # Production consideration: Standard port for PostgreSQL
+            
+            - name: metrics
+              # name: metrics - Port name
+              # Purpose: Identifies this port for metrics collection
+              # Impact: Port can be referenced by name for monitoring
+              # Production consideration: Enables metrics collection
+              
+              containerPort: 9187
+              # containerPort: 9187 - Port number
+              # Value: 9187 - PostgreSQL metrics port
+              # Purpose: Exposes the metrics port
+              # Impact: Metrics are accessible on port 9187
+              # Production consideration: Standard port for PostgreSQL metrics
+          
+          # =============================================================================
+          # ENVIRONMENT VARIABLES
+          # =============================================================================
+          env:
+            # env: Array of environment variables for this container
+            - name: POSTGRES_DB
+              # name: POSTGRES_DB - Environment variable name
+              # Purpose: Sets the default database name
+              value: "ecommerce"
+              # value: ecommerce - Database name
+              # Purpose: Creates the ecommerce database
+              # Impact: PostgreSQL creates ecommerce database on startup
+              # Production consideration: Matches application requirements
+            
+            - name: POSTGRES_USER
+              # name: POSTGRES_USER - Environment variable name
+              # Purpose: Sets the database user
+              valueFrom:
+                # valueFrom: Get value from another source
+                secretKeyRef:
+                  # secretKeyRef: Reference to a secret key
+                  name: postgresql-secrets
+                  # name: postgresql-secrets - Secret name
+                  # Purpose: References the PostgreSQL secrets
+                  # Impact: Uses database credentials from secrets
+                  # Security benefit: Database credentials are encrypted
+                  key: POSTGRES_USER
+                  # key: POSTGRES_USER - Secret key name
+                  # Purpose: Gets the database user from secrets
+                  # Impact: Application connects to database using secret
+                  # Production consideration: Secure credential management
+            
+            - name: POSTGRES_PASSWORD
+              # name: POSTGRES_PASSWORD - Environment variable name
+              # Purpose: Sets the database password
+              valueFrom:
+                # valueFrom: Get value from another source
+                secretKeyRef:
+                  # secretKeyRef: Reference to a secret key
+                  name: postgresql-secrets
+                  # name: postgresql-secrets - Secret name
+                  # Purpose: References the PostgreSQL secrets
+                  # Impact: Uses database credentials from secrets
+                  # Security benefit: Database credentials are encrypted
+                  key: POSTGRES_PASSWORD
+                  # key: POSTGRES_PASSWORD - Secret key name
+                  # Purpose: Gets the database password from secrets
+                  # Impact: Application connects to database using secret
+                  # Production consideration: Secure credential management
+            
+            - name: PGDATA
+              # name: PGDATA - Environment variable name
+              # Purpose: Sets the PostgreSQL data directory
+              value: "/var/lib/postgresql/data/pgdata"
+              # value: /var/lib/postgresql/data/pgdata - Data directory
+              # Purpose: Specifies where PostgreSQL stores data
+              # Impact: PostgreSQL data is stored in the specified directory
+              # Production consideration: Enables persistent data storage
+          
+          # =============================================================================
+          # RESOURCE CONFIGURATION
+          # =============================================================================
+          resources:
+            # resources: Resource requests and limits for this container
+            requests:
+              # requests: Minimum resources required by this container
+              cpu: "200m"
+              # cpu: 200m - CPU request
+              # Value: 200 millicores (0.2 CPU cores)
+              # Purpose: Guarantees minimum CPU allocation
+              # Impact: Container is guaranteed 200m CPU
+              # Production consideration: Ensures consistent performance
+              
+              memory: "512Mi"
+              # memory: 512Mi - Memory request
+              # Value: 512 Mebibytes
+              # Purpose: Guarantees minimum memory allocation
+              # Impact: Container is guaranteed 512Mi memory
+              # Production consideration: Ensures consistent performance
+            
+            limits:
+              # limits: Maximum resources this container can use
+              cpu: "1000m"
+              # cpu: 1000m - CPU limit
+              # Value: 1000 millicores (1 CPU core)
+              # Purpose: Prevents container from using too much CPU
+              # Impact: Container cannot use more than 1000m CPU
+              # Production consideration: Prevents resource starvation
+              
+              memory: "2Gi"
+              # memory: 2Gi - Memory limit
+              # Value: 2 Gibibytes
+              # Purpose: Prevents container from using too much memory
+              # Impact: Container cannot use more than 2Gi memory
+              # Production consideration: Prevents memory exhaustion
+          
+          # =============================================================================
+          # HEALTH CHECKS
+          # =============================================================================
+          livenessProbe:
+            # livenessProbe: Checks if the container is alive
+            # Purpose: Determines if the container should be restarted
+            exec:
+              # exec: Execute command for health check
+              command:
+                # command: Array of commands to execute
+                - /bin/sh
+                # /bin/sh - Shell to execute commands
+                - -c
+                # -c - Execute command string
+                - exec pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB" -h 127.0.0.1 -p 5432
+                # pg_isready command - Check PostgreSQL readiness
+                # Purpose: Verifies PostgreSQL is accepting connections
+                # Impact: Kubernetes checks PostgreSQL readiness
+                # Production consideration: Standard PostgreSQL health check
+            
+            initialDelaySeconds: 30
+            # initialDelaySeconds: 30 - Initial delay before first check
+            # Value: 30 - Wait 30 seconds before first check
+            # Purpose: Allows PostgreSQL time to start up
+            # Impact: First health check happens after 30 seconds
+            # Production consideration: Prevents premature restarts during startup
+            
+            periodSeconds: 10
+            # periodSeconds: 10 - Check interval
+            # Value: 10 - Check every 10 seconds
+            # Purpose: Controls frequency of health checks
+            # Impact: Health check runs every 10 seconds
+            # Production consideration: Balances responsiveness with resource usage
+            
+            timeoutSeconds: 5
+            # timeoutSeconds: 5 - Check timeout
+            # Value: 5 - Timeout after 5 seconds
+            # Purpose: Prevents hanging health checks
+            # Impact: Health check times out after 5 seconds
+            # Production consideration: Prevents resource waste from hanging checks
+            
+            failureThreshold: 3
+            # failureThreshold: 3 - Consecutive failures before restart
+            # Value: 3 - Restart after 3 consecutive failures
+            # Purpose: Prevents restarts from temporary issues
+            # Impact: Container restarts after 3 failed health checks
+            # Production consideration: Balances availability with stability
+          
+          readinessProbe:
+            # readinessProbe: Checks if the container is ready to serve traffic
+            # Purpose: Determines if the container should receive traffic
+            exec:
+              # exec: Execute command for readiness check
+              command:
+                # command: Array of commands to execute
+                - /bin/sh
+                # /bin/sh - Shell to execute commands
+                - -c
+                # -c - Execute command string
+                - exec pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB" -h 127.0.0.1 -p 5432
+                # pg_isready command - Check PostgreSQL readiness
+                # Purpose: Verifies PostgreSQL is accepting connections
+                # Impact: Kubernetes checks PostgreSQL readiness
+                # Production consideration: Standard PostgreSQL readiness check
+            
+            initialDelaySeconds: 5
+            # initialDelaySeconds: 5 - Initial delay before first check
+            # Value: 5 - Wait 5 seconds before first check
+            # Purpose: Allows PostgreSQL time to initialize
+            # Impact: First readiness check happens after 5 seconds
+            # Production consideration: Quick readiness detection
+            
+            periodSeconds: 5
+            # periodSeconds: 5 - Check interval
+            # Value: 5 - Check every 5 seconds
+            # Purpose: Controls frequency of readiness checks
+            # Impact: Readiness check runs every 5 seconds
+            # Production consideration: Responsive readiness detection
+            
+            timeoutSeconds: 3
+            # timeoutSeconds: 3 - Check timeout
+            # Value: 3 - Timeout after 3 seconds
+            # Purpose: Prevents hanging readiness checks
+            # Impact: Readiness check times out after 3 seconds
+            # Production consideration: Prevents resource waste from hanging checks
+            
+            failureThreshold: 3
+            # failureThreshold: 3 - Consecutive failures before marking not ready
+            # Value: 3 - Mark not ready after 3 consecutive failures
+            # Purpose: Prevents traffic removal from temporary issues
+            # Impact: Container marked not ready after 3 failed checks
+            # Production consideration: Balances availability with stability
+          
+          # =============================================================================
+          # VOLUME MOUNTS
+          # =============================================================================
+          volumeMounts:
+            # volumeMounts: Array of volumes to mount in this container
+            - name: postgresql-data
+              # name: postgresql-data - Volume name
+              # Purpose: References the postgresql-data volume
+              # Impact: Mounts persistent data storage
+              # Production consideration: Enables data persistence
+              
+              mountPath: /var/lib/postgresql/data
+              # mountPath: /var/lib/postgresql/data - Mount path
+              # Purpose: Directory where PostgreSQL data is stored
+              # Impact: PostgreSQL data is persisted at this location
+              # Production consideration: Standard PostgreSQL data directory
+              
+              subPath: postgresql
+              # subPath: postgresql - Subdirectory within the volume
+              # Purpose: Creates a subdirectory for PostgreSQL data
+              # Impact: PostgreSQL data is stored in postgresql subdirectory
+              # Production consideration: Prevents conflicts with other data
+      
+      # =============================================================================
+      # VOLUMES
+      # =============================================================================
+      volumes:
+        # volumes: Array of volumes available to this pod
+        - name: postgresql-data
+          # name: postgresql-data - Volume name
+          # Purpose: Identifies this volume for mounting
+          # Impact: Volume can be referenced by name
+          # Production consideration: Clear naming for operational management
+          
+          persistentVolumeClaim:
+            # persistentVolumeClaim: Volume source type
+            # Purpose: Creates volume from PersistentVolumeClaim
+            # Impact: Data persists across pod restarts
+            # Production consideration: Enables data persistence
+            claimName: postgresql-pvc
+            # claimName: postgresql-pvc - PVC name
+            # Purpose: References the PostgreSQL PersistentVolumeClaim
+            # Impact: Mounts persistent storage for PostgreSQL
+            # Production consideration: Uses dedicated storage for database

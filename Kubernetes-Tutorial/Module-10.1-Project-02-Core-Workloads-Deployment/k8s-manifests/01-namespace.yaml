@@ -1,0 +1,1088 @@
+# =============================================================================
+# NAMESPACE CONFIGURATION FOR CORE WORKLOADS DEPLOYMENT
+# =============================================================================
+# Purpose: Creates a production-ready namespace for the e-commerce Core Workloads
+# Deployment project with comprehensive resource management, security policies,
+# and operational controls.
+# Why needed: Provides logical separation, resource isolation, security boundaries,
+# and operational management for the e-commerce application components.
+# Kubernetes concept: Namespaces are virtual clusters within a physical cluster
+# that provide resource isolation and access control.
+
+apiVersion: v1
+# API Version: v1 is the stable version for core Kubernetes resources
+# This is the most commonly used API version for basic resources like Namespace
+
+kind: Namespace
+# Resource Type: Namespace is a Kubernetes resource that provides logical separation
+# Namespaces allow multiple teams to share the same cluster without conflicts
+# and provide resource isolation and security boundaries
+
+metadata:
+  # Metadata section contains identifying information about the resource
+  name: ecommerce
+  # Name: Unique identifier for the namespace within the cluster
+  # This name will be used to reference the namespace in other resources
+  # Must be unique across the entire cluster
+  
+  labels:
+    # Labels: Key-value pairs for organizing and selecting resources
+    # Labels enable efficient resource management and selection
+    
+    # =============================================================================
+    # APPLICATION IDENTIFICATION LABELS
+    # =============================================================================
+    app: ecommerce
+    # app: ecommerce - Identifies this as the e-commerce application namespace
+    # Used for selecting all e-commerce related resources
+    
+    project: core-workloads-deployment
+    # project: core-workloads-deployment - Groups resources by project
+    # Enables project-level resource management and billing
+    
+    environment: production
+    # environment: production - Indicates this is a production environment
+    # Used for environment-specific configurations and policies
+    
+    tier: application
+    # tier: application - Identifies the application tier
+    # Used for tier-based resource allocation and networking
+    
+    # =============================================================================
+    # MANAGEMENT LABELS
+    # =============================================================================
+    managed-by: kubernetes
+    # managed-by: kubernetes - Indicates this resource is managed by Kubernetes
+    # Used for resource lifecycle management
+    
+    version: "1.0.0"
+    # version: "1.0.0" - Version of the namespace configuration
+    # Used for configuration versioning and rollback
+    
+    created-by: platform-engineering
+    # created-by: platform-engineering - Identifies the creating team
+    # Used for ownership and responsibility tracking
+    
+    # =============================================================================
+    # SECURITY LABELS
+    # =============================================================================
+    security-level: high
+    # security-level: high - Indicates high security requirements
+    # Used for security policy enforcement and compliance
+    
+    compliance: pci-dss,gdpr,sox
+    # compliance: pci-dss,gdpr,sox - Compliance requirements
+    # Used for compliance monitoring and audit trails
+    
+    # =============================================================================
+    # OPERATIONAL LABELS
+    # =============================================================================
+    monitoring: enabled
+    # monitoring: enabled - Indicates monitoring is enabled
+    # Used for monitoring system configuration
+    
+    logging: enabled
+    # logging: enabled - Indicates logging is enabled
+    # Used for log collection and analysis
+    
+    backup: enabled
+    # backup: enabled - Indicates backup is enabled
+    # Used for backup system configuration
+    
+    # =============================================================================
+    # COST MANAGEMENT LABELS
+    # =============================================================================
+    cost-center: engineering
+    # cost-center: engineering - Cost center for billing
+    # Used for cost allocation and budget tracking
+    
+    billing-tier: production
+    # billing-tier: production - Billing tier classification
+    # Used for cost calculation and resource pricing
+    
+    # =============================================================================
+    # LIFECYCLE MANAGEMENT LABELS
+    # =============================================================================
+    lifecycle-stage: active
+    # lifecycle-stage: active - Current lifecycle stage
+    # Used for lifecycle management and automation
+    
+    maintenance-window: "02:00-04:00 UTC"
+    # maintenance-window: "02:00-04:00 UTC" - Scheduled maintenance window
+    # Used for maintenance scheduling and automation
+  
+  annotations:
+    # Annotations: Additional metadata that doesn't affect resource behavior
+    # Used for documentation, tooling, and operational information
+    
+    # =============================================================================
+    # DOCUMENTATION ANNOTATIONS
+    # =============================================================================
+    description: "E-commerce application namespace for Core Workloads Deployment project"
+    # description: Human-readable description of the namespace purpose
+    # Used for documentation and operational understanding
+    
+    contact: "platform-engineering@company.com"
+    # contact: Email address for the team responsible for this namespace
+    # Used for incident response and maintenance coordination
+    
+    documentation: "https://docs.company.com/ecommerce/namespace"
+    # documentation: URL to detailed documentation
+    # Used for reference and troubleshooting
+    
+    # =============================================================================
+    # MANAGEMENT ANNOTATIONS
+    # =============================================================================
+    managed-by: "platform-engineering"
+    # managed-by: Identifies the managing team
+    # Used for ownership and responsibility tracking
+    
+    last-updated: "2024-12-01T00:00:00Z"
+    # last-updated: Timestamp of last update
+    # Used for change tracking and audit trails
+    
+    next-review: "2025-01-01T00:00:00Z"
+    # next-review: Next scheduled review date
+    # Used for maintenance scheduling and compliance
+    
+    # =============================================================================
+    # SECURITY ANNOTATIONS
+    # =============================================================================
+    security-policy: "high-security"
+    # security-policy: Security policy level
+    # Used for security policy enforcement
+    
+    network-policy: "enabled"
+    # network-policy: Network policy enforcement status
+    # Used for network security configuration
+    
+    pod-security-policy: "restricted"
+    # pod-security-policy: Pod security policy level
+    # Used for pod security enforcement
+    
+    # =============================================================================
+    # MONITORING ANNOTATIONS
+    # =============================================================================
+    prometheus.io/scrape: "true"
+    # prometheus.io/scrape: Enable Prometheus scraping
+    # Used for metrics collection configuration
+    
+    prometheus.io/port: "9090"
+    # prometheus.io/port: Port for Prometheus scraping
+    # Used for metrics endpoint configuration
+    
+    grafana.com/dashboard: "ecommerce-overview"
+    # grafana.com/dashboard: Grafana dashboard reference
+    # Used for monitoring dashboard configuration
+    
+    # =============================================================================
+    # OPERATIONS ANNOTATIONS
+    # =============================================================================
+    backup-schedule: "daily"
+    # backup-schedule: Backup frequency
+    # Used for backup automation configuration
+    
+    backup-retention: "30d"
+    # backup-retention: Backup retention period
+    # Used for backup lifecycle management
+    
+    maintenance-schedule: "weekly"
+    # maintenance-schedule: Maintenance frequency
+    # Used for maintenance automation
+
+---
+# =============================================================================
+# RESOURCE QUOTA DEFINITION
+# =============================================================================
+# Purpose: Limits the total amount of resources that can be consumed in the namespace
+# Why needed: Prevents resource exhaustion and ensures fair resource allocation
+# across applications in the production environment
+# Kubernetes concept: ResourceQuota enforces resource limits at the namespace level
+# This prevents any single namespace from consuming all cluster resources
+
+apiVersion: v1
+# API Version: v1 is the stable version for ResourceQuota resources
+
+kind: ResourceQuota
+# Resource Type: ResourceQuota limits the amount of resources in a namespace
+# This prevents any single namespace from consuming all cluster resources
+# and ensures fair resource allocation across multiple applications
+
+metadata:
+  # Metadata section for the ResourceQuota resource
+  name: ecommerce-resource-quota
+  # Name: Unique identifier for this resource quota within the namespace
+  # This name will be used to reference the quota in monitoring and management
+  
+  namespace: ecommerce
+  # Namespace: Specifies which namespace this quota applies to
+  # Must match the namespace created above
+  
+  labels:
+    # Labels: Key-value pairs for organizing and selecting resources
+    app: ecommerce
+    # app: ecommerce - Identifies this quota as belonging to the e-commerce app
+    component: resource-management
+    # component: resource-management - Identifies this as a resource management component
+    tier: infrastructure
+    # tier: infrastructure - Identifies this as infrastructure tier
+
+spec:
+  # Specification section defines the actual quota limits
+  hard:
+    # hard: Enforces strict limits - requests exceeding these will be rejected
+    # These limits apply to the sum of all resources in the namespace
+    
+    # =============================================================================
+    # CPU RESOURCE LIMITS
+    # =============================================================================
+    requests.cpu: "8"
+    # requests.cpu: "8" - Maximum total CPU requests allowed in the namespace
+    # Value: 8 CPU cores (8000 millicores)
+    # Purpose: Limits the sum of all CPU requests from pods in this namespace
+    # Impact: Pods requesting more than 8 CPU cores total will be rejected
+    # Production consideration: Allows for multiple high-performance applications
+    
+    limits.cpu: "16"
+    # limits.cpu: "16" - Maximum total CPU limits allowed in the namespace
+    # Value: 16 CPU cores (16000 millicores)
+    # Purpose: Limits the sum of all CPU limits from pods in this namespace
+    # Impact: Pods with limits exceeding 16 CPU cores total will be rejected
+    # Production consideration: Provides headroom for burst capacity
+    
+    # =============================================================================
+    # MEMORY RESOURCE LIMITS
+    # =============================================================================
+    requests.memory: "16Gi"
+    # requests.memory: "16Gi" - Maximum total memory requests allowed
+    # Value: 16 Gibibytes (16 * 1024^3 bytes)
+    # Purpose: Limits the sum of all memory requests from pods
+    # Impact: Pods requesting more than 16Gi memory total will be rejected
+    # Production consideration: Sufficient for multiple database and application instances
+    
+    limits.memory: "32Gi"
+    # limits.memory: "32Gi" - Maximum total memory limits allowed
+    # Value: 32 Gibibytes (32 * 1024^3 bytes)
+    # Purpose: Limits the sum of all memory limits from pods
+    # Impact: Pods with limits exceeding 32Gi memory total will be rejected
+    # Production consideration: Provides headroom for memory-intensive operations
+    
+    # =============================================================================
+    # STORAGE RESOURCE LIMITS
+    # =============================================================================
+    requests.storage: "100Gi"
+    # requests.storage: "100Gi" - Maximum total storage requests allowed
+    # Value: 100 Gibibytes of storage
+    # Purpose: Limits the total storage capacity that can be requested
+    # Impact: PVCs requesting more than 100Gi total storage will be rejected
+    # Production consideration: Sufficient for database and application data
+    
+    persistentvolumeclaims: "10"
+    # persistentvolumeclaims: "10" - Maximum number of PVCs allowed
+    # Value: 10 persistent volume claims
+    # Purpose: Limits the number of storage claims in the namespace
+    # Impact: Creating more than 10 PVCs will be rejected
+    # Production consideration: Allows for multiple database and application volumes
+    
+    # =============================================================================
+    # OBJECT COUNT LIMITS
+    # =============================================================================
+    pods: "50"
+    # pods: "50" - Maximum number of pods allowed in the namespace
+    # Value: 50 pods
+    # Purpose: Prevents namespace from creating too many pods
+    # Impact: Creating more than 50 pods will be rejected
+    # Production consideration: Allows for high availability and scaling
+    
+    services: "20"
+    # services: "20" - Maximum number of services allowed
+    # Value: 20 services
+    # Purpose: Limits the number of service endpoints
+    # Impact: Creating more than 20 services will be rejected
+    # Production consideration: Sufficient for microservices architecture
+    
+    secrets: "30"
+    # secrets: "30" - Maximum number of Secrets allowed
+    # Value: 30 Secrets
+    # Purpose: Limits sensitive data storage objects
+    # Impact: Creating more than 30 Secrets will be rejected
+    # Production consideration: Allows for multiple application secrets and certificates
+    
+    configmaps: "30"
+    # configmaps: "30" - Maximum number of ConfigMaps allowed
+    # Value: 30 ConfigMaps
+    # Purpose: Limits configuration storage objects
+    # Impact: Creating more than 30 ConfigMaps will be rejected
+    # Production consideration: Sufficient for complex application configurations
+    
+    # =============================================================================
+    # NETWORK RESOURCE LIMITS
+    # =============================================================================
+    services.loadbalancers: "5"
+    # services.loadbalancers: "5" - Maximum number of LoadBalancer services
+    # Value: 5 LoadBalancer services
+    # Purpose: Limits external load balancer resources
+    # Impact: Creating more than 5 LoadBalancer services will be rejected
+    # Production consideration: Sufficient for main application and monitoring services
+    
+    services.nodeports: "10"
+    # services.nodeports: "10" - Maximum number of NodePort services
+    # Value: 10 NodePort services
+    # Purpose: Limits node port allocations
+    # Impact: Creating more than 10 NodePort services will be rejected
+    # Production consideration: Allows for development and testing services
+    
+    # =============================================================================
+    # REPLICATION LIMITS
+    # =============================================================================
+    replicationcontrollers: "10"
+    # replicationcontrollers: "10" - Maximum number of ReplicationControllers
+    # Value: 10 ReplicationControllers
+    # Purpose: Limits legacy replication controller objects
+    # Impact: Creating more than 10 ReplicationControllers will be rejected
+    # Production consideration: Legacy support for older applications
+    
+    resourcequotas: "1"
+    # resourcequotas: "1" - Maximum number of ResourceQuotas per namespace
+    # Value: 1 ResourceQuota
+    # Purpose: Prevents multiple quota conflicts
+    # Impact: Creating more than 1 ResourceQuota will be rejected
+    # Production consideration: Ensures single quota management per namespace
+
+---
+# =============================================================================
+# LIMIT RANGE DEFINITION
+# =============================================================================
+# Purpose: Defines default resource limits for pods and containers in the namespace
+# Why needed: Ensures consistent resource allocation and prevents resource abuse
+# by setting default values when resources are not explicitly specified
+# Kubernetes concept: LimitRange sets default resource limits and requests
+# for containers, pods, and persistent volume claims in a namespace
+
+apiVersion: v1
+# API Version: v1 is the stable version for LimitRange resources
+
+kind: LimitRange
+# Resource Type: LimitRange sets default resource limits and requests
+# This ensures consistent resource allocation across all resources in the namespace
+# and prevents resource abuse by setting reasonable defaults
+
+metadata:
+  # Metadata section for the LimitRange resource
+  name: ecommerce-limit-range
+  # Name: Unique identifier for this limit range within the namespace
+  # This name will be used to reference the limit range in monitoring and management
+  
+  namespace: ecommerce
+  # Namespace: Specifies which namespace this limit range applies to
+  # Must match the namespace created above
+  
+  labels:
+    # Labels: Key-value pairs for organizing and selecting resources
+    app: ecommerce
+    # app: ecommerce - Identifies this limit range as belonging to the e-commerce app
+    component: resource-management
+    # component: resource-management - Identifies this as a resource management component
+    tier: infrastructure
+    # tier: infrastructure - Identifies this as infrastructure tier
+
+spec:
+  # Specification section defines the actual limit range rules
+  limits:
+    # limits: Array of limit range rules for different resource types
+    
+    # =============================================================================
+    # CONTAINER RESOURCE LIMITS
+    # =============================================================================
+    - type: Container
+      # type: Container - Applies to individual containers within pods
+      # This rule sets limits for all containers in the namespace
+      
+      default:
+        # default: Default values when limits are not specified
+        cpu: "500m"
+        # cpu: "500m" - Default CPU limit for containers
+        # Value: 500 millicores (0.5 CPU cores)
+        # Purpose: Sets default CPU limit when not explicitly specified
+        # Impact: Containers without CPU limits get 500m CPU limit
+        # Production consideration: Reasonable default for most applications
+        
+        memory: "512Mi"
+        # memory: "512Mi" - Default memory limit for containers
+        # Value: 512 Mebibytes (512 * 1024^2 bytes)
+        # Purpose: Sets default memory limit when not explicitly specified
+        # Impact: Containers without memory limits get 512Mi memory limit
+        # Production consideration: Sufficient for most lightweight applications
+        
+        ephemeral-storage: "1Gi"
+        # ephemeral-storage: "1Gi" - Default ephemeral storage limit
+        # Value: 1 Gibibyte of ephemeral storage
+        # Purpose: Sets default ephemeral storage limit for containers
+        # Impact: Containers without storage limits get 1Gi ephemeral storage
+        # Production consideration: Sufficient for temporary files and logs
+      
+      defaultRequest:
+        # defaultRequest: Default values when requests are not specified
+        cpu: "100m"
+        # cpu: "100m" - Default CPU request for containers
+        # Value: 100 millicores (0.1 CPU cores)
+        # Purpose: Sets default CPU request when not explicitly specified
+        # Impact: Containers without CPU requests get 100m CPU request
+        # Production consideration: Minimal CPU allocation for basic operations
+        
+        memory: "128Mi"
+        # memory: "128Mi" - Default memory request for containers
+        # Value: 128 Mebibytes (128 * 1024^2 bytes)
+        # Purpose: Sets default memory request when not explicitly specified
+        # Impact: Containers without memory requests get 128Mi memory request
+        # Production consideration: Minimal memory allocation for basic operations
+        
+        ephemeral-storage: "100Mi"
+        # ephemeral-storage: "100Mi" - Default ephemeral storage request
+        # Value: 100 Mebibytes of ephemeral storage
+        # Purpose: Sets default ephemeral storage request for containers
+        # Impact: Containers without storage requests get 100Mi ephemeral storage
+        # Production consideration: Minimal storage allocation for basic operations
+      
+      max:
+        # max: Maximum values allowed for containers
+        cpu: "2"
+        # cpu: "2" - Maximum CPU per container
+        # Value: 2 CPU cores (2000 millicores)
+        # Purpose: Prevents any single container from consuming too much CPU
+        # Impact: Containers requesting more than 2 CPU cores will be rejected
+        # Production consideration: Prevents resource hogging by single containers
+        
+        memory: "4Gi"
+        # memory: "4Gi" - Maximum memory per container
+        # Value: 4 Gibibytes (4 * 1024^3 bytes)
+        # Purpose: Prevents any single container from consuming too much memory
+        # Impact: Containers requesting more than 4Gi memory will be rejected
+        # Production consideration: Prevents memory exhaustion by single containers
+        
+        ephemeral-storage: "10Gi"
+        # ephemeral-storage: "10Gi" - Maximum ephemeral storage per container
+        # Value: 10 Gibibytes of ephemeral storage
+        # Purpose: Prevents any single container from consuming too much storage
+        # Impact: Containers requesting more than 10Gi ephemeral storage will be rejected
+        # Production consideration: Prevents storage exhaustion by single containers
+      
+      min:
+        # min: Minimum values required for containers
+        cpu: "50m"
+        # cpu: "50m" - Minimum CPU per container
+        # Value: 50 millicores (0.05 CPU cores)
+        # Purpose: Ensures containers have minimum CPU allocation
+        # Impact: Containers requesting less than 50m CPU will be rejected
+        # Production consideration: Ensures basic functionality for all containers
+        
+        memory: "64Mi"
+        # memory: "64Mi" - Minimum memory per container
+        # Value: 64 Mebibytes (64 * 1024^2 bytes)
+        # Purpose: Ensures containers have minimum memory allocation
+        # Impact: Containers requesting less than 64Mi memory will be rejected
+        # Production consideration: Ensures basic functionality for all containers
+        
+        ephemeral-storage: "50Mi"
+        # ephemeral-storage: "50Mi" - Minimum ephemeral storage per container
+        # Value: 50 Mebibytes of ephemeral storage
+        # Purpose: Ensures containers have minimum storage allocation
+        # Impact: Containers requesting less than 50Mi ephemeral storage will be rejected
+        # Production consideration: Ensures basic functionality for all containers
+    
+    # =============================================================================
+    # POD RESOURCE LIMITS
+    # =============================================================================
+    - type: Pod
+      # type: Pod - Applies to entire pods (sum of all containers)
+      # This rule sets limits for the total resources used by all containers in a pod
+      
+      max:
+        # max: Maximum values allowed for pods
+        cpu: "4"
+        # cpu: "4" - Maximum CPU per pod
+        # Value: 4 CPU cores (4000 millicores)
+        # Purpose: Prevents any single pod from consuming too much CPU
+        # Impact: Pods requesting more than 4 CPU cores total will be rejected
+        # Production consideration: Allows for multi-container pods with reasonable limits
+        
+        memory: "8Gi"
+        # memory: "8Gi" - Maximum memory per pod
+        # Value: 8 Gibibytes (8 * 1024^3 bytes)
+        # Purpose: Prevents any single pod from consuming too much memory
+        # Impact: Pods requesting more than 8Gi memory total will be rejected
+        # Production consideration: Allows for memory-intensive multi-container pods
+        
+        ephemeral-storage: "20Gi"
+        # ephemeral-storage: "20Gi" - Maximum ephemeral storage per pod
+        # Value: 20 Gibibytes of ephemeral storage
+        # Purpose: Prevents any single pod from consuming too much storage
+        # Impact: Pods requesting more than 20Gi ephemeral storage will be rejected
+        # Production consideration: Allows for storage-intensive multi-container pods
+      
+      min:
+        # min: Minimum values required for pods
+        cpu: "100m"
+        # cpu: "100m" - Minimum CPU per pod
+        # Value: 100 millicores (0.1 CPU cores)
+        # Purpose: Ensures pods have minimum CPU allocation
+        # Impact: Pods requesting less than 100m CPU total will be rejected
+        # Production consideration: Ensures basic functionality for all pods
+        
+        memory: "128Mi"
+        # memory: "128Mi" - Minimum memory per pod
+        # Value: 128 Mebibytes (128 * 1024^2 bytes)
+        # Purpose: Ensures pods have minimum memory allocation
+        # Impact: Pods requesting less than 128Mi memory total will be rejected
+        # Production consideration: Ensures basic functionality for all pods
+        
+        ephemeral-storage: "100Mi"
+        # ephemeral-storage: "100Mi" - Minimum ephemeral storage per pod
+        # Value: 100 Mebibytes of ephemeral storage
+        # Purpose: Ensures pods have minimum storage allocation
+        # Impact: Pods requesting less than 100Mi ephemeral storage will be rejected
+        # Production consideration: Ensures basic functionality for all pods
+    
+    # =============================================================================
+    # PERSISTENT VOLUME CLAIM LIMITS
+    # =============================================================================
+    - type: PersistentVolumeClaim
+      # type: PersistentVolumeClaim - Applies to persistent volume claims
+      # This rule sets limits for storage claims in the namespace
+      
+      max:
+        # max: Maximum values allowed for persistent volume claims
+        storage: "50Gi"
+        # storage: "50Gi" - Maximum storage per PVC
+        # Value: 50 Gibibytes of storage
+        # Purpose: Prevents any single PVC from requesting too much storage
+        # Impact: PVCs requesting more than 50Gi storage will be rejected
+        # Production consideration: Prevents storage abuse while allowing reasonable database sizes
+      
+      min:
+        # min: Minimum values required for persistent volume claims
+        storage: "1Gi"
+        # storage: "1Gi" - Minimum storage per PVC
+        # Value: 1 Gibibyte of storage
+        # Purpose: Ensures PVCs have minimum storage allocation
+        # Impact: PVCs requesting less than 1Gi storage will be rejected
+        # Production consideration: Ensures sufficient storage for basic operations
+
+---
+# =============================================================================
+# NETWORK POLICY DEFINITION
+# =============================================================================
+# Purpose: Defines network policies for the ecommerce namespace to implement
+# micro-segmentation and secure network communication between components
+# Why needed: Provides network security isolation and controls traffic flow
+# between pods, namespaces, and external services
+# Kubernetes concept: NetworkPolicy controls network traffic at the pod level
+# using ingress and egress rules with selectors
+
+apiVersion: networking.k8s.io/v1
+# API Version: networking.k8s.io/v1 is the stable version for NetworkPolicy resources
+# This is the most commonly used API version for network policies
+
+kind: NetworkPolicy
+# Resource Type: NetworkPolicy controls network traffic to and from pods
+# This provides network-level security and micro-segmentation
+# Network policies are enforced by the CNI plugin (e.g., Calico, Weave)
+
+metadata:
+  # Metadata section for the NetworkPolicy resource
+  name: ecommerce-network-policy
+  # Name: Unique identifier for this network policy within the namespace
+  # This name will be used to reference the policy in monitoring and management
+  
+  namespace: ecommerce
+  # Namespace: Specifies which namespace this network policy applies to
+  # Must match the namespace created above
+  
+  labels:
+    # Labels: Key-value pairs for organizing and selecting resources
+    app: ecommerce
+    # app: ecommerce - Identifies this policy as belonging to the e-commerce app
+    component: network-security
+    # component: network-security - Identifies this as a network security component
+    tier: infrastructure
+    # tier: infrastructure - Identifies this as infrastructure tier
+
+spec:
+  # Specification section defines the actual network policy rules
+  
+  # =============================================================================
+  # POD SELECTOR
+  # =============================================================================
+  podSelector: {}
+  # podSelector: {} - Applies this policy to all pods in the namespace
+  # Empty selector means all pods are subject to this network policy
+  # Alternative: podSelector: { matchLabels: { app: ecommerce } } for specific pods
+  
+  policyTypes:
+    # policyTypes: Specifies which types of rules are defined
+    - Ingress
+    # Ingress: Defines rules for incoming traffic to pods
+    - Egress
+    # Egress: Defines rules for outgoing traffic from pods
+  
+  # =============================================================================
+  # INGRESS RULES - INCOMING TRAFFIC
+  # =============================================================================
+  ingress:
+    # ingress: Array of rules defining allowed incoming traffic
+    # Traffic not matching any rule will be denied by default
+    
+    # =============================================================================
+    # INGRESS CONTROLLER TRAFFIC
+    # =============================================================================
+    - from:
+        # from: Defines sources of allowed traffic
+        - namespaceSelector:
+            # namespaceSelector: Selects pods from specific namespaces
+            matchLabels:
+              name: ingress-nginx
+              # name: ingress-nginx - Allows traffic from nginx ingress controller
+              # This enables external traffic to reach the application
+        - namespaceSelector:
+            # Additional ingress controller support
+            matchLabels:
+              name: istio-system
+              # name: istio-system - Allows traffic from Istio service mesh
+              # This enables service mesh traffic management
+      ports:
+        # ports: Defines which ports traffic is allowed on
+        - protocol: TCP
+          port: 80
+          # port: 80 - HTTP traffic port
+          # Purpose: Allows HTTP traffic from ingress controllers
+          # Impact: Enables web traffic to reach the application
+        - protocol: TCP
+          port: 443
+          # port: 443 - HTTPS traffic port
+          # Purpose: Allows HTTPS traffic from ingress controllers
+          # Impact: Enables secure web traffic to reach the application
+        - protocol: TCP
+          port: 8080
+          # port: 8080 - Application traffic port
+          # Purpose: Allows application traffic from ingress controllers
+          # Impact: Enables direct application access
+        - protocol: TCP
+          port: 9090
+          # port: 9090 - Metrics traffic port
+          # Purpose: Allows metrics traffic from ingress controllers
+          # Impact: Enables monitoring and observability
+    
+    # =============================================================================
+    # MONITORING NAMESPACE TRAFFIC
+    # =============================================================================
+    - from:
+        # from: Defines sources of allowed traffic
+        - namespaceSelector:
+            # namespaceSelector: Selects pods from monitoring namespace
+            matchLabels:
+              name: monitoring
+              # name: monitoring - Allows traffic from monitoring namespace
+              # This enables monitoring systems to collect metrics and logs
+      ports:
+        # ports: Defines which ports traffic is allowed on
+        - protocol: TCP
+          port: 9090
+          # port: 9090 - Prometheus metrics port
+          # Purpose: Allows Prometheus to scrape metrics
+          # Impact: Enables metrics collection for monitoring
+        - protocol: TCP
+          port: 8080
+          # port: 8080 - Application metrics port
+          # Purpose: Allows monitoring tools to access application metrics
+          # Impact: Enables comprehensive application monitoring
+    
+    # =============================================================================
+    # SAME NAMESPACE TRAFFIC
+    # =============================================================================
+    - from:
+        # from: Defines sources of allowed traffic
+        - namespaceSelector:
+            # namespaceSelector: Selects pods from same namespace
+            matchLabels:
+              name: ecommerce
+              # name: ecommerce - Allows traffic from same namespace
+              # This enables inter-pod communication within the application
+      ports:
+        # ports: Defines which ports traffic is allowed on
+        - protocol: TCP
+          port: 80
+          # port: 80 - HTTP traffic port
+          # Purpose: Allows HTTP communication between pods
+          # Impact: Enables web service communication
+        - protocol: TCP
+          port: 443
+          # port: 443 - HTTPS traffic port
+          # Purpose: Allows HTTPS communication between pods
+          # Impact: Enables secure web service communication
+        - protocol: TCP
+          port: 8080
+          # port: 8080 - Application traffic port
+          # Purpose: Allows application communication between pods
+          # Impact: Enables microservices communication
+        - protocol: TCP
+          port: 5432
+          # port: 5432 - PostgreSQL database port
+          # Purpose: Allows database access from application pods
+          # Impact: Enables database connectivity
+        - protocol: TCP
+          port: 6379
+          # port: 6379 - Redis cache port
+          # Purpose: Allows cache access from application pods
+          # Impact: Enables caching functionality
+        - protocol: TCP
+          port: 5672
+          # port: 5672 - RabbitMQ message queue port
+          # Purpose: Allows message queue access from application pods
+          # Impact: Enables asynchronous messaging
+  
+  # =============================================================================
+  # EGRESS RULES - OUTGOING TRAFFIC
+  # =============================================================================
+  egress:
+    # egress: Array of rules defining allowed outgoing traffic
+    # Traffic not matching any rule will be denied by default
+    
+    # =============================================================================
+    # DNS RESOLUTION TRAFFIC
+    # =============================================================================
+    - to: []
+      # to: [] - Empty selector allows traffic to any destination
+      # This is required for DNS resolution to work
+      ports:
+        # ports: Defines which ports traffic is allowed on
+        - protocol: UDP
+          port: 53
+          # port: 53 - DNS UDP port
+          # Purpose: Allows DNS resolution via UDP
+          # Impact: Enables domain name resolution
+        - protocol: TCP
+          port: 53
+          # port: 53 - DNS TCP port
+          # Purpose: Allows DNS resolution via TCP
+          # Impact: Enables domain name resolution for large queries
+    
+    # =============================================================================
+    # EXTERNAL HTTPS TRAFFIC
+    # =============================================================================
+    - to: []
+      # to: [] - Empty selector allows traffic to any destination
+      # This allows external HTTPS connections
+      ports:
+        # ports: Defines which ports traffic is allowed on
+        - protocol: TCP
+          port: 443
+          # port: 443 - HTTPS traffic port
+          # Purpose: Allows HTTPS connections to external services
+          # Impact: Enables API calls to external services, package downloads
+    
+    # =============================================================================
+    # SAME NAMESPACE TRAFFIC
+    # =============================================================================
+    - to:
+        # to: Defines destinations of allowed traffic
+        - namespaceSelector:
+            # namespaceSelector: Selects pods in same namespace
+            matchLabels:
+              name: ecommerce
+              # name: ecommerce - Allows traffic to same namespace
+              # This enables inter-pod communication within the application
+      ports:
+        # ports: Defines which ports traffic is allowed on
+        - protocol: TCP
+          port: 80
+          # port: 80 - HTTP traffic port
+          # Purpose: Allows HTTP communication to other pods
+          # Impact: Enables web service communication
+        - protocol: TCP
+          port: 443
+          # port: 443 - HTTPS traffic port
+          # Purpose: Allows HTTPS communication to other pods
+          # Impact: Enables secure web service communication
+        - protocol: TCP
+          port: 8080
+          # port: 8080 - Application traffic port
+          # Purpose: Allows application communication to other pods
+          # Impact: Enables microservices communication
+        - protocol: TCP
+          port: 5432
+          # port: 5432 - PostgreSQL database port
+          # Purpose: Allows database connections from pods
+          # Impact: Enables database connectivity
+        - protocol: TCP
+          port: 6379
+          # port: 6379 - Redis cache port
+          # Purpose: Allows cache connections from pods
+          # Impact: Enables caching functionality
+        - protocol: TCP
+          port: 5672
+          # port: 5672 - RabbitMQ message queue port
+          # Purpose: Allows message queue connections from pods
+          # Impact: Enables asynchronous messaging
+    
+    # =============================================================================
+    # MONITORING NAMESPACE TRAFFIC
+    # =============================================================================
+    - to:
+        # to: Defines destinations of allowed traffic
+        - namespaceSelector:
+            # namespaceSelector: Selects pods in monitoring namespace
+            matchLabels:
+              name: monitoring
+              # name: monitoring - Allows traffic to monitoring namespace
+              # This enables sending metrics and logs to monitoring systems
+      ports:
+        # ports: Defines which ports traffic is allowed on
+        - protocol: TCP
+          port: 9090
+          # port: 9090 - Prometheus metrics port
+          # Purpose: Allows sending metrics to Prometheus
+          # Impact: Enables metrics collection for monitoring
+        - protocol: TCP
+          port: 8080
+          # port: 8080 - Application metrics port
+          # Purpose: Allows sending metrics to monitoring tools
+          # Impact: Enables comprehensive application monitoring
+
+---
+# =============================================================================
+# POD SECURITY POLICY DEFINITION
+# =============================================================================
+# Purpose: Defines security policies for pods in the ecommerce namespace to ensure
+# secure container execution and prevent privilege escalation
+# Why needed: Provides pod-level security controls and prevents security vulnerabilities
+# by restricting container capabilities and access
+# Kubernetes concept: PodSecurityPolicy controls security-related fields of pod specifications
+# and enforces security best practices at the pod level
+
+apiVersion: policy/v1beta1
+# API Version: policy/v1beta1 is the stable version for PodSecurityPolicy resources
+# Note: PodSecurityPolicy is deprecated in Kubernetes 1.21+ and replaced by Pod Security Standards
+
+kind: PodSecurityPolicy
+# Resource Type: PodSecurityPolicy controls security-related fields of pod specifications
+# This provides pod-level security controls and enforces security best practices
+# PodSecurityPolicy is enforced by the admission controller
+
+metadata:
+  # Metadata section for the PodSecurityPolicy resource
+  name: ecommerce-psp
+  # Name: Unique identifier for this pod security policy
+  # This name will be used to reference the policy in RBAC and admission control
+  
+  namespace: ecommerce
+  # Namespace: Specifies which namespace this policy applies to
+  # Must match the namespace created above
+  
+  labels:
+    # Labels: Key-value pairs for organizing and selecting resources
+    app: ecommerce
+    # app: ecommerce - Identifies this policy as belonging to the e-commerce app
+    component: pod-security
+    # component: pod-security - Identifies this as a pod security component
+    tier: infrastructure
+    # tier: infrastructure - Identifies this as infrastructure tier
+
+spec:
+  # Specification section defines the actual security policy rules
+  
+  # =============================================================================
+  # PRIVILEGE CONTROLS
+  # =============================================================================
+  privileged: false
+  # privileged: false - Disables privileged containers
+  # Value: false - Privileged containers are not allowed
+  # Purpose: Prevents containers from running with full host privileges
+  # Impact: Containers cannot access host resources directly
+  # Security benefit: Prevents privilege escalation and host access
+  
+  # =============================================================================
+  # HOST NAMESPACE SHARING
+  # =============================================================================
+  hostNetwork: false
+  # hostNetwork: false - Disables host network sharing
+  # Value: false - Pods cannot use host network
+  # Purpose: Prevents pods from accessing host network directly
+  # Impact: Pods must use pod network for communication
+  # Security benefit: Prevents network-level attacks and port conflicts
+  
+  hostIPC: false
+  # hostIPC: false - Disables host IPC sharing
+  # Value: false - Pods cannot use host IPC
+  # Purpose: Prevents pods from accessing host inter-process communication
+  # Impact: Pods cannot communicate with host processes via IPC
+  # Security benefit: Prevents process-level attacks and data leakage
+  
+  hostPID: false
+  # hostPID: false - Disables host PID sharing
+  # Value: false - Pods cannot use host process ID namespace
+  # Purpose: Prevents pods from seeing host processes
+  # Impact: Pods cannot access host process information
+  # Security benefit: Prevents process enumeration and attacks
+  
+  # =============================================================================
+  # HOST PORT CONTROLS
+  # =============================================================================
+  hostPorts:
+    # hostPorts: Controls which host ports pods can bind to
+    - min: 0
+      # min: 0 - Minimum host port allowed
+      # Value: 0 - No minimum port restriction
+      max: 0
+      # max: 0 - Maximum host port allowed
+      # Value: 0 - No host ports allowed
+      # Purpose: Prevents pods from binding to host ports
+      # Impact: Pods cannot use host ports for networking
+      # Security benefit: Prevents port conflicts and unauthorized access
+  
+  # =============================================================================
+  # VOLUME CONTROLS
+  # =============================================================================
+  allowedHostPaths: []
+  # allowedHostPaths: [] - No host paths allowed
+  # Value: [] - Empty array means no host paths allowed
+  # Purpose: Prevents pods from mounting host filesystem paths
+  # Impact: Pods cannot access host filesystem directly
+  # Security benefit: Prevents host filesystem access and data leakage
+  
+  volumes:
+    # volumes: List of allowed volume types
+    - 'configMap'
+    # 'configMap' - Allows ConfigMap volumes
+    # Purpose: Enables configuration data mounting
+    # Impact: Pods can mount configuration from ConfigMaps
+    # Security benefit: Secure configuration management
+    
+    - 'emptyDir'
+    # 'emptyDir' - Allows empty directory volumes
+    # Purpose: Enables temporary storage for pods
+    # Impact: Pods can use temporary storage
+    # Security benefit: Isolated temporary storage
+    
+    - 'projected'
+    # 'projected' - Allows projected volumes
+    # Purpose: Enables multiple volume sources in single mount
+    # Impact: Pods can mount multiple volume sources
+    # Security benefit: Flexible and secure volume mounting
+    
+    - 'secret'
+    # 'secret' - Allows Secret volumes
+    # Purpose: Enables sensitive data mounting
+    # Impact: Pods can mount secrets securely
+    # Security benefit: Secure secret management
+    
+    - 'downwardAPI'
+    # 'downwardAPI' - Allows Downward API volumes
+    # Purpose: Enables pod metadata access
+    # Impact: Pods can access their own metadata
+    # Security benefit: Controlled metadata access
+    
+    - 'persistentVolumeClaim'
+    # 'persistentVolumeClaim' - Allows PVC volumes
+    # Purpose: Enables persistent storage
+    # Impact: Pods can use persistent storage
+    # Security benefit: Controlled persistent storage access
+  
+  # =============================================================================
+  # USER AND GROUP CONTROLS
+  # =============================================================================
+  runAsUser:
+    # runAsUser: Controls which user containers can run as
+    rule: 'MustRunAsNonRoot'
+    # rule: 'MustRunAsNonRoot' - Requires non-root user
+    # Value: MustRunAsNonRoot - Containers must run as non-root user
+    # Purpose: Prevents containers from running as root
+    # Impact: All containers must specify non-root user
+    # Security benefit: Prevents privilege escalation attacks
+  
+  runAsGroup:
+    # runAsGroup: Controls which group containers can run as
+    rule: 'MustRunAsNonRoot'
+    # rule: 'MustRunAsNonRoot' - Requires non-root group
+    # Value: MustRunAsNonRoot - Containers must run as non-root group
+    # Purpose: Prevents containers from running as root group
+    # Impact: All containers must specify non-root group
+    # Security benefit: Prevents group-based privilege escalation
+  
+  supplementalGroups:
+    # supplementalGroups: Controls additional groups containers can use
+    rule: 'MustRunAsNonRoot'
+    # rule: 'MustRunAsNonRoot' - Requires non-root supplemental groups
+    # Value: MustRunAsNonRoot - Supplemental groups must be non-root
+    # Purpose: Prevents containers from using root groups
+    # Impact: All supplemental groups must be non-root
+    # Security benefit: Prevents group-based privilege escalation
+  
+  # =============================================================================
+  # FILE SYSTEM CONTROLS
+  # =============================================================================
+  fsGroup:
+    # fsGroup: Controls file system group ownership
+    rule: 'MustRunAsNonRoot'
+    # rule: 'MustRunAsNonRoot' - Requires non-root file system group
+    # Value: MustRunAsNonRoot - File system group must be non-root
+    # Purpose: Prevents containers from using root file system group
+    # Impact: All file system groups must be non-root
+    # Security benefit: Prevents file system privilege escalation
+  
+  # =============================================================================
+  # CAPABILITIES CONTROLS
+  # =============================================================================
+  allowedCapabilities: []
+  # allowedCapabilities: [] - No additional capabilities allowed
+  # Value: [] - Empty array means no additional capabilities
+  # Purpose: Prevents containers from using additional Linux capabilities
+  # Impact: Containers cannot use privileged capabilities
+  # Security benefit: Prevents capability-based privilege escalation
+  
+  requiredDropCapabilities:
+    # requiredDropCapabilities: Capabilities that must be dropped
+    - 'ALL'
+    # 'ALL' - Drop all capabilities
+    # Value: ALL - All capabilities must be dropped
+    # Purpose: Removes all Linux capabilities from containers
+    # Impact: Containers run with minimal capabilities
+    # Security benefit: Implements principle of least privilege
+  
+  # =============================================================================
+  # SELINUX CONTROLS
+  # =============================================================================
+  seLinux:
+    # seLinux: Controls SELinux context for containers
+    rule: 'RunAsAny'
+    # rule: 'RunAsAny' - Allow any SELinux context
+    # Value: RunAsAny - No SELinux restrictions
+    # Purpose: Allows flexible SELinux configuration
+    # Impact: Containers can use any SELinux context
+    # Security consideration: May need tightening based on security requirements
+  
+  # =============================================================================
+  # FILE SYSTEM CONTROLS
+  # =============================================================================
+  readOnlyRootFilesystem: false
+  # readOnlyRootFilesystem: false - Allows writable root filesystem
+  # Value: false - Root filesystem can be writable
+  # Purpose: Allows containers to write to root filesystem
+  # Impact: Containers can modify files in root filesystem
+  # Security consideration: May need tightening for enhanced security
+  
+  # =============================================================================
+  # PRIVILEGE ESCALATION CONTROLS
+  # =============================================================================
+  allowPrivilegeEscalation: false
+  # allowPrivilegeEscalation: false - Disables privilege escalation
+  # Value: false - Privilege escalation not allowed
+  # Purpose: Prevents containers from escalating privileges
+  # Impact: Containers cannot gain additional privileges
+  # Security benefit: Prevents privilege escalation attacks
+  
+  defaultAllowPrivilegeEscalation: false
+  # defaultAllowPrivilegeEscalation: false - Default privilege escalation disabled
+  # Value: false - Default privilege escalation is disabled
+  # Purpose: Sets default privilege escalation behavior
+  # Impact: New containers default to no privilege escalation
+  # Security benefit: Ensures secure defaults for new containers

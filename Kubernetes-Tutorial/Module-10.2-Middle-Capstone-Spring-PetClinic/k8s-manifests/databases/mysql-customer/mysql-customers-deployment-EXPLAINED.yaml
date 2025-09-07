@@ -1,0 +1,542 @@
+# Spring PetClinic MySQL Customer Database Deployment
+# This manifest deploys the MySQL database for customer service with persistent storage
+
+# =============================================================================
+# STATEFULSET OVERVIEW
+# =============================================================================
+# Purpose: Deploys and manages the MySQL database for customer data
+# Why StatefulSet: Provides stable network identity and persistent storage
+# Kubernetes concept: StatefulSet is designed for stateful applications like databases
+# Role: Stores customer, pet, and pet type information for the customer service
+
+apiVersion: apps/v1
+# API Version: apps/v1 is the stable version for StatefulSet resources
+# StatefulSets were promoted to stable in Kubernetes 1.9
+# Provides ordered deployment, scaling, and deletion of pods
+
+kind: StatefulSet
+# Resource Type: StatefulSet manages stateful applications
+# Unlike Deployments, provides stable network identities and persistent storage
+# Pods are created and deleted in order (mysql-customer-0, mysql-customer-1, etc.)
+
+metadata:
+  # Metadata section contains identifying information about the StatefulSet
+  name: mysql-customer
+  # Name: Unique identifier for the StatefulSet within the namespace
+  # Pod names will be: mysql-customer-0, mysql-customer-1, etc.
+  # Provides stable network identity for database connections
+  
+  namespace: petclinic
+  # Namespace: Specifies which namespace this StatefulSet belongs to
+  # Must match the namespace created in petclinic-namespace.yml
+  # Provides resource isolation and access control boundaries
+  
+  labels:
+    # Labels: Key-value pairs for organizing and selecting resources
+    app: mysql-customer
+    # app: mysql-customer - Primary application identifier
+    # Used by Service selector to route traffic to these pods
+    component: database
+    # component: database - Identifies this as a database component
+    # Useful for organizing microservices architecture
+    tier: data
+    # tier: data - Indicates this is a data tier service
+    # Used by network policies for security and traffic control
+    database: customer
+    # database: customer - Specifies which database this serves
+    # Helps distinguish between different database instances
+    version: "8.0"
+    # version: "8.0" - MySQL version for tracking and compatibility
+    # Important for upgrade planning and compatibility checks
+  
+  annotations:
+    # Annotations: Additional metadata that doesn't affect resource behavior
+    description: "MySQL database for Spring PetClinic customer service"
+    # description: Human-readable description of the StatefulSet purpose
+    # Helps with documentation and operational understanding
+    contact: "devops@petclinic.com"
+    # contact: Contact information for the team responsible for this database
+    # Critical for incident response and database maintenance
+    backup-schedule: "0 2 * * *"
+    # backup-schedule: Cron expression for backup scheduling
+    # Used by backup operators and documentation
+
+spec:
+  # Specification section defines the desired state of the StatefulSet
+  serviceName: mysql-customer
+  # serviceName: Headless service name for stable network identity
+  # Required for StatefulSets to provide stable DNS names
+  # Each pod gets DNS name: mysql-customer-0.mysql-customer.petclinic.svc.cluster.local
+  
+  replicas: 1
+  # replicas: 1 - Number of database instances
+  # Usually 1 for single-master databases like MySQL
+  # Can be increased for read replicas or clustering setups
+  
+  selector:
+    # Selector defines which pods belong to this StatefulSet
+    matchLabels:
+      # matchLabels: Pods must have ALL these labels to be managed by this StatefulSet
+      app: mysql-customer
+      # app: mysql-customer - Must match the pod template labels below
+      # This is how the StatefulSet identifies its pods
+  
+  template:
+    # Template defines the pod specification for this StatefulSet
+    # All pods created by this StatefulSet will use this template
+    metadata:
+      # Pod metadata - labels and annotations for the pods
+      labels:
+        # Labels for the pods - must include selector labels
+        app: mysql-customer
+        # app: mysql-customer - Matches the StatefulSet selector
+        # Required for the StatefulSet to manage these pods
+        component: database
+        # component: database - Identifies the component type
+        # Used by monitoring and service discovery
+        tier: data
+        # tier: data - Indicates this is a data tier service
+        # Used by network policies for traffic control
+        database: customer
+        # database: customer - Specifies database purpose
+        # Useful for database-specific monitoring and policies
+      
+      annotations:
+        # Pod annotations for additional metadata
+        prometheus.io/scrape: "true"
+        # prometheus.io/scrape: "true" - Enables Prometheus monitoring
+        # Tells Prometheus to scrape metrics from this pod
+        prometheus.io/port: "9104"
+        # prometheus.io/port: "9104" - Port for MySQL exporter metrics
+        # MySQL exporter typically runs on port 9104
+        prometheus.io/path: "/metrics"
+        # prometheus.io/path: "/metrics" - Metrics endpoint path
+        # Standard Prometheus metrics endpoint
+        backup.kubernetes.io/enabled: "true"
+        # backup.kubernetes.io/enabled: "true" - Enable automated backups
+        # Used by backup operators like Velero or custom backup solutions
+    
+    spec:
+      # Pod specification defines the containers and their configuration
+      containers:
+      - name: mysql
+        # name: mysql - Container name within the pod
+        # Must be unique within the pod and DNS-compliant
+        # Used for logging, debugging, and container management
+        
+        image: mysql:8.0
+        # image: Official MySQL 8.0 image from Docker Hub
+        # mysql:8.0 - Specific version tag for consistency and security
+        # Using specific versions prevents unexpected updates
+        
+        imagePullPolicy: IfNotPresent
+        # imagePullPolicy: IfNotPresent - Pull image only if not present locally
+        # Reduces network traffic and improves startup time
+        # "Always" would pull on every pod restart
+        
+        ports:
+        - containerPort: 3306
+          # containerPort: 3306 - Standard MySQL port
+          # Port the MySQL server listens on inside the container
+          name: mysql
+          # name: mysql - Named port for service reference
+          # Allows services to reference ports by name instead of number
+          protocol: TCP
+          # protocol: TCP - Network protocol for MySQL connections
+          # MySQL uses TCP for client connections
+        
+        env:
+        # Environment variables for MySQL configuration
+        # These configure the MySQL server during initialization
+        - name: MYSQL_ROOT_PASSWORD
+          # MYSQL_ROOT_PASSWORD - Password for MySQL root user
+          valueFrom:
+            secretKeyRef:
+              # secretKeyRef: Reference to Kubernetes Secret
+              # Keeps sensitive data separate from configuration
+              name: mysql-credentials
+              # name: mysql-credentials - Secret containing database passwords
+              # Must be created before deploying this StatefulSet
+              key: root-password
+              # key: root-password - Key within the secret containing root password
+              # Secret can contain multiple key-value pairs
+        
+        - name: MYSQL_DATABASE
+          # MYSQL_DATABASE - Database to create during initialization
+          value: "petclinic_customer"
+          # value: "petclinic_customer" - Database name for customer service
+          # This database will be created automatically on first startup
+        
+        - name: MYSQL_USER
+          # MYSQL_USER - Application user to create during initialization
+          valueFrom:
+            secretKeyRef:
+              # secretKeyRef: Reference to secret for application username
+              name: mysql-credentials
+              # name: mysql-credentials - Same secret as root password
+              key: username
+              # key: username - Application username from secret
+        
+        - name: MYSQL_PASSWORD
+          # MYSQL_PASSWORD - Password for application user
+          valueFrom:
+            secretKeyRef:
+              # secretKeyRef: Reference to secret for application password
+              name: mysql-credentials
+              # name: mysql-credentials - Same secret as other credentials
+              key: password
+              # key: password - Application user password from secret
+        
+        - name: MYSQL_CHARSET
+          # MYSQL_CHARSET - Character set for the database
+          value: "utf8mb4"
+          # value: "utf8mb4" - Full UTF-8 support including emojis
+          # Recommended for modern applications with international content
+        
+        - name: MYSQL_COLLATION
+          # MYSQL_COLLATION - Collation for string comparison
+          value: "utf8mb4_unicode_ci"
+          # value: "utf8mb4_unicode_ci" - Case-insensitive Unicode collation
+          # Provides proper sorting for international characters
+        
+        volumeMounts:
+        # Volume mounts for persistent and configuration storage
+        - name: mysql-customer-storage
+          # name: mysql-customer-storage - Reference to persistent volume claim
+          # This is defined in volumeClaimTemplates below
+          mountPath: /var/lib/mysql
+          # mountPath: /var/lib/mysql - MySQL data directory
+          # All database files, logs, and configuration stored here
+        
+        - name: mysql-config
+          # name: mysql-config - Reference to configuration volume
+          mountPath: /etc/mysql/conf.d
+          # mountPath: /etc/mysql/conf.d - MySQL configuration directory
+          # Custom configuration files placed here override defaults
+        
+        - name: mysql-initdb
+          # name: mysql-initdb - Reference to initialization scripts volume
+          mountPath: /docker-entrypoint-initdb.d
+          # mountPath: /docker-entrypoint-initdb.d - MySQL initialization directory
+          # SQL scripts here are executed during first startup
+        
+        resources:
+          # Resource constraints for the MySQL container
+          # Critical for database performance and stability
+          requests:
+            # requests: Guaranteed resources allocated to the container
+            # Used by scheduler to place pods on nodes with sufficient resources
+            memory: "512Mi"
+            # memory: "512Mi" - Guaranteed memory allocation
+            # MySQL needs sufficient memory for buffer pools and caching
+            cpu: "250m"
+            # cpu: "250m" - Guaranteed CPU allocation
+            # 250m = 0.25 CPU cores, adequate for small to medium workloads
+          
+          limits:
+            # limits: Maximum resources the container can use
+            # Prevents database from consuming excessive resources
+            memory: "1Gi"
+            # memory: "1Gi" - Maximum memory limit
+            # Should be sized based on expected dataset and concurrent connections
+            cpu: "500m"
+            # cpu: "500m" - Maximum CPU limit
+            # Allows burst capacity for query processing and maintenance
+        
+        livenessProbe:
+          # Liveness probe determines if MySQL is running properly
+          # Kubernetes restarts container if liveness probe fails
+          exec:
+            # exec: Execute command inside container to check health
+            command:
+            - mysqladmin
+            # mysqladmin: MySQL administration utility
+            - ping
+            # ping: Command to check if MySQL server is responding
+            - -h
+            - localhost
+            # -h localhost: Connect to MySQL on localhost
+            - -u
+            - root
+            # -u root: Connect as root user
+            - -p$MYSQL_ROOT_PASSWORD
+            # -p$MYSQL_ROOT_PASSWORD: Use root password from environment
+          initialDelaySeconds: 30
+          # initialDelaySeconds: 30 - Wait 30 seconds before first probe
+          # MySQL needs time to initialize, especially on first startup
+          periodSeconds: 10
+          # periodSeconds: 10 - Check every 10 seconds
+          # Frequent checks for quick failure detection
+          timeoutSeconds: 5
+          # timeoutSeconds: 5 - Timeout for each probe command
+          # Should be less than periodSeconds
+          failureThreshold: 3
+          # failureThreshold: 3 - Restart after 3 consecutive failures
+          # Prevents restart due to temporary issues
+        
+        readinessProbe:
+          # Readiness probe determines if MySQL is ready to accept connections
+          # Service removes pod from endpoints if readiness probe fails
+          exec:
+            # exec: Execute command to check if MySQL is ready
+            command:
+            - mysql
+            # mysql: MySQL client command
+            - -h
+            - localhost
+            # -h localhost: Connect to local MySQL server
+            - -u
+            - root
+            # -u root: Connect as root user
+            - -p$MYSQL_ROOT_PASSWORD
+            # -p$MYSQL_ROOT_PASSWORD: Use root password
+            - -e
+            - "SELECT 1"
+            # -e "SELECT 1": Execute simple query to test connectivity
+            # Returns success only if MySQL can process queries
+          initialDelaySeconds: 5
+          # initialDelaySeconds: 5 - Start checking after 5 seconds
+          # Shorter than liveness probe since we check readiness more frequently
+          periodSeconds: 2
+          # periodSeconds: 2 - Check every 2 seconds
+          # Frequent checks for quick traffic routing decisions
+          timeoutSeconds: 1
+          # timeoutSeconds: 1 - Quick timeout for readiness checks
+          # Fast failure detection for traffic routing
+          failureThreshold: 3
+          # failureThreshold: 3 - Mark unready after 3 consecutive failures
+          # Removes pod from service endpoints quickly
+        
+        securityContext:
+          # Security context defines security settings for the MySQL container
+          # Important for database security and compliance
+          runAsUser: 999
+          # runAsUser: 999 - Run as mysql user (standard MySQL user ID)
+          # Avoids running as root for security
+          runAsGroup: 999
+          # runAsGroup: 999 - Run as mysql group
+          # Ensures proper file permissions
+          fsGroup: 999
+          # fsGroup: 999 - File system group for volume ownership
+          # Ensures MySQL can read/write to mounted volumes
+          allowPrivilegeEscalation: false
+          # allowPrivilegeEscalation: false - Prevents gaining additional privileges
+          # Security hardening for database containers
+          capabilities:
+            # Linux capabilities management
+            drop:
+            - ALL
+            # drop: ALL - Remove all Linux capabilities
+            add:
+            - CHOWN
+            # add: CHOWN - Allow changing file ownership
+            # Required for MySQL to manage data files
+            - DAC_OVERRIDE
+            # add: DAC_OVERRIDE - Allow bypassing file permission checks
+            # Required for MySQL file operations
+            - SETGID
+            # add: SETGID - Allow setting group ID
+            # Required for proper MySQL operation
+            - SETUID
+            # add: SETUID - Allow setting user ID
+            # Required for MySQL user management
+      
+      # MySQL Exporter sidecar container for monitoring
+      - name: mysql-exporter
+        # name: mysql-exporter - Sidecar container for Prometheus metrics
+        # Runs alongside MySQL to export metrics for monitoring
+        image: prom/mysqld-exporter:latest
+        # image: Official Prometheus MySQL exporter
+        # Provides MySQL metrics in Prometheus format
+        
+        ports:
+        - containerPort: 9104
+          # containerPort: 9104 - Standard port for MySQL exporter
+          # Prometheus scrapes metrics from this port
+          name: metrics
+          # name: metrics - Named port for Prometheus discovery
+          protocol: TCP
+          # protocol: TCP - HTTP metrics endpoint uses TCP
+        
+        env:
+        # Environment variables for MySQL exporter configuration
+        - name: DATA_SOURCE_NAME
+          # DATA_SOURCE_NAME - MySQL connection string for exporter
+          value: "root:$(MYSQL_ROOT_PASSWORD)@(localhost:3306)/"
+          # Connection string format: user:password@(host:port)/database
+          # Uses root credentials to access MySQL metrics
+        
+        resources:
+          # Resource constraints for the exporter sidecar
+          requests:
+            memory: "64Mi"
+            # memory: "64Mi" - Small memory footprint for exporter
+            cpu: "50m"
+            # cpu: "50m" - Minimal CPU for metrics collection
+          limits:
+            memory: "128Mi"
+            # memory: "128Mi" - Maximum memory for exporter
+            cpu: "100m"
+            # cpu: "100m" - Maximum CPU for exporter
+        
+        securityContext:
+          # Security context for the exporter container
+          runAsNonRoot: true
+          # runAsNonRoot: true - Don't run as root user
+          runAsUser: 65534
+          # runAsUser: 65534 - Run as nobody user
+          # Standard non-privileged user ID
+          allowPrivilegeEscalation: false
+          # allowPrivilegeEscalation: false - Security hardening
+          readOnlyRootFilesystem: true
+          # readOnlyRootFilesystem: true - Make filesystem read-only
+          # Exporter doesn't need to write files
+          capabilities:
+            drop:
+            - ALL
+            # drop: ALL - Remove all Linux capabilities
+            # Exporter doesn't need special privileges
+      
+      volumes:
+      # Volumes provide storage and configuration for the pod
+      - name: mysql-config
+        # name: mysql-config - Volume for MySQL configuration files
+        configMap:
+          # configMap: Configuration stored in Kubernetes ConfigMap
+          name: mysql-config
+          # name: mysql-config - ConfigMap containing MySQL configuration
+          # Must be created separately with custom MySQL settings
+      
+      - name: mysql-initdb
+        # name: mysql-initdb - Volume for database initialization scripts
+        configMap:
+          # configMap: Initialization scripts stored in ConfigMap
+          name: mysql-initdb-customer
+          # name: mysql-initdb-customer - ConfigMap with customer database schema
+          # Contains SQL scripts to create tables and initial data
+      
+      restartPolicy: Always
+      # restartPolicy: Always - Restart containers if they exit
+      # Critical for database availability
+      # Ensures MySQL restarts automatically on failures
+      
+      terminationGracePeriodSeconds: 60
+      # terminationGracePeriodSeconds: 60 - Time to wait before force-killing pod
+      # Longer than default to allow MySQL to flush buffers and close connections
+      # Critical for data integrity during shutdown
+      
+      serviceAccountName: mysql-service-account
+      # serviceAccountName: Service account for database pod
+      # Should have minimal permissions for security
+      # Used for accessing Kubernetes API if needed for backups or monitoring
+  
+  volumeClaimTemplates:
+  # Volume claim templates create persistent storage for each StatefulSet pod
+  # Each pod gets its own persistent volume claim
+  - metadata:
+      name: mysql-customer-storage
+      # name: mysql-customer-storage - Name referenced in volumeMounts
+      # Each pod gets: mysql-customer-storage-mysql-customer-0, etc.
+      labels:
+        # Labels for the persistent volume claim
+        app: mysql-customer
+        # app: mysql-customer - Matches StatefulSet labels
+        component: database
+        # component: database - Identifies as database storage
+        database: customer
+        # database: customer - Specifies which database this serves
+    
+    spec:
+      # Persistent volume claim specification
+      accessModes:
+      - ReadWriteOnce
+      # accessModes: ReadWriteOnce - Volume can be mounted by single node
+      # Appropriate for databases that don't support shared storage
+      # Other options: ReadOnlyMany, ReadWriteMany
+      
+      resources:
+        # Storage resource requirements
+        requests:
+          storage: 10Gi
+          # storage: 10Gi - Requested storage size
+          # Should be sized based on expected data growth
+          # Can be expanded later if storage class supports it
+      
+      storageClassName: fast-ssd
+      # storageClassName: fast-ssd - Storage class for performance
+      # Should use SSD storage for database workloads
+      # Storage class defines provisioner, parameters, and policies
+
+---
+# Headless Service for StatefulSet stable network identity
+# Required for StatefulSet DNS names and service discovery
+
+apiVersion: v1
+# API Version: v1 is the stable version for Service resources
+# Services provide network access and load balancing
+
+kind: Service
+# Resource Type: Service provides network access to pods
+# Headless service provides stable DNS names for StatefulSet pods
+
+metadata:
+  # Service metadata
+  name: mysql-customer
+  # name: mysql-customer - Service name matching StatefulSet serviceName
+  # Required for StatefulSet stable network identity
+  # Provides DNS name: mysql-customer.petclinic.svc.cluster.local
+  
+  namespace: petclinic
+  # namespace: petclinic - Must match StatefulSet namespace
+  # Services can only route to pods in the same namespace
+  
+  labels:
+    # Service labels for organization and selection
+    app: mysql-customer
+    # app: mysql-customer - Matches StatefulSet labels
+    component: database
+    # component: database - Identifies service component
+    tier: data
+    # tier: data - Indicates data tier service
+    database: customer
+    # database: customer - Specifies database purpose
+
+spec:
+  # Service specification
+  clusterIP: None
+  # clusterIP: None - Creates headless service
+  # Headless services don't get cluster IP addresses
+  # Required for StatefulSet stable network identity
+  
+  ports:
+  - port: 3306
+    # port: 3306 - MySQL port exposed by service
+    # Standard MySQL port for client connections
+    targetPort: 3306
+    # targetPort: 3306 - Port on the pod containers
+    # Must match containerPort in StatefulSet
+    protocol: TCP
+    # protocol: TCP - MySQL uses TCP protocol
+    name: mysql
+    # name: mysql - Named port for reference
+  
+  - port: 9104
+    # port: 9104 - MySQL exporter metrics port
+    # For Prometheus monitoring
+    targetPort: 9104
+    # targetPort: 9104 - Exporter container port
+    protocol: TCP
+    # protocol: TCP - HTTP metrics use TCP
+    name: metrics
+    # name: metrics - Named port for monitoring
+  
+  selector:
+    # Selector determines which pods receive traffic
+    app: mysql-customer
+    # app: mysql-customer - Routes traffic to MySQL customer pods
+    # Must match StatefulSet pod template labels
+  
+  publishNotReadyAddresses: true
+  # publishNotReadyAddresses: true - Include unready pods in DNS
+  # Important for StatefulSet pod discovery during startup
+  # Allows pods to find each other even if not fully ready

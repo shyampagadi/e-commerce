@@ -1,0 +1,236 @@
+# Network Policies for E-commerce Application Security
+# This manifest defines network security policies for the e-commerce application components
+
+# =============================================================================
+# NETWORK POLICY OVERVIEW
+# =============================================================================
+# Purpose: Implements network security controls for e-commerce application
+# Why Network Policies: Provides micro-segmentation and traffic control
+# Kubernetes concept: NetworkPolicy controls traffic flow between pods
+
+---
+# Backend Network Policy
+apiVersion: networking.k8s.io/v1
+# API Version: networking.k8s.io/v1 is the stable version for NetworkPolicy resources
+# This version provides comprehensive network traffic control capabilities
+
+kind: NetworkPolicy
+# Resource Type: NetworkPolicy defines network traffic rules
+# Controls ingress and egress traffic for selected pods
+
+metadata:
+  # Metadata section contains identifying information about the network policy
+  name: backend-network-policy
+  # Name: Unique identifier for the backend network policy
+  namespace: ecommerce
+  # Namespace: Specifies which namespace this policy applies to
+  
+  labels:
+    # Labels: Key-value pairs for organizing and selecting resources
+    app: ecommerce-backend
+    # app: ecommerce-backend - Associates policy with backend application
+    component: security
+    # component: security - Identifies this as a security component
+    policy-type: network
+    # policy-type: network - Indicates this is a network policy
+  
+  annotations:
+    # Annotations: Additional metadata for tools and libraries
+    kubernetes.io/description: "Network security policy for e-commerce backend"
+    # description: Human-readable description of the policy
+
+spec:
+  # NetworkPolicy specification defines the traffic rules
+  podSelector:
+    # podSelector: Selects which pods this policy applies to
+    matchLabels:
+      app: ecommerce-backend
+      # Applies to all pods with label app=ecommerce-backend
+  
+  policyTypes:
+  # policyTypes: Defines which types of traffic this policy controls
+  - Ingress
+  # Ingress: Controls incoming traffic to selected pods
+  - Egress
+  # Egress: Controls outgoing traffic from selected pods
+  
+  ingress:
+  # ingress: Rules for incoming traffic
+  - from:
+    # from: Sources allowed to send traffic to backend pods
+    - podSelector:
+        # podSelector: Allow traffic from frontend pods
+        matchLabels:
+          app: ecommerce-frontend
+    - namespaceSelector:
+        # namespaceSelector: Allow traffic from monitoring namespace
+        matchLabels:
+          name: monitoring
+    ports:
+    # ports: Allowed destination ports
+    - protocol: TCP
+      # protocol: TCP traffic only
+      port: 8080
+      # port: Backend application port
+  
+  egress:
+  # egress: Rules for outgoing traffic
+  - to:
+    # to: Destinations allowed for outgoing traffic
+    - podSelector:
+        # podSelector: Allow traffic to database pods
+        matchLabels:
+          app: ecommerce-database
+    ports:
+    # ports: Allowed destination ports
+    - protocol: TCP
+      # protocol: TCP traffic only
+      port: 5432
+      # port: PostgreSQL database port
+  - to: []
+    # to: [] - Allow traffic to any destination for DNS
+    ports:
+    # ports: DNS ports for name resolution
+    - protocol: TCP
+      port: 53
+      # port: DNS TCP port
+    - protocol: UDP
+      port: 53
+      # port: DNS UDP port
+
+---
+# Frontend Network Policy
+apiVersion: networking.k8s.io/v1
+# API Version: networking.k8s.io/v1 for NetworkPolicy resources
+
+kind: NetworkPolicy
+# Resource Type: NetworkPolicy for frontend traffic control
+
+metadata:
+  # Metadata for frontend network policy
+  name: frontend-network-policy
+  # Name: Unique identifier for the frontend network policy
+  namespace: ecommerce
+  # Namespace: E-commerce application namespace
+  
+  labels:
+    # Labels for organization and selection
+    app: ecommerce-frontend
+    # app: ecommerce-frontend - Associates policy with frontend application
+    component: security
+    # component: security - Security component identifier
+    policy-type: network
+    # policy-type: network - Network policy type
+  
+  annotations:
+    # Annotations for additional metadata
+    kubernetes.io/description: "Network security policy for e-commerce frontend"
+    # description: Policy description
+
+spec:
+  # Frontend NetworkPolicy specification
+  podSelector:
+    # podSelector: Selects frontend pods
+    matchLabels:
+      app: ecommerce-frontend
+      # Applies to all pods with label app=ecommerce-frontend
+  
+  policyTypes:
+  # policyTypes: Traffic types controlled by this policy
+  - Ingress
+  # Ingress: Incoming traffic control
+  - Egress
+  # Egress: Outgoing traffic control
+  
+  ingress:
+  # ingress: Incoming traffic rules
+  - from: []
+    # from: [] - Allow traffic from any source (public access)
+    ports:
+    # ports: Allowed incoming ports
+    - protocol: TCP
+      # protocol: TCP traffic
+      port: 80
+      # port: HTTP port for frontend
+  
+  egress:
+  # egress: Outgoing traffic rules
+  - to:
+    # to: Allowed destinations
+    - podSelector:
+        # podSelector: Allow traffic to backend pods
+        matchLabels:
+          app: ecommerce-backend
+    ports:
+    # ports: Allowed destination ports
+    - protocol: TCP
+      # protocol: TCP traffic
+      port: 8080
+      # port: Backend API port
+  - to: []
+    # to: [] - Allow DNS traffic to any destination
+    ports:
+    # ports: DNS resolution ports
+    - protocol: TCP
+      port: 53
+      # port: DNS TCP
+    - protocol: UDP
+      port: 53
+      # port: DNS UDP
+
+---
+# Database Network Policy
+apiVersion: networking.k8s.io/v1
+# API Version: networking.k8s.io/v1 for NetworkPolicy resources
+
+kind: NetworkPolicy
+# Resource Type: NetworkPolicy for database traffic control
+
+metadata:
+  # Metadata for database network policy
+  name: database-network-policy
+  # Name: Unique identifier for the database network policy
+  namespace: ecommerce
+  # Namespace: E-commerce application namespace
+  
+  labels:
+    # Labels for organization and selection
+    app: ecommerce-database
+    # app: ecommerce-database - Associates policy with database
+    component: security
+    # component: security - Security component identifier
+    policy-type: network
+    # policy-type: network - Network policy type
+  
+  annotations:
+    # Annotations for additional metadata
+    kubernetes.io/description: "Network security policy for e-commerce database"
+    # description: Policy description
+
+spec:
+  # Database NetworkPolicy specification
+  podSelector:
+    # podSelector: Selects database pods
+    matchLabels:
+      app: ecommerce-database
+      # Applies to all pods with label app=ecommerce-database
+  
+  policyTypes:
+  # policyTypes: Only control incoming traffic (database doesn't initiate connections)
+  - Ingress
+  # Ingress: Incoming traffic control only
+  
+  ingress:
+  # ingress: Incoming traffic rules
+  - from:
+    # from: Sources allowed to connect to database
+    - podSelector:
+        # podSelector: Only backend pods can connect to database
+        matchLabels:
+          app: ecommerce-backend
+    ports:
+    # ports: Allowed database ports
+    - protocol: TCP
+      # protocol: TCP traffic
+      port: 5432
+      # port: PostgreSQL database port

@@ -1,0 +1,770 @@
+# Spring PetClinic Helm Chart Values - Line by Line Documentation
+# ================================================================
+# 
+# This file contains all configurable values for the Spring PetClinic Helm chart.
+# Each value is documented with its purpose, impact, and recommended settings.
+#
+# Author: DevOps Team
+# Version: 2.0.0
+# Last Updated: December 2024
+
+# =============================================================================
+# GLOBAL CONFIGURATION
+# =============================================================================
+# Global values are accessible by all templates and sub-charts
+# These provide consistent configuration across the entire deployment
+
+global:
+  # Global section contains values shared across all chart components
+  # Values defined here can be overridden by specific component values
+  
+  imageRegistry: ""
+  # imageRegistry: Override default Docker registry for all images
+  # Default: "" (empty) - uses default registry (Docker Hub)
+  # Example: "my-registry.com" - uses custom private registry
+  # When set, prepends to all image names: my-registry.com/image:tag
+  # Useful for air-gapped environments or private registries
+  
+  imagePullSecrets: []
+  # imagePullSecrets: Kubernetes secrets for pulling private images
+  # Default: [] (empty array) - no authentication needed
+  # Example: [{"name": "my-registry-secret"}]
+  # Required when using private Docker registries
+  # Secrets must be created separately in the target namespace
+  
+  storageClass: "fast-ssd"
+  # storageClass: Default storage class for persistent volumes
+  # Default: "fast-ssd" - assumes SSD storage class exists
+  # Used by databases and other components requiring persistent storage
+  # Should match available storage classes in your cluster
+  # Examples: "gp2" (AWS), "standard" (GKE), "managed-premium" (Azure)
+
+# =============================================================================
+# APPLICATION CONFIGURATION
+# =============================================================================
+# Application-level settings that define overall deployment characteristics
+
+app:
+  # Application metadata and configuration
+  name: petclinic
+  # name: Application name used throughout the deployment
+  # Default: "petclinic" - used in resource names and labels
+  # Should be DNS-compliant (lowercase, alphanumeric, hyphens)
+  # Used as prefix for generated resource names
+  
+  version: "2.7.3"
+  # version: Application version for tracking and rollbacks
+  # Default: "2.7.3" - Spring PetClinic version
+  # Used in labels for version tracking and canary deployments
+  # Should match the actual application version being deployed
+  
+  environment: production
+  # environment: Deployment environment identifier
+  # Default: "production" - indicates production deployment
+  # Options: development, staging, production
+  # Used for environment-specific configurations and policies
+  # Affects resource allocation, monitoring, and security settings
+
+# =============================================================================
+# CONTAINER IMAGE CONFIGURATION
+# =============================================================================
+# Docker image settings for all microservices
+
+image:
+  # Container image configuration for all services
+  registry: springcommunity
+  # registry: Docker registry containing PetClinic images
+  # Default: "springcommunity" - official Spring community registry
+  # Can be overridden by global.imageRegistry
+  # Examples: "docker.io", "gcr.io/my-project", "my-registry.com"
+  
+  repository: spring-petclinic
+  # repository: Base repository name for PetClinic images
+  # Default: "spring-petclinic" - base name for all service images
+  # Actual images: spring-petclinic-api-gateway, spring-petclinic-customer-service, etc.
+  # Service-specific suffixes are appended automatically
+  
+  tag: "latest"
+  # tag: Docker image tag to deploy
+  # Default: "latest" - pulls most recent image
+  # Production recommendation: Use specific version tags (e.g., "2.7.3")
+  # Specific tags ensure consistent deployments and easier rollbacks
+  
+  pullPolicy: IfNotPresent
+  # pullPolicy: When to pull container images
+  # Default: "IfNotPresent" - pull only if image not present locally
+  # Options: Always, Never, IfNotPresent
+  # "Always" recommended for :latest tags, "IfNotPresent" for specific tags
+
+# =============================================================================
+# REPLICA CONFIGURATION
+# =============================================================================
+# Number of pod replicas for each microservice
+
+replicaCount:
+  # Replica counts for each microservice
+  # Higher replica counts provide better availability and load distribution
+  # Consider resource constraints and actual load requirements
+  
+  configServer: 1
+  # configServer: Number of Config Server replicas
+  # Default: 1 - single instance sufficient for most deployments
+  # Config Server provides centralized configuration management
+  # Multiple replicas provide high availability but require shared storage
+  
+  discoveryServer: 1
+  # discoveryServer: Number of Discovery Server (Eureka) replicas
+  # Default: 1 - single instance for development/testing
+  # Production recommendation: 2-3 replicas for high availability
+  # Eureka servers form a cluster and replicate registry information
+  
+  apiGateway: 2
+  # apiGateway: Number of API Gateway replicas
+  # Default: 2 - provides high availability and load distribution
+  # API Gateway is the entry point for all client requests
+  # Multiple replicas essential for production availability
+  
+  customerService: 2
+  # customerService: Number of Customer Service replicas
+  # Default: 2 - handles customer and pet data operations
+  # Scale based on expected customer management load
+  # Each replica can handle independent requests
+  
+  vetService: 2
+  # vetService: Number of Vet Service replicas
+  # Default: 2 - handles veterinarian data operations
+  # Typically lower load than customer service
+  # Scale based on number of veterinarians and appointment volume
+  
+  visitService: 2
+  # visitService: Number of Visit Service replicas
+  # Default: 2 - handles appointment and visit data
+  # Often highest load service due to appointment scheduling
+  # Scale based on appointment booking patterns
+  
+  adminServer: 1
+  # adminServer: Number of Admin Server replicas
+  # Default: 1 - provides administrative interface
+  # Single instance sufficient as it's used for monitoring/administration
+  # Not critical for application functionality
+
+# =============================================================================
+# SERVICE CONFIGURATION
+# =============================================================================
+# Kubernetes Service settings for network access
+
+service:
+  # Service configuration for exposing microservices
+  type: ClusterIP
+  # type: Kubernetes Service type for all services
+  # Default: "ClusterIP" - internal cluster access only
+  # Options: ClusterIP, NodePort, LoadBalancer, ExternalName
+  # ClusterIP is most secure for internal microservices
+  
+  ports:
+    # Port configuration for each microservice
+    # These are the ports services listen on and expose
+    
+    configServer: 8888
+    # configServer: Port for Config Server
+    # Default: 8888 - standard Spring Cloud Config Server port
+    # Used by other services to retrieve configuration
+    # Must match application.yml server.port setting
+    
+    discoveryServer: 8761
+    # discoveryServer: Port for Discovery Server (Eureka)
+    # Default: 8761 - standard Eureka server port
+    # Used for service registration and discovery
+    # Eureka dashboard accessible at this port
+    
+    apiGateway: 8080
+    # apiGateway: Port for API Gateway
+    # Default: 8080 - standard web application port
+    # Main entry point for all client requests
+    # Should be exposed via Ingress for external access
+    
+    customerService: 8081
+    # customerService: Port for Customer Service
+    # Default: 8081 - unique port for customer operations
+    # Internal service, accessed via API Gateway
+    # Handles customer and pet management APIs
+    
+    vetService: 8082
+    # vetService: Port for Vet Service
+    # Default: 8082 - unique port for veterinarian operations
+    # Internal service, accessed via API Gateway
+    # Handles veterinarian data and specialties
+    
+    visitService: 8083
+    # visitService: Port for Visit Service
+    # Default: 8083 - unique port for visit operations
+    # Internal service, accessed via API Gateway
+    # Handles appointment scheduling and visit records
+    
+    adminServer: 9090
+    # adminServer: Port for Admin Server
+    # Default: 9090 - administrative interface port
+    # Provides monitoring and management capabilities
+    # Typically accessed by operations team only
+
+# =============================================================================
+# INGRESS CONFIGURATION
+# =============================================================================
+# External access configuration for the application
+
+ingress:
+  # Ingress configuration for external access
+  enabled: true
+  # enabled: Whether to create Ingress resource
+  # Default: true - enables external access to the application
+  # Set to false for internal-only deployments
+  # Requires Ingress controller to be installed in cluster
+  
+  className: "nginx"
+  # className: Ingress class to use
+  # Default: "nginx" - assumes NGINX Ingress Controller
+  # Other options: "traefik", "istio", "alb" (AWS)
+  # Must match available Ingress controllers in cluster
+  
+  annotations:
+    # Ingress annotations for additional configuration
+    # Annotations are specific to the Ingress controller being used
+    
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    # rewrite-target: Rewrite URL path before forwarding to service
+    # Default: "/" - removes path prefix from requests
+    # Useful when application expects requests at root path
+    
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # ssl-redirect: Force HTTPS redirects
+    # Default: "true" - redirects HTTP requests to HTTPS
+    # Improves security by enforcing encrypted connections
+    
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    # cluster-issuer: Certificate issuer for automatic TLS certificates
+    # Default: "letsencrypt-prod" - uses Let's Encrypt for free certificates
+    # Requires cert-manager to be installed in cluster
+    # Automatically provisions and renews TLS certificates
+  
+  hosts:
+    # Host configuration for external access
+    - host: petclinic.example.com
+      # host: Domain name for accessing the application
+      # Default: "petclinic.example.com" - example domain
+      # Replace with actual domain name for your deployment
+      # DNS must point to Ingress controller load balancer
+      
+      paths:
+        # Path routing configuration
+        - path: /
+          # path: URL path to match
+          # Default: "/" - matches all paths under the host
+          # Routes all requests to the API Gateway
+          
+          pathType: Prefix
+          # pathType: How to interpret the path
+          # Default: "Prefix" - matches paths starting with specified prefix
+          # Options: Exact, Prefix, ImplementationSpecific
+          
+          service: api-gateway
+          # service: Target service for this path
+          # Default: "api-gateway" - routes to API Gateway service
+          # API Gateway then routes to appropriate microservices
+  
+  tls:
+    # TLS/SSL configuration for HTTPS
+    - secretName: petclinic-tls
+      # secretName: Kubernetes secret containing TLS certificate
+      # Default: "petclinic-tls" - automatically created by cert-manager
+      # Contains private key and certificate for HTTPS
+      
+      hosts:
+        - petclinic.example.com
+        # hosts: Domain names covered by this certificate
+        # Must match the host configuration above
+        # Certificate will be valid for these domain names
+
+# =============================================================================
+# RESOURCE CONFIGURATION
+# =============================================================================
+# CPU and memory resource allocation for each microservice
+
+resources:
+  # Resource requests and limits for each microservice
+  # Requests: Guaranteed resources allocated to containers
+  # Limits: Maximum resources containers can use
+  
+  configServer:
+    # Resource configuration for Config Server
+    requests:
+      # requests: Guaranteed resource allocation
+      memory: "256Mi"
+      # memory: Guaranteed memory allocation
+      # Default: "256Mi" - sufficient for configuration management
+      # Config Server has low memory requirements
+      
+      cpu: "100m"
+      # cpu: Guaranteed CPU allocation
+      # Default: "100m" - 0.1 CPU cores
+      # Config Server has low CPU requirements
+    
+    limits:
+      # limits: Maximum resource usage
+      memory: "512Mi"
+      # memory: Maximum memory limit
+      # Default: "512Mi" - prevents excessive memory usage
+      # Should be 2x requests for burst capacity
+      
+      cpu: "250m"
+      # cpu: Maximum CPU limit
+      # Default: "250m" - 0.25 CPU cores
+      # Allows burst capacity for configuration requests
+  
+  discoveryServer:
+    # Resource configuration for Discovery Server
+    requests:
+      memory: "256Mi"
+      # memory: Guaranteed memory for Eureka server
+      # Eureka maintains service registry in memory
+      cpu: "100m"
+      # cpu: Guaranteed CPU for service registration/discovery
+    
+    limits:
+      memory: "512Mi"
+      # memory: Maximum memory for service registry
+      cpu: "250m"
+      # cpu: Maximum CPU for registry operations
+  
+  apiGateway:
+    # Resource configuration for API Gateway
+    requests:
+      memory: "512Mi"
+      # memory: Higher memory for request routing and filtering
+      # API Gateway processes all incoming requests
+      cpu: "250m"
+      # cpu: Higher CPU for request processing and routing
+    
+    limits:
+      memory: "1Gi"
+      # memory: Maximum memory for high-traffic scenarios
+      # 1Gi allows handling of traffic spikes
+      cpu: "500m"
+      # cpu: Maximum CPU for request processing
+      # 0.5 cores for handling concurrent requests
+  
+  customerService:
+    # Resource configuration for Customer Service
+    requests:
+      memory: "512Mi"
+      # memory: Memory for customer data processing
+      # Includes JVM heap and database connection pools
+      cpu: "250m"
+      # cpu: CPU for customer operations and database queries
+    
+    limits:
+      memory: "1Gi"
+      # memory: Maximum memory for customer data operations
+      cpu: "500m"
+      # cpu: Maximum CPU for database operations
+  
+  vetService:
+    # Resource configuration for Vet Service
+    requests:
+      memory: "512Mi"
+      # memory: Memory for veterinarian data processing
+      cpu: "250m"
+      # cpu: CPU for vet operations and queries
+    
+    limits:
+      memory: "1Gi"
+      # memory: Maximum memory for vet data operations
+      cpu: "500m"
+      # cpu: Maximum CPU for vet service operations
+  
+  visitService:
+    # Resource configuration for Visit Service
+    requests:
+      memory: "512Mi"
+      # memory: Memory for visit/appointment processing
+      # Often highest load due to appointment scheduling
+      cpu: "250m"
+      # cpu: CPU for visit operations and scheduling logic
+    
+    limits:
+      memory: "1Gi"
+      # memory: Maximum memory for visit processing
+      cpu: "500m"
+      # cpu: Maximum CPU for appointment operations
+  
+  adminServer:
+    # Resource configuration for Admin Server
+    requests:
+      memory: "256Mi"
+      # memory: Lower memory for administrative interface
+      # Admin server has lighter resource requirements
+      cpu: "100m"
+      # cpu: Lower CPU for monitoring operations
+    
+    limits:
+      memory: "512Mi"
+      # memory: Maximum memory for admin operations
+      cpu: "250m"
+      # cpu: Maximum CPU for administrative tasks
+
+# =============================================================================
+# AUTOSCALING CONFIGURATION
+# =============================================================================
+# Horizontal Pod Autoscaler settings for automatic scaling
+
+autoscaling:
+  # Horizontal Pod Autoscaler (HPA) configuration
+  enabled: true
+  # enabled: Whether to enable automatic scaling
+  # Default: true - enables HPA for production deployments
+  # Automatically scales pods based on resource utilization
+  # Requires metrics-server to be installed in cluster
+  
+  minReplicas: 2
+  # minReplicas: Minimum number of replicas to maintain
+  # Default: 2 - ensures high availability
+  # HPA will never scale below this number
+  # Should match or be higher than replicaCount values
+  
+  maxReplicas: 10
+  # maxReplicas: Maximum number of replicas allowed
+  # Default: 10 - prevents excessive resource usage
+  # HPA will never scale above this number
+  # Should be set based on cluster capacity and cost considerations
+  
+  targetCPUUtilizationPercentage: 70
+  # targetCPUUtilizationPercentage: CPU utilization target for scaling
+  # Default: 70 - scales when average CPU usage exceeds 70%
+  # HPA adds replicas when CPU usage is consistently above this threshold
+  # Lower values provide more headroom but use more resources
+  
+  targetMemoryUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: Memory utilization target
+  # Default: 80 - scales when average memory usage exceeds 80%
+  # Memory-based scaling helps prevent out-of-memory conditions
+  # Should be set lower than container memory limits
+
+# =============================================================================
+# POD DISRUPTION BUDGET CONFIGURATION
+# =============================================================================
+# Pod Disruption Budget for maintaining availability during updates
+
+podDisruptionBudget:
+  # Pod Disruption Budget (PDB) configuration
+  enabled: true
+  # enabled: Whether to create Pod Disruption Budgets
+  # Default: true - protects against voluntary disruptions
+  # Ensures minimum number of pods remain available during updates
+  # Important for maintaining service availability
+  
+  minAvailable: 1
+  # minAvailable: Minimum number of pods that must remain available
+  # Default: 1 - ensures at least one pod is always running
+  # Can be absolute number or percentage (e.g., "50%")
+  # Prevents all pods from being terminated simultaneously
+
+# =============================================================================
+# SECURITY CONFIGURATION
+# =============================================================================
+# Security context and policies for all containers
+
+securityContext:
+  # Security context applied to all containers
+  # Implements security best practices and reduces attack surface
+  
+  runAsNonRoot: true
+  # runAsNonRoot: Prevents containers from running as root user
+  # Default: true - security best practice
+  # Reduces privilege escalation risks
+  # Required by many security policies and compliance frameworks
+  
+  runAsUser: 1000
+  # runAsUser: Specific user ID to run containers
+  # Default: 1000 - standard non-root user ID
+  # Ensures consistent user ID across environments
+  # Important for file permissions and security
+  
+  fsGroup: 1000
+  # fsGroup: File system group for volume ownership
+  # Default: 1000 - matches runAsUser for consistency
+  # Ensures containers can read/write to mounted volumes
+  # Required when using persistent storage
+  
+  allowPrivilegeEscalation: false
+  # allowPrivilegeEscalation: Prevents gaining additional privileges
+  # Default: false - security hardening
+  # Prevents containers from escalating privileges during runtime
+  # Important for preventing container breakout attempts
+  
+  readOnlyRootFilesystem: true
+  # readOnlyRootFilesystem: Makes root filesystem read-only
+  # Default: true - prevents runtime modifications
+  # Improves security by preventing malicious file modifications
+  # Applications must use volume mounts for writable directories
+  
+  capabilities:
+    # Linux capabilities management
+    drop:
+      - ALL
+      # drop: ALL - removes all Linux capabilities
+      # Implements principle of least privilege
+      # Containers only get capabilities they explicitly need
+      # Significantly reduces attack surface
+
+# =============================================================================
+# NETWORK POLICY CONFIGURATION
+# =============================================================================
+# Network policies for traffic control and security
+
+networkPolicy:
+  # Network policy configuration for traffic control
+  enabled: true
+  # enabled: Whether to create network policies
+  # Default: true - enables network segmentation
+  # Requires network policy support in cluster (e.g., Calico, Cilium)
+  # Provides micro-segmentation for improved security
+  
+  ingress:
+    # Ingress traffic rules
+    enabled: true
+    # enabled: Whether to control incoming traffic
+    # Default: true - restricts incoming connections
+    # Only allows traffic from specified sources
+  
+  egress:
+    # Egress traffic rules
+    enabled: true
+    # enabled: Whether to control outgoing traffic
+    # Default: true - restricts outgoing connections
+    # Only allows traffic to specified destinations
+
+# =============================================================================
+# DATABASE CONFIGURATION
+# =============================================================================
+# MySQL database settings for microservices
+
+mysql:
+  # MySQL database configuration
+  enabled: true
+  # enabled: Whether to deploy MySQL databases
+  # Default: true - deploys MySQL instances for each service
+  # Set to false if using external database services
+  
+  auth:
+    # Authentication configuration for MySQL
+    rootPassword: "petclinic-root-password"
+    # rootPassword: Password for MySQL root user
+    # Default: "petclinic-root-password" - should be changed for production
+    # Used for database administration and maintenance
+    # Should be stored in Kubernetes secrets for security
+    
+    username: "petclinic"
+    # username: Application database username
+    # Default: "petclinic" - used by microservices to connect
+    # Each service connects using this username
+    # Should have limited privileges (not root)
+    
+    password: "petclinic-password"
+    # password: Application database password
+    # Default: "petclinic-password" - should be changed for production
+    # Used by microservices for database authentication
+    # Should be stored in Kubernetes secrets
+    
+    database: "petclinic"
+    # database: Default database name
+    # Default: "petclinic" - base database name
+    # Each service gets its own database (petclinic_customer, etc.)
+  
+  primary:
+    # Primary database instance configuration
+    persistence:
+      # Persistent storage configuration
+      enabled: true
+      # enabled: Whether to use persistent storage
+      # Default: true - ensures data survives pod restarts
+      # Critical for production deployments
+      
+      size: 10Gi
+      # size: Storage size for database
+      # Default: 10Gi - adequate for small to medium datasets
+      # Should be sized based on expected data growth
+      # Can be expanded later if storage class supports it
+      
+      storageClass: "fast-ssd"
+      # storageClass: Storage class for database volumes
+      # Default: "fast-ssd" - uses SSD storage for performance
+      # Should match available storage classes in cluster
+      # SSD recommended for database workloads
+  
+  metrics:
+    # Database metrics configuration
+    enabled: true
+    # enabled: Whether to enable MySQL metrics collection
+    # Default: true - enables Prometheus monitoring
+    # Provides database performance and health metrics
+    # Important for monitoring and alerting
+
+# =============================================================================
+# MONITORING CONFIGURATION
+# =============================================================================
+# Observability and monitoring stack settings
+
+monitoring:
+  # Monitoring and observability configuration
+  prometheus:
+    # Prometheus metrics collection
+    enabled: true
+    # enabled: Whether to enable Prometheus monitoring
+    # Default: true - enables metrics collection
+    # Provides application and infrastructure metrics
+    
+    serviceMonitor:
+      # ServiceMonitor for Prometheus Operator
+      enabled: true
+      # enabled: Whether to create ServiceMonitor resources
+      # Default: true - enables automatic service discovery
+      # Requires Prometheus Operator to be installed
+      
+      interval: 30s
+      # interval: How often to scrape metrics
+      # Default: 30s - balance between granularity and resource usage
+      # More frequent scraping provides better resolution
+      
+      path: /actuator/prometheus
+      # path: Metrics endpoint path
+      # Default: /actuator/prometheus - Spring Boot Actuator endpoint
+      # All microservices expose metrics at this path
+  
+  grafana:
+    # Grafana dashboard and visualization
+    enabled: true
+    # enabled: Whether to enable Grafana dashboards
+    # Default: true - provides visualization for metrics
+    # Creates dashboards for application and infrastructure monitoring
+    
+    adminPassword: "admin"
+    # adminPassword: Grafana admin user password
+    # Default: "admin" - should be changed for production
+    # Used to access Grafana web interface
+    # Should be stored in Kubernetes secrets
+    
+    dashboards:
+      # Dashboard configuration
+      enabled: true
+      # enabled: Whether to provision dashboards automatically
+      # Default: true - creates pre-configured dashboards
+      # Includes dashboards for JVM, Spring Boot, and business metrics
+  
+  jaeger:
+    # Jaeger distributed tracing
+    enabled: true
+    # enabled: Whether to enable distributed tracing
+    # Default: true - enables request tracing across services
+    # Provides insights into request flows and performance bottlenecks
+    # Helps with debugging and performance optimization
+
+# =============================================================================
+# BACKUP CONFIGURATION
+# =============================================================================
+# Backup and disaster recovery settings
+
+backup:
+  # Backup configuration for data protection
+  enabled: true
+  # enabled: Whether to enable automated backups
+  # Default: true - enables database and configuration backups
+  # Critical for disaster recovery and data protection
+  
+  schedule: "0 2 * * *"
+  # schedule: Cron expression for backup timing
+  # Default: "0 2 * * *" - daily at 2 AM
+  # Runs during low-traffic hours to minimize impact
+  # Format: minute hour day month day-of-week
+  
+  retention: "30d"
+  # retention: How long to keep backups
+  # Default: "30d" - keep backups for 30 days
+  # Balance between storage costs and recovery requirements
+  # Should align with business recovery point objectives
+  
+  storage:
+    # Backup storage configuration
+    size: "50Gi"
+    # size: Storage size for backup data
+    # Default: "50Gi" - should be larger than database sizes
+    # Must accommodate multiple backup versions
+    
+    storageClass: "standard"
+    # storageClass: Storage class for backup volumes
+    # Default: "standard" - can use cheaper storage for backups
+    # Doesn't need high performance like database storage
+
+# =============================================================================
+# ENVIRONMENT-SPECIFIC OVERRIDES
+# =============================================================================
+# Configuration overrides for different deployment environments
+
+environments:
+  # Environment-specific configuration overrides
+  # These values override defaults based on deployment environment
+  
+  development:
+    # Development environment overrides
+    replicaCount: 1
+    # replicaCount: Single replica for development
+    # Reduces resource usage in development environments
+    
+    resources:
+      # Reduced resource allocation for development
+      requests:
+        memory: "128Mi"
+        # memory: Lower memory for development workloads
+        cpu: "50m"
+        # cpu: Lower CPU for development workloads
+      limits:
+        memory: "256Mi"
+        # memory: Lower memory limits for development
+        cpu: "100m"
+        # cpu: Lower CPU limits for development
+  
+  staging:
+    # Staging environment overrides
+    replicaCount: 1
+    # replicaCount: Single replica for staging
+    # Staging mirrors production but with fewer resources
+    
+    resources:
+      # Moderate resource allocation for staging
+      requests:
+        memory: "256Mi"
+        # memory: Moderate memory for staging workloads
+        cpu: "100m"
+        # cpu: Moderate CPU for staging workloads
+      limits:
+        memory: "512Mi"
+        # memory: Moderate memory limits for staging
+        cpu: "250m"
+        # cpu: Moderate CPU limits for staging
+  
+  production:
+    # Production environment overrides
+    replicaCount: 2
+    # replicaCount: Multiple replicas for high availability
+    # Production requires redundancy for reliability
+    
+    resources:
+      # Full resource allocation for production
+      requests:
+        memory: "512Mi"
+        # memory: Full memory allocation for production workloads
+        cpu: "250m"
+        # cpu: Full CPU allocation for production workloads
+      limits:
+        memory: "1Gi"
+        # memory: Full memory limits for production
+        cpu: "500m"
+        # cpu: Full CPU limits for production

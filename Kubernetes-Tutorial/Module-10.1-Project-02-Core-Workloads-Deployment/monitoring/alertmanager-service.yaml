@@ -1,0 +1,317 @@
+# =============================================================================
+# ALERTMANAGER SERVICE
+# =============================================================================
+# Purpose: Exposes the AlertManager deployment for internal and external access
+# Why needed: Provides stable endpoint for Prometheus and users to access AlertManager
+# Kubernetes concept: Service provides load balancing and service discovery for AlertManager pods
+# This service enables access to AlertManager web interface and API
+
+apiVersion: v1
+# API Version: v1 is the stable version for Service resources
+# This is the most commonly used API version for service exposure
+
+kind: Service
+# Resource Type: Service provides stable network access to a set of pods
+# This enables load balancing and service discovery for AlertManager
+
+metadata:
+  # Metadata section contains identifying information about the resource
+  name: alertmanager-service
+  # Name: Unique identifier for this Service within the namespace
+  # This name will be used to reference the service in other resources
+  
+  namespace: ecommerce
+  # Namespace: Specifies which namespace this Service belongs to
+  # Must match the namespace created in the namespace.yaml file
+  
+  labels:
+    # Labels: Key-value pairs for organizing and selecting resources
+    app: alertmanager
+    # app: alertmanager - Identifies this Service as belonging to AlertManager
+    component: monitoring
+    # component: monitoring - Identifies this as a monitoring component
+    tier: observability
+    # tier: observability - Identifies this as observability tier
+    environment: production
+    # environment: production - Indicates this is for production environment
+    managed-by: kubernetes
+    # managed-by: kubernetes - Indicates this resource is managed by Kubernetes
+  
+  annotations:
+    # Annotations: Additional metadata that doesn't affect resource behavior
+    description: "AlertManager service for e-commerce application alerting"
+    # description: Human-readable description of the Service purpose
+    # Used for documentation and operational understanding
+    
+    contact: "platform-engineering@company.com"
+    # contact: Email address for the team responsible for this Service
+    # Used for incident response and maintenance coordination
+    
+    last-updated: "2024-12-01T00:00:00Z"
+    # last-updated: Timestamp of last modification
+    # Used for change tracking and audit purposes
+    
+    version: "1.0.0"
+    # version: Version identifier for this Service configuration
+    # Used for version control and rollback purposes
+
+spec:
+  # Spec section defines the desired state of the Service
+  type: ClusterIP
+  # type: ClusterIP - Service type
+  # Purpose: Exposes the service on a cluster-internal IP
+  # Impact: Service is only accessible within the cluster
+  # Production consideration: Secure internal access, requires ingress for external access
+  
+  ports:
+    # ports: List of ports exposed by this service
+    # Purpose: Defines which ports are accessible
+    # Impact: Enables network communication on specified ports
+    # Production consideration: Only expose necessary ports for security
+    
+    - name: web
+      # name: web - Port name identifier
+      # Purpose: Identifies this port for service discovery
+      # Impact: Enables named port references in other resources
+      # Production consideration: Descriptive names improve maintainability
+      
+      port: 9093
+      # port: 9093 - Service port number
+      # Purpose: Port number on which the service listens
+      # Impact: Clients connect to this port to access AlertManager
+      # Production consideration: Standard AlertManager port for web interface
+      
+      targetPort: 9093
+      # targetPort: 9093 - Pod port number
+      # Purpose: Port number on the target pods
+      # Impact: Traffic is forwarded to this port on the pods
+      # Production consideration: Must match container port in deployment
+      
+      protocol: TCP
+      # protocol: TCP - Network protocol
+      # Purpose: Specifies the network protocol to use
+      # Impact: Service uses TCP for reliable communication
+      # Production consideration: TCP is standard for web applications
+    
+    - name: metrics
+      # name: metrics - Port name identifier
+      # Purpose: Identifies this port for metrics collection
+      # Impact: Enables named port references for monitoring
+      # Production consideration: Descriptive names improve maintainability
+      
+      port: 9093
+      # port: 9093 - Service port number
+      # Purpose: Port number for metrics endpoint
+      # Impact: Prometheus connects to this port for metrics
+      # Production consideration: Same port as web interface for simplicity
+      
+      targetPort: 9093
+      # targetPort: 9093 - Pod port number
+      # Purpose: Port number on the target pods
+      # Impact: Traffic is forwarded to this port on the pods
+      # Production consideration: Must match container port in deployment
+      
+      protocol: TCP
+      # protocol: TCP - Network protocol
+      # Purpose: Specifies the network protocol to use
+      # Impact: Service uses TCP for reliable communication
+      # Production consideration: TCP is standard for metrics collection
+  
+  selector:
+    # selector: Label selector for target pods
+    # Purpose: Identifies which pods this service targets
+    # Impact: Traffic is load balanced across matching pods
+    # Production consideration: Must match pod labels exactly
+    
+    app: alertmanager
+    # app: alertmanager - Application label selector
+    # Purpose: Targets pods with app=alertmanager label
+    # Impact: Service routes traffic to AlertManager pods
+    # Production consideration: Enables service discovery and load balancing
+    
+    component: monitoring
+    # component: monitoring - Component label selector
+    # Purpose: Targets pods with component=monitoring label
+    # Impact: Further refines pod selection
+    # Production consideration: Provides additional filtering for precise targeting
+    
+    tier: observability
+    # tier: observability - Tier label selector
+    # Purpose: Targets pods with tier=observability label
+    # Impact: Ensures only observability tier pods are selected
+    # Production consideration: Maintains proper service isolation
+
+---
+# =============================================================================
+# ALERTMANAGER INGRESS (Optional - for external access)
+# =============================================================================
+# Purpose: Provides external access to AlertManager through ingress controller
+# Why needed: Enables access to AlertManager from outside the cluster
+# Kubernetes concept: Ingress provides HTTP/HTTPS routing to services
+# This is optional and depends on ingress controller availability
+
+apiVersion: networking.k8s.io/v1
+# API Version: networking.k8s.io/v1 is the stable version for Ingress resources
+# This is the most commonly used API version for ingress configuration
+
+kind: Ingress
+# Resource Type: Ingress provides HTTP/HTTPS routing to services
+# This enables external access to internal services
+
+metadata:
+  # Metadata section contains identifying information about the resource
+  name: alertmanager-ingress
+  # Name: Unique identifier for this Ingress within the namespace
+  # This name will be used to reference the ingress in other resources
+  
+  namespace: ecommerce
+  # Namespace: Specifies which namespace this Ingress belongs to
+  # Must match the namespace created in the namespace.yaml file
+  
+  labels:
+    # Labels: Key-value pairs for organizing and selecting resources
+    app: alertmanager
+    # app: alertmanager - Identifies this Ingress as belonging to AlertManager
+    component: monitoring
+    # component: monitoring - Identifies this as a monitoring component
+    tier: observability
+    # tier: observability - Identifies this as observability tier
+    environment: production
+    # environment: production - Indicates this is for production environment
+    managed-by: kubernetes
+    # managed-by: kubernetes - Indicates this resource is managed by Kubernetes
+  
+  annotations:
+    # Annotations: Additional metadata that doesn't affect resource behavior
+    description: "AlertManager ingress for external access to alerting interface"
+    # description: Human-readable description of the Ingress purpose
+    # Used for documentation and operational understanding
+    
+    contact: "platform-engineering@company.com"
+    # contact: Email address for the team responsible for this Ingress
+    # Used for incident response and maintenance coordination
+    
+    last-updated: "2024-12-01T00:00:00Z"
+    # last-updated: Timestamp of last modification
+    # Used for change tracking and audit purposes
+    
+    version: "1.0.0"
+    # version: Version identifier for this Ingress configuration
+    # Used for version control and rollback purposes
+    
+    # Ingress Controller Annotations
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    # nginx.ingress.kubernetes.io/rewrite-target: / - Nginx rewrite rule
+    # Purpose: Rewrites the URL path for proper routing
+    # Impact: Ensures AlertManager receives requests at the correct path
+    # Production consideration: Required for proper AlertManager routing
+    
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # nginx.ingress.kubernetes.io/ssl-redirect: "true" - SSL redirect
+    # Purpose: Redirects HTTP traffic to HTTPS
+    # Impact: Ensures all traffic is encrypted
+    # Production consideration: Security best practice for production
+    
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    # nginx.ingress.kubernetes.io/force-ssl-redirect: "true" - Force SSL
+    # Purpose: Forces SSL redirect even for HTTPS requests
+    # Impact: Ensures all traffic uses HTTPS
+    # Production consideration: Additional security layer
+
+spec:
+  # Spec section defines the desired state of the Ingress
+  ingressClassName: nginx
+  # ingressClassName: nginx - Ingress class name
+  # Purpose: Specifies which ingress controller to use
+  # Impact: Routes traffic through nginx ingress controller
+  # Production consideration: Must match available ingress controller
+  
+  tls:
+    # tls: TLS configuration for HTTPS
+    # Purpose: Configures SSL/TLS termination
+    # Impact: Enables encrypted communication
+    # Production consideration: Required for secure external access
+    
+    - hosts:
+        # hosts: List of hostnames for TLS
+        # Purpose: Specifies which hostnames use this TLS configuration
+        # Impact: TLS certificate is valid for these hostnames
+        # Production consideration: Must match actual domain names
+        
+        - alertmanager.ecommerce.local
+        # alertmanager.ecommerce.local - Hostname for AlertManager
+        # Purpose: Subdomain for AlertManager access
+        # Impact: Users access AlertManager via this URL
+        # Production consideration: Use proper domain in production
+      
+      secretName: alertmanager-tls-secret
+      # secretName: alertmanager-tls-secret - TLS secret name
+      # Purpose: References the secret containing TLS certificate
+      # Impact: Uses this certificate for HTTPS
+      # Production consideration: Must create this secret with valid certificate
+  
+  rules:
+    # rules: List of routing rules
+    # Purpose: Defines how traffic is routed to services
+    # Impact: Determines which service handles each request
+    # Production consideration: Must match service and port configurations
+    
+    - host: alertmanager.ecommerce.local
+      # host: alertmanager.ecommerce.local - Hostname for this rule
+      # Purpose: Matches requests to this hostname
+      # Impact: Routes traffic for this hostname to the specified service
+      # Production consideration: Must match TLS hostname configuration
+      
+      http:
+        # http: HTTP routing configuration
+        # Purpose: Defines HTTP-specific routing rules
+        # Impact: Handles HTTP/HTTPS requests
+        # Production consideration: Standard for web applications
+        
+        paths:
+          # paths: List of path-based routing rules
+          # Purpose: Routes different paths to different services
+          # Impact: Enables path-based service selection
+          # Production consideration: Allows multiple services on same hostname
+          
+          - path: /
+            # path: / - Root path
+            # Purpose: Matches all requests to the root path
+            # Impact: All requests are routed to the specified service
+            # Production consideration: Catch-all rule for AlertManager
+            
+            pathType: Prefix
+            # pathType: Prefix - Path matching type
+            # Purpose: Matches paths that start with the specified prefix
+            # Impact: Matches all paths starting with /
+            # Production consideration: Most flexible path matching
+            
+            backend:
+              # backend: Backend service configuration
+              # Purpose: Specifies which service handles the requests
+              # Impact: Routes traffic to the specified service
+              # Production consideration: Must match existing service configuration
+              
+              service:
+                # service: Service reference
+                # Purpose: References the target service
+                # Impact: Routes traffic to this service
+                # Production consideration: Must match service name and port
+                
+                name: alertmanager-service
+                # name: alertmanager-service - Service name
+                # Purpose: References the AlertManager service
+                # Impact: Routes traffic to AlertManager service
+                # Production consideration: Must match the service name defined above
+                
+                port:
+                  # port: Service port reference
+                  # Purpose: Specifies which port to use
+                  # Impact: Routes traffic to the specified port
+                  # Production consideration: Must match service port configuration
+                  
+                  number: 9093
+                  # number: 9093 - Port number
+                  # Purpose: Port number on the service
+                  # Impact: Routes traffic to port 9093
+                  # Production consideration: Must match the service port defined above

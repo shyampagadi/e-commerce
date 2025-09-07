@@ -1,0 +1,338 @@
+# =============================================================================
+# PROMETHEUS DEPLOYMENT
+# =============================================================================
+# Purpose: Deploys Prometheus for monitoring the e-commerce application
+# Why needed: Provides metrics collection, storage, and querying capabilities
+# Kubernetes concept: Deployment manages Prometheus pods and ensures availability
+
+apiVersion: apps/v1
+# API Version: apps/v1 is the stable version for Deployment resources
+# This is the most commonly used API version for application deployments
+
+kind: Deployment
+# Resource Type: Deployment manages ReplicaSets and provides declarative updates
+# This enables rolling updates, rollbacks, and scaling of Prometheus pods
+
+metadata:
+  # Metadata section contains identifying information about the resource
+  name: prometheus-deployment
+  # Name: Unique identifier for this Deployment within the namespace
+  # This name will be used to reference the Deployment in services and other resources
+  
+  namespace: ecommerce
+  # Namespace: Specifies which namespace this Deployment belongs to
+  # Must match the namespace created in the namespace.yaml file
+  
+  labels:
+    # Labels: Key-value pairs for organizing and selecting resources
+    app: prometheus
+    # app: prometheus - Identifies this Deployment as belonging to Prometheus
+    component: monitoring
+    # component: monitoring - Identifies this as a monitoring component
+    tier: observability
+    # tier: observability - Identifies this as observability tier
+    environment: production
+    # environment: production - Indicates this is for production environment
+    managed-by: kubernetes
+    # managed-by: kubernetes - Indicates this resource is managed by Kubernetes
+  
+  annotations:
+    # Annotations: Additional metadata that doesn't affect resource behavior
+    description: "Prometheus monitoring deployment for e-commerce application"
+    # description: Human-readable description of the Deployment purpose
+    # Used for documentation and operational understanding
+    
+    contact: "platform-engineering@company.com"
+    # contact: Email address for the team responsible for this Deployment
+    # Used for incident response and maintenance coordination
+    
+    last-updated: "2024-12-01T00:00:00Z"
+    # last-updated: Timestamp of last deployment update
+    # Used for change tracking and audit trails
+    
+    version: "1.0.0"
+    # version: Version of the deployment configuration
+    # Used for deployment versioning and rollback
+
+spec:
+  # Specification section defines the actual deployment configuration
+  
+  # =============================================================================
+  # REPLICA CONFIGURATION
+  # =============================================================================
+  replicas: 1
+  # replicas: 1 - Number of pod replicas to maintain
+  # Value: 1 - One Prometheus pod (single instance for data consistency)
+  # Purpose: Ensures data consistency and avoids split-brain scenarios
+  # Impact: One Prometheus pod will be running
+  # Production consideration: Prometheus is stateful and should run as single instance
+  
+  # =============================================================================
+  # SELECTOR CONFIGURATION
+  # =============================================================================
+  selector:
+    # selector: Defines which pods this Deployment manages
+    matchLabels:
+      # matchLabels: Pods must have all these labels to be managed
+      app: prometheus
+      # app: prometheus - Pods must have this label
+      component: monitoring
+      # component: monitoring - Pods must have this label
+      tier: observability
+      # tier: observability - Pods must have this label
+      # Purpose: Ensures only Prometheus pods are managed by this Deployment
+      # Impact: Only pods with these labels will be managed
+      # Production consideration: Prevents management of wrong pods
+  
+  # =============================================================================
+  # DEPLOYMENT STRATEGY
+  # =============================================================================
+  strategy:
+    # strategy: Defines how pods are updated
+    type: Recreate
+    # type: Recreate - Use recreate strategy for Prometheus
+    # Purpose: Ensures data consistency during updates
+    # Impact: Old pod is terminated before new pod is created
+    # Production consideration: Prevents data corruption from concurrent instances
+  
+  # =============================================================================
+  # POD TEMPLATE CONFIGURATION
+  # =============================================================================
+  template:
+    # template: Defines the pod template for this Deployment
+    # This template is used to create new pods when needed
+    
+    metadata:
+      # Metadata section for the pod template
+      labels:
+        # Labels: Key-value pairs for organizing and selecting pods
+        app: prometheus
+        # app: prometheus - Identifies this pod as belonging to Prometheus
+        component: monitoring
+        # component: monitoring - Identifies this as a monitoring pod
+        tier: observability
+        # tier: observability - Identifies this as observability tier
+        environment: production
+        # environment: production - Indicates this is for production environment
+        version: "1.0.0"
+        # version: 1.0.0 - Pod version for tracking
+        # Purpose: Enables version-specific pod management
+        # Impact: Pods are tagged with specific version
+        # Production consideration: Enables version tracking and rollback
+      
+      annotations:
+        # Annotations: Additional metadata for the pod template
+        prometheus.io/scrape: "false"
+        # prometheus.io/scrape: Disable self-scraping
+        # Value: false - Prometheus will not scrape itself via service discovery
+        # Purpose: Prevents infinite recursion in self-monitoring
+        # Impact: Prometheus doesn't scrape itself via service discovery
+        # Production consideration: Prevents monitoring loops
+    
+    spec:
+      # Specification section defines the pod configuration
+      
+      # =============================================================================
+      # CONTAINER CONFIGURATION
+      # =============================================================================
+      containers:
+        # containers: Array of containers in this pod
+        - name: prometheus
+          # name: prometheus - Container name
+          # Purpose: Identifies this container within the pod
+          # Impact: Container is referenced by this name
+          # Production consideration: Clear naming for operational management
+          
+          image: prom/prometheus:v2.45.0
+          # image: prom/prometheus:v2.45.0 - Container image
+          # Value: prom/prometheus:v2.45.0 - Prometheus image with version tag
+          # Purpose: Specifies which container image to run
+          # Impact: Pod runs the specified Prometheus image
+          # Production consideration: Versioned images enable rollback and tracking
+          
+          imagePullPolicy: IfNotPresent
+          # imagePullPolicy: IfNotPresent - Image pull policy
+          # Value: IfNotPresent - Pull image only if not present locally
+          # Purpose: Controls when to pull the container image
+          # Impact: Reduces image pull overhead for existing images
+          # Production consideration: Balances image freshness with performance
+          
+          ports:
+            # ports: Array of ports exposed by this container
+            - name: web
+              # name: web - Port name
+              # Purpose: Identifies this port for service discovery
+              # Impact: Port can be referenced by name in services
+              # Production consideration: Enables clear port identification
+              
+              containerPort: 9090
+              # containerPort: 9090 - Port number
+              # Value: 9090 - Prometheus web interface port
+              # Purpose: Exposes the Prometheus web interface
+              # Impact: Prometheus web UI is accessible on port 9090
+              # Production consideration: Standard port for Prometheus web interface
+              
+              protocol: TCP
+              # protocol: TCP - Port protocol
+              # Value: TCP - Transmission Control Protocol
+              # Purpose: Specifies the network protocol
+              # Impact: Port uses TCP protocol
+              # Production consideration: Standard protocol for web services
+          
+          # =============================================================================
+          # COMMAND AND ARGUMENTS
+          # =============================================================================
+          args:
+            # args: Array of arguments to pass to the container command
+            - '--config.file=/etc/prometheus/prometheus.yml'
+            # --config.file: Configuration file path
+            # Value: /etc/prometheus/prometheus.yml - Path to config file
+            # Purpose: Specifies the Prometheus configuration file
+            # Impact: Prometheus uses the specified configuration
+            # Production consideration: Externalized configuration management
+            
+            - '--storage.tsdb.path=/prometheus/'
+            # --storage.tsdb.path: Time series database path
+            # Value: /prometheus/ - Directory for time series data
+            # Purpose: Specifies where to store time series data
+            # Impact: Prometheus stores data in the specified directory
+            # Production consideration: Persistent storage for time series data
+            
+            - '--web.console.libraries=/etc/prometheus/console_libraries'
+            # --web.console.libraries: Console libraries path
+            # Value: /etc/prometheus/console_libraries - Path to console libraries
+            # Purpose: Specifies where to find console libraries
+            # Impact: Prometheus loads console libraries from specified path
+            # Production consideration: Enables web console functionality
+            
+            - '--web.console.templates=/etc/prometheus/consoles'
+            # --web.console.templates: Console templates path
+            # Value: /etc/prometheus/consoles - Path to console templates
+            # Purpose: Specifies where to find console templates
+            # Impact: Prometheus loads console templates from specified path
+            # Production consideration: Enables web console functionality
+            
+            - '--storage.tsdb.retention.time=15d'
+            # --storage.tsdb.retention.time: Data retention time
+            # Value: 15d - 15 days retention
+            # Purpose: Specifies how long to keep time series data
+            # Impact: Prometheus retains data for 15 days
+            # Production consideration: Balances storage usage with data availability
+            
+            - '--web.enable-lifecycle'
+            # --web.enable-lifecycle: Enable lifecycle endpoints
+            # Value: true - Enable lifecycle endpoints
+            # Purpose: Enables configuration reload and shutdown endpoints
+            # Impact: Prometheus can reload configuration without restart
+            # Production consideration: Enables dynamic configuration updates
+          
+          # =============================================================================
+          # RESOURCE CONFIGURATION
+          # =============================================================================
+          resources:
+            # resources: Resource requests and limits for this container
+            requests:
+              # requests: Minimum resources required by this container
+              cpu: "500m"
+              # cpu: 500m - CPU request
+              # Value: 500 millicores (0.5 CPU cores)
+              # Purpose: Guarantees minimum CPU allocation
+              # Impact: Container is guaranteed 500m CPU
+              # Production consideration: Ensures consistent performance
+              
+              memory: "1Gi"
+              # memory: 1Gi - Memory request
+              # Value: 1 Gibibyte
+              # Purpose: Guarantees minimum memory allocation
+              # Impact: Container is guaranteed 1Gi memory
+              # Production consideration: Ensures consistent performance
+            
+            limits:
+              # limits: Maximum resources this container can use
+              cpu: "2000m"
+              # cpu: 2000m - CPU limit
+              # Value: 2000 millicores (2 CPU cores)
+              # Purpose: Prevents container from using too much CPU
+              # Impact: Container cannot use more than 2000m CPU
+              # Production consideration: Prevents resource starvation
+              
+              memory: "4Gi"
+              # memory: 4Gi - Memory limit
+              # Value: 4 Gibibytes
+              # Purpose: Prevents container from using too much memory
+              # Impact: Container cannot use more than 4Gi memory
+              # Production consideration: Prevents memory exhaustion
+          
+          # =============================================================================
+          # VOLUME MOUNTS
+          # =============================================================================
+          volumeMounts:
+            # volumeMounts: Array of volumes to mount in this container
+            - name: prometheus-config
+              # name: prometheus-config - Volume name
+              # Purpose: References the prometheus-config volume
+              # Impact: Mounts Prometheus configuration
+              # Production consideration: Enables configuration management
+              
+              mountPath: /etc/prometheus
+              # mountPath: /etc/prometheus - Mount path
+              # Purpose: Directory where config is mounted
+              # Impact: Configuration files are available at /etc/prometheus
+              # Production consideration: Standard configuration directory
+              
+              readOnly: true
+              # readOnly: true - Read-only mount
+              # Purpose: Prevents modification of configuration
+              # Impact: Configuration files are read-only
+              # Security benefit: Prevents configuration tampering
+            
+            - name: prometheus-storage
+              # name: prometheus-storage - Volume name
+              # Purpose: References the prometheus-storage volume
+              # Impact: Mounts persistent storage for time series data
+              # Production consideration: Enables data persistence
+              
+              mountPath: /prometheus
+              # mountPath: /prometheus - Mount path
+              # Purpose: Directory where time series data is stored
+              # Impact: Time series data is persisted at this location
+              # Production consideration: Persistent storage for time series data
+      
+      # =============================================================================
+      # VOLUMES
+      # =============================================================================
+      volumes:
+        # volumes: Array of volumes available to this pod
+        - name: prometheus-config
+          # name: prometheus-config - Volume name
+          # Purpose: Identifies this volume for mounting
+          # Impact: Volume can be referenced by name
+          # Production consideration: Clear naming for operational management
+          
+          configMap:
+            # configMap: Volume source type
+            # Purpose: Creates volume from ConfigMap
+            # Impact: Configuration data is available as files
+            # Production consideration: Enables configuration management
+            name: prometheus-config
+            # name: prometheus-config - ConfigMap name
+            # Purpose: References the Prometheus ConfigMap
+            # Impact: Mounts Prometheus configuration
+            # Production consideration: Uses centralized configuration
+        
+        - name: prometheus-storage
+          # name: prometheus-storage - Volume name
+          # Purpose: Identifies this volume for mounting
+          # Impact: Volume can be referenced by name
+          # Production consideration: Clear naming for operational management
+          
+          persistentVolumeClaim:
+            # persistentVolumeClaim: Volume source type
+            # Purpose: Creates volume from PersistentVolumeClaim
+            # Impact: Data persists across pod restarts
+            # Production consideration: Enables data persistence
+            claimName: prometheus-pvc
+            # claimName: prometheus-pvc - PVC name
+            # Purpose: References the Prometheus PersistentVolumeClaim
+            # Impact: Mounts persistent storage for Prometheus
+            # Production consideration: Uses dedicated storage for time series data

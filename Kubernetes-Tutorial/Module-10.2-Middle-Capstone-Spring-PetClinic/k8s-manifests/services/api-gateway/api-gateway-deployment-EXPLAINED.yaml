@@ -1,0 +1,399 @@
+# Spring PetClinic API Gateway Deployment
+# This manifest deploys the API Gateway service with comprehensive configuration
+
+# =============================================================================
+# DEPLOYMENT OVERVIEW
+# =============================================================================
+# Purpose: Deploys and manages the Spring PetClinic API Gateway service
+# Why Deployment: Provides rolling updates, rollbacks, and replica management
+# Kubernetes concept: Deployment is a higher-level abstraction that manages ReplicaSets
+# Role: Acts as the single entry point for all client requests to microservices
+
+apiVersion: apps/v1
+# API Version: apps/v1 is the stable version for Deployment resources
+# This version includes features like rolling updates and rollback capabilities
+# Introduced in Kubernetes 1.9 and is the recommended version for production
+
+kind: Deployment
+# Resource Type: Deployment manages a set of identical pods
+# Provides declarative updates for Pods and ReplicaSets
+# Ensures desired number of replicas are always running
+
+metadata:
+  # Metadata section contains identifying information about the deployment
+  name: api-gateway
+  # Name: Unique identifier for the deployment within the namespace
+  # This name will be used to reference the deployment in other resources
+  # Must be DNS-compliant (lowercase, alphanumeric, hyphens only)
+  
+  namespace: petclinic
+  # Namespace: Specifies which namespace this deployment belongs to
+  # Must match the namespace created in petclinic-namespace.yml
+  # Provides resource isolation and access control boundaries
+  
+  labels:
+    # Labels: Key-value pairs for organizing and selecting resources
+    # Used by services, network policies, and monitoring tools
+    app: api-gateway
+    # app: api-gateway - Primary application identifier
+    # Used by Service selector to route traffic to these pods
+    component: gateway
+    # component: gateway - Identifies this as the gateway component
+    # Useful for organizing microservices architecture
+    tier: frontend
+    # tier: frontend - Indicates this is a frontend-facing service
+    # Helps with network policy and security configurations
+    version: v1.0.0
+    # version: v1.0.0 - Tracks the application version for rollback purposes
+    # Important for blue-green deployments and canary releases
+    environment: production
+    # environment: production - Indicates deployment environment
+    # Used for environment-specific configurations and policies
+  
+  annotations:
+    # Annotations: Additional metadata that doesn't affect resource behavior
+    # Used by tools, libraries, and controllers for extended functionality
+    deployment.kubernetes.io/revision: "1"
+    # deployment.kubernetes.io/revision: "1" - Tracks deployment revision number
+    # Automatically managed by Kubernetes for rollback purposes
+    description: "Spring PetClinic API Gateway - Single entry point for all microservices"
+    # description: Human-readable description of the deployment purpose
+    # Helps with documentation and operational understanding
+    contact: "devops@petclinic.com"
+    # contact: Contact information for the team responsible for this service
+    # Useful for incident response and operational queries
+    
+spec:
+  # Specification section defines the desired state of the deployment
+  replicas: 2
+  # replicas: 2 - Number of pod instances to run
+  # Provides high availability and load distribution
+  # Should be at least 2 for production to handle node failures
+  
+  strategy:
+    # Deployment strategy defines how updates are performed
+    type: RollingUpdate
+    # type: RollingUpdate - Updates pods gradually to maintain availability
+    # Alternative is "Recreate" which terminates all pods before creating new ones
+    rollingUpdate:
+      # Rolling update parameters control the update process
+      maxUnavailable: 1
+      # maxUnavailable: 1 - Maximum number of pods that can be unavailable during update
+      # Can be absolute number or percentage (e.g., "25%")
+      # Ensures at least 1 pod remains available during updates
+      maxSurge: 1
+      # maxSurge: 1 - Maximum number of pods that can be created above desired replicas
+      # Allows temporary scaling during updates for zero-downtime deployments
+      # Can be absolute number or percentage (e.g., "25%")
+  
+  selector:
+    # Selector defines which pods belong to this deployment
+    matchLabels:
+      # matchLabels: Pods must have ALL these labels to be managed by this deployment
+      app: api-gateway
+      # app: api-gateway - Must match the pod template labels below
+      # This is how the deployment identifies its pods
+  
+  template:
+    # Template defines the pod specification for this deployment
+    # All pods created by this deployment will use this template
+    metadata:
+      # Pod metadata - labels and annotations for the pods
+      labels:
+        # Labels for the pods - must include selector labels
+        app: api-gateway
+        # app: api-gateway - Matches the deployment selector
+        # Required for the deployment to manage these pods
+        component: gateway
+        # component: gateway - Identifies the component type
+        # Used by monitoring and service discovery
+        tier: frontend
+        # tier: frontend - Indicates this is a frontend service
+        # Used by network policies for traffic control
+        version: v1.0.0
+        # version: v1.0.0 - Application version for tracking
+        # Useful for canary deployments and version-specific routing
+      
+      annotations:
+        # Pod annotations for additional metadata
+        prometheus.io/scrape: "true"
+        # prometheus.io/scrape: "true" - Enables Prometheus monitoring
+        # Tells Prometheus to scrape metrics from this pod
+        prometheus.io/port: "8080"
+        # prometheus.io/port: "8080" - Port for Prometheus to scrape metrics
+        # Should match the actuator port in the application
+        prometheus.io/path: "/actuator/prometheus"
+        # prometheus.io/path: "/actuator/prometheus" - Metrics endpoint path
+        # Spring Boot Actuator exposes metrics at this path
+    
+    spec:
+      # Pod specification defines the containers and their configuration
+      containers:
+      - name: api-gateway
+        # name: api-gateway - Container name within the pod
+        # Must be unique within the pod and DNS-compliant
+        # Used for logging and debugging purposes
+        
+        image: springcommunity/spring-petclinic-api-gateway:latest
+        # image: Container image to run
+        # springcommunity/spring-petclinic-api-gateway - Official Spring PetClinic image
+        # :latest - Image tag (should use specific versions in production)
+        # Format: [registry/]repository:tag
+        
+        imagePullPolicy: IfNotPresent
+        # imagePullPolicy: IfNotPresent - Pull image only if not present locally
+        # Options: Always, Never, IfNotPresent
+        # "Always" for :latest tags in production, "IfNotPresent" for specific tags
+        
+        ports:
+        - containerPort: 8080
+          # containerPort: 8080 - Port the container listens on
+          # Must match the port the application binds to inside the container
+          name: http
+          # name: http - Named port for service reference
+          # Allows services to reference ports by name instead of number
+          protocol: TCP
+          # protocol: TCP - Network protocol (TCP or UDP)
+          # TCP is default and most common for web applications
+        
+        env:
+        # Environment variables passed to the container
+        # Used to configure the application without rebuilding the image
+        - name: CONFIG_SERVER_URL
+          # CONFIG_SERVER_URL - Spring Cloud Config Server location
+          value: "http://config-server:8888"
+          # value: URL pointing to the config server service
+          # Uses Kubernetes DNS for service discovery (service-name:port)
+        
+        - name: DISCOVERY_SERVER_URL
+          # DISCOVERY_SERVER_URL - Eureka service registry location
+          value: "http://discovery-server:8761/eureka"
+          # value: Eureka server URL with /eureka context path
+          # Required for service registration and discovery
+        
+        - name: SPRING_PROFILES_ACTIVE
+          # SPRING_PROFILES_ACTIVE - Active Spring profiles
+          value: "kubernetes"
+          # value: "kubernetes" - Activates Kubernetes-specific configuration
+          # Enables Kubernetes service discovery and configuration
+        
+        - name: JAVA_OPTS
+          # JAVA_OPTS - JVM options for performance tuning
+          value: "-Xmx512m -Xms256m -XX:+UseG1GC"
+          # -Xmx512m: Maximum heap size (should match container memory limit)
+          # -Xms256m: Initial heap size (improves startup performance)
+          # -XX:+UseG1GC: Use G1 garbage collector (good for low-latency apps)
+        
+        resources:
+          # Resource constraints for the container
+          # Ensures proper resource allocation and prevents resource starvation
+          requests:
+            # requests: Guaranteed resources allocated to the container
+            # Used by scheduler to place pods on nodes with sufficient resources
+            memory: "512Mi"
+            # memory: "512Mi" - Guaranteed memory allocation
+            # Mi = Mebibytes (1024^2 bytes), should match application needs
+            cpu: "250m"
+            # cpu: "250m" - Guaranteed CPU allocation
+            # m = millicores (1000m = 1 CPU core), 250m = 0.25 cores
+          
+          limits:
+            # limits: Maximum resources the container can use
+            # Prevents containers from consuming excessive resources
+            memory: "1Gi"
+            # memory: "1Gi" - Maximum memory limit
+            # Gi = Gibibytes (1024^3 bytes), container killed if exceeded
+            cpu: "500m"
+            # cpu: "500m" - Maximum CPU limit
+            # Container throttled if it tries to use more CPU
+        
+        livenessProbe:
+          # Liveness probe determines if container is running properly
+          # Kubernetes restarts container if liveness probe fails
+          httpGet:
+            # HTTP GET request to check application health
+            path: /actuator/health
+            # path: Spring Boot Actuator health endpoint
+            # Returns 200 OK if application is healthy
+            port: 8080
+            # port: Port to send the health check request
+            # Must match the container port
+          initialDelaySeconds: 60
+          # initialDelaySeconds: 60 - Wait 60 seconds before first probe
+          # Allows application time to start up completely
+          # Should be longer than typical application startup time
+          periodSeconds: 30
+          # periodSeconds: 30 - Check every 30 seconds
+          # Balance between quick failure detection and resource usage
+          timeoutSeconds: 10
+          # timeoutSeconds: 10 - Timeout for each probe request
+          # Should be less than periodSeconds to avoid overlapping probes
+          failureThreshold: 3
+          # failureThreshold: 3 - Restart after 3 consecutive failures
+          # Prevents restart due to temporary network issues
+        
+        readinessProbe:
+          # Readiness probe determines if container is ready to serve traffic
+          # Service removes pod from endpoints if readiness probe fails
+          httpGet:
+            # HTTP GET request to check if application is ready
+            path: /actuator/health/readiness
+            # path: Spring Boot readiness endpoint (more specific than health)
+            # Checks if application dependencies are available
+            port: 8080
+            # port: Port to send the readiness check request
+          initialDelaySeconds: 30
+          # initialDelaySeconds: 30 - Wait 30 seconds before first probe
+          # Usually shorter than liveness probe initial delay
+          periodSeconds: 10
+          # periodSeconds: 10 - Check every 10 seconds
+          # More frequent than liveness probe for faster traffic routing
+          timeoutSeconds: 5
+          # timeoutSeconds: 5 - Timeout for each probe request
+          # Shorter timeout for readiness checks
+          failureThreshold: 3
+          # failureThreshold: 3 - Mark unready after 3 consecutive failures
+          # Removes pod from service endpoints quickly
+        
+        securityContext:
+          # Security context defines security settings for the container
+          # Implements security best practices and reduces attack surface
+          runAsNonRoot: true
+          # runAsNonRoot: true - Prevents running as root user
+          # Security best practice to reduce privilege escalation risks
+          runAsUser: 1000
+          # runAsUser: 1000 - Run as specific non-root user ID
+          # Consistent user ID across environments for file permissions
+          allowPrivilegeEscalation: false
+          # allowPrivilegeEscalation: false - Prevents gaining additional privileges
+          # Security hardening to prevent container breakout attempts
+          readOnlyRootFilesystem: true
+          # readOnlyRootFilesystem: true - Makes root filesystem read-only
+          # Prevents runtime modifications and improves security
+          capabilities:
+            # Linux capabilities management
+            drop:
+            - ALL
+            # drop: ALL - Remove all Linux capabilities
+            # Principle of least privilege - only grant necessary capabilities
+        
+        volumeMounts:
+        # Volume mounts for persistent or shared storage
+        - name: tmp-volume
+          # name: tmp-volume - Reference to volume defined below
+          mountPath: /tmp
+          # mountPath: /tmp - Where to mount the volume in container
+          # Writable directory since root filesystem is read-only
+        
+        - name: logs-volume
+          # name: logs-volume - Volume for application logs
+          mountPath: /app/logs
+          # mountPath: /app/logs - Application log directory
+          # Allows log collection by external tools
+      
+      volumes:
+      # Volumes provide storage that can be mounted into containers
+      - name: tmp-volume
+        # name: tmp-volume - Volume name referenced in volumeMounts
+        emptyDir: {}
+        # emptyDir: {} - Temporary directory that exists for pod lifetime
+        # Deleted when pod is removed, good for temporary files
+      
+      - name: logs-volume
+        # name: logs-volume - Volume for application logs
+        emptyDir: {}
+        # emptyDir: {} - Temporary log storage
+        # In production, consider persistent volumes for log retention
+      
+      restartPolicy: Always
+      # restartPolicy: Always - Restart containers if they exit
+      # Options: Always, OnFailure, Never
+      # Always is default and appropriate for long-running services
+      
+      terminationGracePeriodSeconds: 30
+      # terminationGracePeriodSeconds: 30 - Time to wait before force-killing pod
+      # Allows application to gracefully shutdown and close connections
+      # Should be longer than application shutdown time
+      
+      dnsPolicy: ClusterFirst
+      # dnsPolicy: ClusterFirst - Use cluster DNS for name resolution
+      # Enables service discovery via DNS names
+      # Options: ClusterFirst, Default, None, ClusterFirstWithHostNet
+      
+      serviceAccountName: default
+      # serviceAccountName: default - Service account for pod authentication
+      # Used for accessing Kubernetes API and other services
+      # Should use custom service account with minimal permissions in production
+
+---
+# Service definition to expose the API Gateway deployment
+# Separating service from deployment allows independent management
+
+apiVersion: v1
+# API Version: v1 is the stable version for Service resources
+# Services have been stable since early Kubernetes versions
+
+kind: Service
+# Resource Type: Service provides network access to pods
+# Abstracts pod IP addresses and provides load balancing
+
+metadata:
+  # Service metadata
+  name: api-gateway
+  # name: api-gateway - Service name for DNS resolution
+  # Other pods can access this service at "api-gateway:8080"
+  
+  namespace: petclinic
+  # namespace: petclinic - Must match deployment namespace
+  # Services can only route to pods in the same namespace
+  
+  labels:
+    # Service labels for organization and selection
+    app: api-gateway
+    # app: api-gateway - Matches deployment labels
+    component: gateway
+    # component: gateway - Identifies service component
+    tier: frontend
+    # tier: frontend - Indicates frontend service
+  
+  annotations:
+    # Service annotations for additional metadata
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    # AWS-specific annotation for Network Load Balancer
+    # Only relevant when running on AWS EKS
+    prometheus.io/scrape: "true"
+    # prometheus.io/scrape: "true" - Enable Prometheus service discovery
+    # Allows Prometheus to discover and scrape this service
+
+spec:
+  # Service specification
+  type: ClusterIP
+  # type: ClusterIP - Internal cluster access only
+  # Options: ClusterIP, NodePort, LoadBalancer, ExternalName
+  # ClusterIP is default and most secure for internal services
+  
+  ports:
+  - port: 8080
+    # port: 8080 - Port exposed by the service
+    # This is the port other services use to connect
+    targetPort: 8080
+    # targetPort: 8080 - Port on the pod containers
+    # Must match containerPort in deployment
+    protocol: TCP
+    # protocol: TCP - Network protocol
+    # Must match container port protocol
+    name: http
+    # name: http - Named port for reference
+    # Useful for services with multiple ports
+  
+  selector:
+    # Selector determines which pods receive traffic
+    # Must match labels on target pods
+    app: api-gateway
+    # app: api-gateway - Routes traffic to pods with this label
+    # Must match deployment pod template labels
+  
+  sessionAffinity: None
+  # sessionAffinity: None - No session stickiness
+  # Options: None, ClientIP
+  # None provides better load distribution

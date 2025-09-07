@@ -1,0 +1,286 @@
+# =============================================================================
+# PERSISTENT VOLUME CLAIMS FOR MONITORING STACK
+# =============================================================================
+# Purpose: Provides persistent storage for Prometheus, Grafana, and AlertManager
+# Why needed: Ensures data persistence across pod restarts and updates
+# Kubernetes concept: PVC provides persistent storage abstraction for pods
+# This file defines storage requirements for the monitoring components
+
+apiVersion: v1
+# API Version: v1 is the stable version for PersistentVolumeClaim resources
+# This is the most commonly used API version for persistent storage
+
+kind: PersistentVolumeClaim
+# Resource Type: PersistentVolumeClaim requests persistent storage
+# This enables data persistence across pod restarts
+
+metadata:
+  # Metadata section contains identifying information about the resource
+  name: prometheus-pvc
+  # Name: Unique identifier for this PVC within the namespace
+  # This name will be used to reference the storage in deployments
+  
+  namespace: ecommerce
+  # Namespace: Specifies which namespace this PVC belongs to
+  # Must match the namespace created in the namespace.yaml file
+  
+  labels:
+    # Labels: Key-value pairs for organizing and selecting resources
+    app: prometheus
+    # app: prometheus - Identifies this PVC as belonging to Prometheus
+    component: monitoring
+    # component: monitoring - Identifies this as a monitoring component
+    tier: observability
+    # tier: observability - Identifies this as observability tier
+    environment: production
+    # environment: production - Indicates this is for production environment
+    managed-by: kubernetes
+    # managed-by: kubernetes - Indicates this resource is managed by Kubernetes
+  
+  annotations:
+    # Annotations: Additional metadata that doesn't affect resource behavior
+    description: "Persistent storage for Prometheus time series data"
+    # description: Human-readable description of the PVC purpose
+    # Used for documentation and operational understanding
+    
+    contact: "platform-engineering@company.com"
+    # contact: Email address for the team responsible for this PVC
+    # Used for incident response and maintenance coordination
+    
+    last-updated: "2024-12-01T00:00:00Z"
+    # last-updated: Timestamp of last modification
+    # Used for change tracking and audit purposes
+    
+    version: "1.0.0"
+    # version: Version identifier for this PVC configuration
+    # Used for version control and rollback purposes
+
+spec:
+  # Spec section defines the desired state of the PVC
+  accessModes:
+    # accessModes: List of access modes for the volume
+    # Purpose: Defines how the volume can be accessed
+    # Impact: Determines volume accessibility and performance
+    # Production consideration: Critical for data consistency and performance
+    
+    - ReadWriteOnce
+    # ReadWriteOnce - Single node read-write access
+    # Purpose: Allows read-write access from a single node
+    # Impact: Volume can only be mounted by one pod at a time
+    # Production consideration: Suitable for single-replica deployments like Prometheus
+  
+  resources:
+    # resources: Resource requirements for the PVC
+    # Purpose: Specifies storage capacity and performance requirements
+    # Impact: Determines storage allocation and performance
+    # Production consideration: Must be sized appropriately for data retention
+    
+    requests:
+      # requests: Minimum resource requirements
+      # Purpose: Specifies minimum storage capacity needed
+      # Impact: Kubernetes ensures this storage is available
+      # Production consideration: Should be based on data retention requirements
+      
+      storage: 10Gi
+      # storage: 10Gi - Storage capacity request
+      # Purpose: Requests 10 gigabytes of storage
+      # Impact: PVC will have at least 10GB of storage
+      # Production consideration: Based on Prometheus data retention needs
+  
+  storageClassName: standard
+  # storageClassName: standard - Storage class name
+  # Purpose: Specifies which storage class to use
+  # Impact: Determines storage backend and performance characteristics
+  # Production consideration: Must match available storage classes in cluster
+
+---
+# =============================================================================
+# GRAFANA PERSISTENT VOLUME CLAIM
+# =============================================================================
+# Purpose: Provides persistent storage for Grafana dashboards and data
+# Why needed: Ensures Grafana configuration and data persistence
+# Kubernetes concept: PVC provides persistent storage abstraction for pods
+# This PVC stores Grafana dashboards, data sources, and user data
+
+apiVersion: v1
+# API Version: v1 is the stable version for PersistentVolumeClaim resources
+# This is the most commonly used API version for persistent storage
+
+kind: PersistentVolumeClaim
+# Resource Type: PersistentVolumeClaim requests persistent storage
+# This enables data persistence across pod restarts
+
+metadata:
+  # Metadata section contains identifying information about the resource
+  name: grafana-pvc
+  # Name: Unique identifier for this PVC within the namespace
+  # This name will be used to reference the storage in deployments
+  
+  namespace: ecommerce
+  # Namespace: Specifies which namespace this PVC belongs to
+  # Must match the namespace created in the namespace.yaml file
+  
+  labels:
+    # Labels: Key-value pairs for organizing and selecting resources
+    app: grafana
+    # app: grafana - Identifies this PVC as belonging to Grafana
+    component: monitoring
+    # component: monitoring - Identifies this as a monitoring component
+    tier: observability
+    # tier: observability - Identifies this as observability tier
+    environment: production
+    # environment: production - Indicates this is for production environment
+    managed-by: kubernetes
+    # managed-by: kubernetes - Indicates this resource is managed by Kubernetes
+  
+  annotations:
+    # Annotations: Additional metadata that doesn't affect resource behavior
+    description: "Persistent storage for Grafana dashboards and configuration"
+    # description: Human-readable description of the PVC purpose
+    # Used for documentation and operational understanding
+    
+    contact: "platform-engineering@company.com"
+    # contact: Email address for the team responsible for this PVC
+    # Used for incident response and maintenance coordination
+    
+    last-updated: "2024-12-01T00:00:00Z"
+    # last-updated: Timestamp of last modification
+    # Used for change tracking and audit purposes
+    
+    version: "1.0.0"
+    # version: Version identifier for this PVC configuration
+    # Used for version control and rollback purposes
+
+spec:
+  # Spec section defines the desired state of the PVC
+  accessModes:
+    # accessModes: List of access modes for the volume
+    # Purpose: Defines how the volume can be accessed
+    # Impact: Determines volume accessibility and performance
+    # Production consideration: Critical for data consistency and performance
+    
+    - ReadWriteOnce
+    # ReadWriteOnce - Single node read-write access
+    # Purpose: Allows read-write access from a single node
+    # Impact: Volume can only be mounted by one pod at a time
+    # Production consideration: Suitable for single-replica deployments like Grafana
+  
+  resources:
+    # resources: Resource requirements for the PVC
+    # Purpose: Specifies storage capacity and performance requirements
+    # Impact: Determines storage allocation and performance
+    # Production consideration: Must be sized appropriately for dashboard data
+    
+    requests:
+      # requests: Minimum resource requirements
+      # Purpose: Specifies minimum storage capacity needed
+      # Impact: Kubernetes ensures this storage is available
+      # Production consideration: Should be based on dashboard and user data needs
+      
+      storage: 5Gi
+      # storage: 5Gi - Storage capacity request
+      # Purpose: Requests 5 gigabytes of storage
+      # Impact: PVC will have at least 5GB of storage
+      # Production consideration: Based on Grafana data storage needs
+  
+  storageClassName: standard
+  # storageClassName: standard - Storage class name
+  # Purpose: Specifies which storage class to use
+  # Impact: Determines storage backend and performance characteristics
+  # Production consideration: Must match available storage classes in cluster
+
+---
+# =============================================================================
+# ALERTMANAGER PERSISTENT VOLUME CLAIM
+# =============================================================================
+# Purpose: Provides persistent storage for AlertManager data and configuration
+# Why needed: Ensures AlertManager state and configuration persistence
+# Kubernetes concept: PVC provides persistent storage abstraction for pods
+# This PVC stores AlertManager state, silences, and configuration
+
+apiVersion: v1
+# API Version: v1 is the stable version for PersistentVolumeClaim resources
+# This is the most commonly used API version for persistent storage
+
+kind: PersistentVolumeClaim
+# Resource Type: PersistentVolumeClaim requests persistent storage
+# This enables data persistence across pod restarts
+
+metadata:
+  # Metadata section contains identifying information about the resource
+  name: alertmanager-pvc
+  # Name: Unique identifier for this PVC within the namespace
+  # This name will be used to reference the storage in deployments
+  
+  namespace: ecommerce
+  # Namespace: Specifies which namespace this PVC belongs to
+  # Must match the namespace created in the namespace.yaml file
+  
+  labels:
+    # Labels: Key-value pairs for organizing and selecting resources
+    app: alertmanager
+    # app: alertmanager - Identifies this PVC as belonging to AlertManager
+    component: monitoring
+    # component: monitoring - Identifies this as a monitoring component
+    tier: observability
+    # tier: observability - Identifies this as observability tier
+    environment: production
+    # environment: production - Indicates this is for production environment
+    managed-by: kubernetes
+    # managed-by: kubernetes - Indicates this resource is managed by Kubernetes
+  
+  annotations:
+    # Annotations: Additional metadata that doesn't affect resource behavior
+    description: "Persistent storage for AlertManager state and configuration"
+    # description: Human-readable description of the PVC purpose
+    # Used for documentation and operational understanding
+    
+    contact: "platform-engineering@company.com"
+    # contact: Email address for the team responsible for this PVC
+    # Used for incident response and maintenance coordination
+    
+    last-updated: "2024-12-01T00:00:00Z"
+    # last-updated: Timestamp of last modification
+    # Used for change tracking and audit purposes
+    
+    version: "1.0.0"
+    # version: Version identifier for this PVC configuration
+    # Used for version control and rollback purposes
+
+spec:
+  # Spec section defines the desired state of the PVC
+  accessModes:
+    # accessModes: List of access modes for the volume
+    # Purpose: Defines how the volume can be accessed
+    # Impact: Determines volume accessibility and performance
+    # Production consideration: Critical for data consistency and performance
+    
+    - ReadWriteOnce
+    # ReadWriteOnce - Single node read-write access
+    # Purpose: Allows read-write access from a single node
+    # Impact: Volume can only be mounted by one pod at a time
+    # Production consideration: Suitable for single-replica deployments like AlertManager
+  
+  resources:
+    # resources: Resource requirements for the PVC
+    # Purpose: Specifies storage capacity and performance requirements
+    # Impact: Determines storage allocation and performance
+    # Production consideration: Must be sized appropriately for alert data
+    
+    requests:
+      # requests: Minimum resource requirements
+      # Purpose: Specifies minimum storage capacity needed
+      # Impact: Kubernetes ensures this storage is available
+      # Production consideration: Should be based on alert data storage needs
+      
+      storage: 2Gi
+      # storage: 2Gi - Storage capacity request
+      # Purpose: Requests 2 gigabytes of storage
+      # Impact: PVC will have at least 2GB of storage
+      # Production consideration: Based on AlertManager data storage needs
+  
+  storageClassName: standard
+  # storageClassName: standard - Storage class name
+  # Purpose: Specifies which storage class to use
+  # Impact: Determines storage backend and performance characteristics
+  # Production consideration: Must match available storage classes in cluster

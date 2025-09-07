@@ -1,0 +1,441 @@
+# =============================================================================
+# SPRING CLOUD CONFIG SERVER - COMPREHENSIVE CENTRALIZED CONFIGURATION DOCUMENTATION
+# =============================================================================
+# This file defines the Spring Cloud Config Server deployment, which provides
+# centralized configuration management for the PetClinic microservices ecosystem.
+# Config Server enables externalized configuration, environment-specific settings,
+# and dynamic configuration updates without application restarts.
+#
+# CONFIGURATION PHILOSOPHY: Centralized configuration management follows the
+# Twelve-Factor App methodology, separating configuration from code for better
+# maintainability, security, and environment portability.
+#
+# OPERATIONAL IMPACT: Config Server is a critical infrastructure component that
+# all microservices depend on for configuration, making it essential for system startup.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# CONFIG SERVER DEPLOYMENT - CENTRALIZED CONFIGURATION MANAGEMENT
+# -----------------------------------------------------------------------------
+# API version for Deployment resources
+# apps/v1 provides stable deployment functionality for stateless applications
+apiVersion: apps/v1
+
+# Resource type: Deployment for stateless configuration service
+# Deployments are appropriate for Config Server as it's stateless and can be replicated
+# Configuration data is typically stored in external Git repositories or databases
+kind: Deployment
+
+# Metadata section for Deployment identification
+metadata:
+  # Deployment name following infrastructure service naming convention
+  name: config-server
+  # NAMING CONVENTION: Simple, descriptive name for infrastructure services
+  
+  # Namespace for application boundary and resource management
+  namespace: petclinic
+  
+  # Labels for resource classification and management
+  labels:
+    # Application identifier for service grouping
+    app: config-server
+    # INFRASTRUCTURE SERVICE: Core service supporting other microservices
+    
+    # Component classification for architectural organization
+    component: infrastructure
+    # INFRASTRUCTURE LAYER: Distinguishes from business logic services
+    
+    # Tier classification for network policies and resource allocation
+    tier: config
+    # CONFIGURATION TIER: Specialized tier for configuration services
+
+# Deployment specification
+spec:
+  # Replica count for high availability
+  replicas: 1
+  # SINGLE INSTANCE: Sufficient for development, consider 2+ for production
+  # SCALING CONSIDERATION: Config Server is typically lightweight and can handle multiple clients
+  
+  # Selector for pod targeting and management
+  selector:
+    matchLabels:
+      app: config-server
+      # TARGETING: Must match pod template labels exactly
+  
+  # Pod template defining the Config Server container
+  template:
+    metadata:
+      # Labels applied to each pod instance
+      labels:
+        app: config-server
+        component: infrastructure
+        tier: config
+        # CONSISTENCY: Labels match Deployment and selector requirements
+    
+    # Pod specification
+    spec:
+      # Container array for Config Server deployment
+      containers:
+      - # Container name for identification and logging
+        name: config-server
+        
+        # Spring Cloud Config Server container image
+        image: springcommunity/spring-petclinic-config-server:3.2.0
+        # VERSION PINNING: Specific version ensures consistent behavior
+        # SPRING COMMUNITY: Official PetClinic Config Server image
+        # VERSION 3.2.0: Matches PetClinic application version for compatibility
+        
+        # Container port configuration
+        ports:
+        - # Config Server default port
+          containerPort: 8888
+          # Port name for service targeting and monitoring
+          name: http
+          # STANDARD PORT: Spring Cloud Config Server default port
+          # HTTP PROTOCOL: RESTful API for configuration retrieval
+        
+        # Environment variables for Config Server configuration
+        env:
+        # Spring profile activation for Kubernetes environment
+        - name: SPRING_PROFILES_ACTIVE
+          value: "kubernetes"
+          # ENVIRONMENT SPECIFIC: Activates Kubernetes-specific configuration
+          # PROFILE STRATEGY: Enables environment-specific behavior
+        
+        # Actuator endpoints exposure for monitoring and management
+        - name: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
+          value: "*"
+          # MONITORING: Exposes all actuator endpoints for observability
+          # MANAGEMENT: Enables health checks, metrics, and configuration management
+          # SECURITY CONSIDERATION: In production, limit to specific endpoints
+        
+        # Resource allocation for Config Server workload
+        resources:
+          # Guaranteed resources for baseline performance
+          requests:
+            # Memory allocation for Spring Boot application
+            memory: "512Mi"
+            # BASELINE MEMORY: Sufficient for Config Server and configuration caching
+            
+            # CPU allocation for request processing
+            cpu: "250m"
+            # BASELINE CPU: Quarter core adequate for configuration serving
+          
+          # Resource limits to prevent resource monopolization
+          limits:
+            # Maximum memory to prevent node pressure
+            memory: "1Gi"
+            # BURST CAPACITY: Double baseline for peak configuration requests
+            
+            # Maximum CPU for fair resource sharing
+            cpu: "500m"
+            # BURST CAPACITY: Half core for intensive configuration processing
+        
+        # Liveness probe for container health monitoring
+        livenessProbe:
+          # HTTP GET request for health verification
+          httpGet:
+            # Spring Boot Actuator health endpoint
+            path: /actuator/health
+            # Config Server port
+            port: 8888
+          # HEALTH ENDPOINT: Spring Boot provides comprehensive health information
+          
+          # Initial delay for application startup completion
+          initialDelaySeconds: 60
+          # STARTUP BUFFER: Spring Boot applications need time to initialize
+          
+          # Probe execution frequency
+          periodSeconds: 30
+          # MONITORING FREQUENCY: Less frequent than readiness (infrastructure service)
+          
+          # Timeout for each probe execution
+          timeoutSeconds: 10
+          # RESPONSIVENESS: Generous timeout for health check processing
+          
+          # Failure threshold before pod restart
+          failureThreshold: 3
+          # STABILITY: Multiple failures required before restart
+        
+        # Readiness probe for traffic routing decisions
+        readinessProbe:
+          # HTTP GET request for readiness verification
+          httpGet:
+            # Same health endpoint for readiness
+            path: /actuator/health
+            # Config Server port
+            port: 8888
+          # READINESS VERIFICATION: Ensures Config Server can serve configurations
+          
+          # Initial delay for readiness checking
+          initialDelaySeconds: 30
+          # STARTUP OPTIMIZATION: Shorter delay than liveness probe
+          
+          # Readiness check frequency
+          periodSeconds: 10
+          # TRAFFIC ROUTING: Frequent checks for responsive configuration serving
+          
+          # Timeout for readiness verification
+          timeoutSeconds: 5
+          # QUICK RESPONSE: Fast timeout for traffic routing decisions
+          
+          # Failure threshold before removing from service
+          failureThreshold: 3
+          # SERVICE AVAILABILITY: Multiple failures before traffic removal
+
+---
+# Document separator for Service resource
+
+# -----------------------------------------------------------------------------
+# CONFIG SERVER SERVICE - NETWORK ACCESS FOR CONFIGURATION CLIENTS
+# -----------------------------------------------------------------------------
+# API version for Service resources
+apiVersion: v1
+
+# Resource type: Service for network access to Config Server
+kind: Service
+
+# Service metadata
+metadata:
+  # Service name for DNS resolution and client access
+  name: config-server
+  # CLIENT ACCESS: Microservices connect using this service name
+  
+  # Namespace consistency with Deployment
+  namespace: petclinic
+  
+  # Labels for service identification and management
+  labels:
+    app: config-server
+    component: infrastructure
+    # CONSISTENCY: Matches Deployment labels for unified management
+
+# Service specification
+spec:
+  # Selector for targeting Config Server pods
+  selector:
+    app: config-server
+    # POD TARGETING: Routes traffic to Config Server pods
+  
+  # Port configuration for configuration access
+  ports:
+  - # Service port for client connections
+    port: 8888
+    # Target port on Config Server pods
+    targetPort: 8888
+    # Port name for identification
+    name: http
+    # CONFIG PROTOCOL: HTTP REST API for configuration retrieval
+  
+  # Service type for cluster-internal access
+  type: ClusterIP
+  # INTERNAL ACCESS: Config Server only accessible within cluster
+  # SECURITY: Configuration data should not be exposed externally
+
+# =============================================================================
+# SPRING CLOUD CONFIG SERVER ARCHITECTURE ANALYSIS
+# =============================================================================
+#
+# CONFIG SERVER RESPONSIBILITIES:
+# ✅ CENTRALIZED CONFIGURATION: Single source of truth for all microservice configurations
+# ✅ ENVIRONMENT MANAGEMENT: Different configurations for dev/staging/production
+# ✅ DYNAMIC UPDATES: Configuration changes without application restarts
+# ✅ VERSION CONTROL: Configuration versioning through Git integration
+# ✅ SECURITY: Encrypted configuration properties for sensitive data
+# ✅ AUDIT TRAIL: Configuration change tracking and history
+#
+# MICROSERVICE CONFIGURATION PATTERN:
+# ✅ EXTERNALIZED CONFIG: Configuration separated from application code
+# ✅ ENVIRONMENT SPECIFIC: Different settings per deployment environment
+# ✅ HIERARCHICAL CONFIG: Global, application, and profile-specific settings
+# ✅ PROPERTY OVERRIDE: Environment variables can override configuration
+# ✅ REFRESH CAPABILITY: Runtime configuration updates via Spring Cloud Bus
+#
+# CONFIGURATION SOURCES AND BACKENDS:
+#
+# 1. GIT REPOSITORY BACKEND:
+#    # Most common configuration source
+#    spring:
+#      cloud:
+#        config:
+#          server:
+#            git:
+#              uri: https://github.com/petclinic/config-repo
+#              default-label: main
+#              search-paths: '{application}'
+#
+# 2. VAULT BACKEND FOR SECRETS:
+#    # HashiCorp Vault integration for sensitive configuration
+#    spring:
+#      cloud:
+#        config:
+#          server:
+#            vault:
+#              host: vault.example.com
+#              port: 8200
+#              scheme: https
+#              backend: secret
+#
+# 3. DATABASE BACKEND:
+#    # Database-stored configuration for dynamic updates
+#    spring:
+#      cloud:
+#        config:
+#          server:
+#            jdbc:
+#              sql: SELECT key, value from PROPERTIES where APPLICATION=? and PROFILE=? and LABEL=?
+#
+# PRODUCTION ENHANCEMENTS NEEDED:
+#
+# 1. HIGH AVAILABILITY CONFIGURATION:
+#    spec:
+#      replicas: 3  # Multiple instances for availability
+#      strategy:
+#        type: RollingUpdate
+#        rollingUpdate:
+#          maxUnavailable: 1
+#          maxSurge: 1
+#
+# 2. SECURITY ENHANCEMENTS:
+#    # Encryption for sensitive configuration
+#    env:
+#    - name: ENCRYPT_KEY
+#      valueFrom:
+#        secretKeyRef:
+#          name: config-server-secrets
+#          key: encrypt-key
+#    
+#    # Authentication for configuration access
+#    - name: SPRING_SECURITY_USER_NAME
+#      valueFrom:
+#        secretKeyRef:
+#          name: config-server-secrets
+#          key: username
+#    - name: SPRING_SECURITY_USER_PASSWORD
+#      valueFrom:
+#        secretKeyRef:
+#          name: config-server-secrets
+#          key: password
+#
+# 3. CONFIGURATION REPOSITORY SETUP:
+#    # Git repository structure for configurations
+#    config-repo/
+#    ├── application.yml          # Global configuration
+#    ├── application-kubernetes.yml  # Kubernetes-specific config
+#    ├── api-gateway.yml         # API Gateway specific config
+#    ├── api-gateway-kubernetes.yml
+#    ├── customers-service.yml   # Customers service config
+#    ├── customers-service-kubernetes.yml
+#    └── ...
+#
+# 4. MONITORING AND OBSERVABILITY:
+#    # Config Server specific metrics
+#    - name: micrometer-prometheus
+#      image: micrometer/prometheus-registry
+#    
+#    # Configuration change tracking
+#    - name: config-audit
+#      image: config-audit-service
+#
+# CLIENT CONFIGURATION PATTERN:
+#
+# 1. MICROSERVICE BOOTSTRAP CONFIGURATION:
+#    # bootstrap.yml in each microservice
+#    spring:
+#      application:
+#        name: customers-service
+#      cloud:
+#        config:
+#          uri: http://config-server:8888
+#          fail-fast: true
+#          retry:
+#            initial-interval: 1000
+#            max-attempts: 6
+#            max-interval: 2000
+#            multiplier: 1.1
+#
+# 2. CONFIGURATION REFRESH:
+#    # Enable configuration refresh in microservices
+#    management:
+#      endpoints:
+#        web:
+#          exposure:
+#            include: refresh
+#    
+#    # Refresh configuration via POST request
+#    curl -X POST http://customers-service:8080/actuator/refresh
+#
+# 3. SPRING CLOUD BUS INTEGRATION:
+#    # Broadcast configuration changes to all instances
+#    spring:
+#      cloud:
+#        bus:
+#          enabled: true
+#        stream:
+#          rabbit:
+#            bindings:
+#              springCloudBusInput:
+#                consumer:
+#                  auto-bind-dlq: true
+#
+# CONFIGURATION MANAGEMENT BEST PRACTICES:
+#
+# 1. CONFIGURATION HIERARCHY:
+#    # Priority order (highest to lowest):
+#    # 1. Environment variables
+#    # 2. Command line arguments
+#    # 3. Profile-specific configuration
+#    # 4. Application-specific configuration
+#    # 5. Global configuration
+#
+# 2. SENSITIVE DATA HANDLING:
+#    # Encrypt sensitive properties
+#    password: '{cipher}AQA...'  # Encrypted value
+#    
+#    # Use external secret management
+#    spring:
+#      cloud:
+#        config:
+#          server:
+#            vault:
+#              authentication: TOKEN
+#              token: ${VAULT_TOKEN}
+#
+# 3. CONFIGURATION VALIDATION:
+#    # Validate configuration on startup
+#    @ConfigurationProperties(prefix = "app")
+#    @Validated
+#    public class AppConfig {
+#        @NotNull
+#        private String databaseUrl;
+#        
+#        @Min(1)
+#        @Max(100)
+#        private int maxConnections;
+#    }
+#
+# DISASTER RECOVERY FOR CONFIG SERVER:
+#
+# 1. CONFIGURATION BACKUP:
+#    # Git repository provides natural backup
+#    # Regular repository backups to multiple locations
+#    # Configuration history through Git commits
+#
+# 2. FALLBACK STRATEGIES:
+#    # Local configuration fallback in microservices
+#    # Configuration caching in clients
+#    # Multiple Config Server instances
+#
+# 3. RECOVERY PROCEDURES:
+#    # Config Server restoration from Git repository
+#    # Configuration rollback through Git history
+#    # Client configuration refresh after recovery
+#
+# COMPLIANCE AND GOVERNANCE:
+# - Configuration change approval workflows
+# - Audit logging for configuration access
+# - Environment-specific access controls
+# - Configuration drift detection and remediation
+# - Compliance reporting for configuration changes
+#
+# =============================================================================
