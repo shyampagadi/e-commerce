@@ -1,0 +1,287 @@
+# =============================================================================
+# NETWORK PARTITION CHAOS EXPERIMENT DEFINITION
+# =============================================================================
+# Kubernetes YAML definition for network partition chaos experiments.
+# Defines the experiment parameters and constraints for network connectivity testing.
+# =============================================================================
+
+# Purpose: Define network partition chaos experiment parameters
+# Why needed: Provides structured experiment definition for network partition testing
+# Impact: Enables consistent and repeatable network partition experiments
+# Usage: Used by chaos engineering scripts to configure network experiments
+# Returns: Experiment configuration for network partition testing
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: network-partition-experiment-config
+  namespace: ecommerce-production
+  labels:
+    app: chaos-engineering
+    experiment-type: network-partition
+    version: "1.0"
+data:
+  # =============================================================================
+  # EXPERIMENT CONFIGURATION
+  # =============================================================================
+  # Purpose: Define experiment configuration parameters
+  # Why needed: Provides centralized configuration for network partition experiments
+  # Impact: Enables consistent experiment execution across different environments
+  
+  experiment-name: "network-partition"
+  # Purpose: Specifies the experiment name
+  # Why needed: Identifies the experiment type
+  # Impact: Experiment is identified as network partition type
+  # Value: network-partition
+  
+  experiment-description: "Test application behavior when network connectivity is disrupted between different parts of the cluster"
+  # Purpose: Describes the experiment purpose
+  # Why needed: Provides context for the experiment
+  # Impact: Users understand what the experiment tests
+  # Value: Comprehensive description of network partition testing
+  
+  experiment-duration: "15m"
+  # Purpose: Sets the default experiment duration
+  # Why needed: Provides default duration for experiments
+  # Impact: Experiments run for specified duration by default
+  # Value: 15 minutes (can be overridden)
+  
+  # =============================================================================
+  # NETWORK PARTITION CONFIGURATION
+  # =============================================================================
+  # Purpose: Define network partition parameters
+  # Why needed: Specifies how network partitions are created
+  # Impact: Determines the scope and method of network disruption
+  
+  partition-types: |
+    - node-to-node
+    - pod-to-pod
+    - service-to-service
+    - namespace-to-namespace
+  # Purpose: Types of network partitions to test
+  # Why needed: Provides different partition scenarios
+  # Impact: Multiple partition types can be tested
+  # Value: Array of partition types
+  
+  default-partition-type: "service-to-service"
+  # Purpose: Default partition type for experiments
+  # Why needed: Provides default partition type when not specified
+  # Impact: Experiments use service-to-service partition by default
+  # Value: service-to-service
+  
+  partition-duration: "10m"
+  # Purpose: Duration of network partition
+  # Why needed: Specifies how long to maintain partition
+  # Impact: Partition is maintained for specified duration
+  # Value: 10 minutes
+  
+  # =============================================================================
+  # SAFETY CONSTRAINTS
+  # =============================================================================
+  # Purpose: Define safety constraints for the experiment
+  # Why needed: Ensures experiments don't break system safety
+  # Impact: Maintains system stability during experiments
+  
+  max-partition-size: "50%"
+  # Purpose: Maximum percentage of cluster that can be partitioned
+  # Why needed: Prevents complete cluster isolation
+  # Impact: Limits partition size to maintain cluster connectivity
+  # Value: 50% of cluster maximum
+  
+  min-connectivity: "1"
+  # Purpose: Minimum number of nodes that must remain connected
+  # Why needed: Ensures cluster remains functional
+  # Impact: Maintains minimum cluster connectivity
+  # Value: 1 node minimum
+  
+  partition-timeout: "600"
+  # Purpose: Maximum time to wait for partition resolution
+  # Why needed: Prevents infinite network disruption
+  # Impact: Partition is automatically resolved after timeout
+  # Value: 600 seconds (10 minutes)
+  
+  # =============================================================================
+  # TARGET CONFIGURATION
+  # =============================================================================
+  # Purpose: Define target components for the experiment
+  # Why needed: Specifies which components to target for network partition
+  # Impact: Determines scope of the experiment
+  
+  target-components: |
+    - frontend-backend
+    - backend-database
+    - frontend-database
+    - monitoring-application
+  # Purpose: List of component pairs to partition
+  # Why needed: Provides specific partition scenarios
+  # Impact: Users can select specific component pairs to test
+  # Value: Array of component pairs
+  
+  default-target: "frontend-backend"
+  # Purpose: Default target for experiments
+  # Why needed: Provides default target when not specified
+  # Impact: Experiments target frontend-backend partition by default
+  # Value: frontend-backend
+  
+  # =============================================================================
+  # NETWORK POLICY CONFIGURATION
+  # =============================================================================
+  # Purpose: Define network policies for creating partitions
+  # Why needed: Specifies how network policies are used to create partitions
+  # Impact: Determines the method of network isolation
+  
+  network-policy-template: |
+    apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: network-partition-{component}
+      namespace: ecommerce-production
+    spec:
+      podSelector:
+        matchLabels:
+          app: {component}
+      policyTypes:
+      - Ingress
+      - Egress
+      ingress: []
+      egress: []
+  # Purpose: Template for creating network policies
+  # Why needed: Provides template for partition creation
+  # Impact: Network policies are created using this template
+  # Value: Kubernetes NetworkPolicy YAML template
+  
+  policy-cleanup: "true"
+  # Purpose: Enable automatic cleanup of network policies
+  # Why needed: Ensures network policies are removed after experiment
+  # Impact: Network policies are automatically cleaned up
+  # Value: true (enabled)
+  
+  # =============================================================================
+  # MONITORING CONFIGURATION
+  # =============================================================================
+  # Purpose: Define monitoring parameters for the experiment
+  # Why needed: Enables comprehensive monitoring during experiments
+  # Impact: Provides visibility into experiment execution
+  
+  monitoring-interval: "10"
+  # Purpose: Interval between monitoring checks
+  # Why needed: Determines how frequently to check network status
+  # Impact: Network is checked every 10 seconds during experiments
+  # Value: 10 seconds
+  
+  metrics-to-monitor: |
+    - network-connectivity
+    - service-endpoints
+    - dns-resolution
+    - packet-loss
+    - latency
+  # Purpose: Metrics to monitor during experiments
+  # Why needed: Provides comprehensive network monitoring
+  # Impact: Multiple network metrics are tracked
+  # Value: Array of network metrics
+  
+  connectivity-tests: |
+    - ping-test
+    - http-connectivity
+    - dns-resolution
+    - service-discovery
+  # Purpose: Tests to perform for connectivity validation
+  # Why needed: Validates network connectivity status
+  # Impact: Multiple connectivity tests are performed
+  # Value: Array of connectivity tests
+  
+  # =============================================================================
+  # VALIDATION CRITERIA
+  # =============================================================================
+  # Purpose: Define success criteria for the experiment
+  # Why needed: Provides clear criteria for experiment success
+  # Impact: Enables objective evaluation of experiment results
+  
+  success-criteria: |
+    - partition-created-successfully
+    - connectivity-disrupted-as-expected
+    - services-degraded-gracefully
+    - monitoring-alerts-triggered
+    - partition-resolved-successfully
+  # Purpose: Criteria for determining experiment success
+  # Why needed: Provides objective success metrics
+  # Impact: Experiments are evaluated against clear criteria
+  # Value: Array of success criteria
+  
+  failure-criteria: |
+    - partition-creation-failed
+    - unexpected-connectivity-loss
+    - service-complete-failure
+    - monitoring-failure
+    - partition-resolution-failed
+  # Purpose: Criteria for determining experiment failure
+  # Why needed: Provides objective failure metrics
+  # Impact: Experiments are evaluated against clear failure criteria
+  # Value: Array of failure criteria
+  
+  # =============================================================================
+  # RECOVERY PROCEDURES
+  # =============================================================================
+  # Purpose: Define recovery procedures for the experiment
+  # Why needed: Provides procedures for handling experiment failures
+  # Impact: Enables systematic recovery from experiment issues
+  
+  automatic-recovery: "true"
+  # Purpose: Enable automatic recovery procedures
+  # Why needed: Provides automatic recovery capability
+  # Impact: System automatically attempts recovery from failures
+  # Value: true (enabled)
+  
+  network-policy-cleanup: "true"
+  # Purpose: Enable automatic network policy cleanup
+  # Why needed: Ensures network policies are removed
+  # Impact: Network policies are automatically cleaned up
+  # Value: true (enabled)
+  
+  connectivity-restoration-timeout: "180"
+  # Purpose: Timeout for connectivity restoration
+  # Why needed: Defines maximum time for connectivity restoration
+  # Impact: Connectivity restoration times out after 180 seconds
+  # Value: 180 seconds (3 minutes)
+  
+  rollback-procedures: |
+    - remove-network-policies
+    - verify-connectivity-restoration
+    - check-service-endpoints
+    - validate-dns-resolution
+    - test-application-functionality
+  # Purpose: Procedures for rolling back experiments
+  # Why needed: Provides systematic rollback procedures
+  # Impact: Experiments can be safely rolled back
+  # Value: Array of rollback procedures
+  
+  # =============================================================================
+  # REPORTING CONFIGURATION
+  # =============================================================================
+  # Purpose: Define reporting parameters for the experiment
+  # Why needed: Enables comprehensive reporting of experiment results
+  # Impact: Provides detailed experiment reports
+  
+  report-format: "json"
+  # Purpose: Format for experiment reports
+  # Why needed: Specifies report output format
+  # Impact: Reports are generated in JSON format
+  # Value: json
+  
+  report-location: "/tmp/chaos-reports"
+  # Purpose: Location for storing experiment reports
+  # Why needed: Provides centralized location for reports
+  # Impact: Reports are stored in specified location
+  # Value: /tmp/chaos-reports
+  
+  include-network-metrics: "true"
+  # Purpose: Include network metrics in experiment reports
+  # Why needed: Provides comprehensive network reporting
+  # Impact: Reports include detailed network metrics
+  # Value: true (enabled)
+  
+  include-connectivity-logs: "true"
+  # Purpose: Include connectivity logs in experiment reports
+  # Why needed: Provides comprehensive connectivity reporting
+  # Impact: Reports include detailed connectivity logs
+  # Value: true (enabled)

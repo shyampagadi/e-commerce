@@ -1,0 +1,243 @@
+# =============================================================================
+# POD FAILURE CHAOS EXPERIMENT DEFINITION
+# =============================================================================
+# Kubernetes YAML definition for pod failure chaos experiments.
+# Defines the experiment parameters and constraints for pod failure testing.
+# =============================================================================
+
+# Purpose: Define pod failure chaos experiment parameters
+# Why needed: Provides structured experiment definition for pod failure testing
+# Impact: Enables consistent and repeatable pod failure experiments
+# Usage: Used by chaos engineering scripts to configure experiments
+# Returns: Experiment configuration for pod failure testing
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pod-failure-experiment-config
+  namespace: ecommerce-production
+  labels:
+    app: chaos-engineering
+    experiment-type: pod-failure
+    version: "1.0"
+data:
+  # =============================================================================
+  # EXPERIMENT CONFIGURATION
+  # =============================================================================
+  # Purpose: Define experiment configuration parameters
+  # Why needed: Provides centralized configuration for pod failure experiments
+  # Impact: Enables consistent experiment execution across different environments
+  
+  experiment-name: "pod-failure"
+  # Purpose: Specifies the experiment name
+  # Why needed: Identifies the experiment type
+  # Impact: Experiment is identified as pod failure type
+  # Value: pod-failure
+  
+  experiment-description: "Test application resilience to pod failures and validate Kubernetes self-healing capabilities"
+  # Purpose: Describes the experiment purpose
+  # Why needed: Provides context for the experiment
+  # Impact: Users understand what the experiment tests
+  # Value: Comprehensive description of pod failure testing
+  
+  experiment-duration: "10m"
+  # Purpose: Sets the default experiment duration
+  # Why needed: Provides default duration for experiments
+  # Impact: Experiments run for specified duration by default
+  # Value: 10 minutes (can be overridden)
+  
+  # =============================================================================
+  # SAFETY CONSTRAINTS
+  # =============================================================================
+  # Purpose: Define safety constraints for the experiment
+  # Why needed: Ensures experiments don't break system safety
+  # Impact: Maintains system stability during experiments
+  
+  max-pod-failures: "2"
+  # Purpose: Maximum number of pods that can be failed simultaneously
+  # Why needed: Prevents system overload from too many simultaneous failures
+  # Impact: Limits concurrent pod failures to maintain system stability
+  # Value: 2 pods maximum
+  
+  min-healthy-pods: "1"
+  # Purpose: Minimum number of healthy pods to maintain
+  # Why needed: Ensures system remains functional during experiments
+  # Impact: Maintains minimum service availability
+  # Value: 1 pod minimum
+  
+  recovery-timeout: "300"
+  # Purpose: Maximum time to wait for pod recovery
+  # Why needed: Prevents infinite waiting for recovery
+  # Impact: Recovery monitoring will timeout after specified time
+  # Value: 300 seconds (5 minutes)
+  
+  # =============================================================================
+  # TARGET CONFIGURATION
+  # =============================================================================
+  # Purpose: Define target components for the experiment
+  # Why needed: Specifies which components to target for pod failures
+  # Impact: Determines scope of the experiment
+  
+  target-components: |
+    - all
+    - frontend
+    - backend
+    - database
+    - monitoring
+  # Purpose: List of available target components
+  # Why needed: Provides options for experiment targeting
+  # Impact: Users can select specific components to test
+  # Value: Array of available targets
+  
+  default-target: "all"
+  # Purpose: Default target component for experiments
+  # Why needed: Provides default target when not specified
+  # Impact: Experiments target all components by default
+  # Value: all components
+  
+  # =============================================================================
+  # POD SELECTION CRITERIA
+  # =============================================================================
+  # Purpose: Define criteria for pod selection
+  # Why needed: Ensures appropriate pods are selected for failure
+  # Impact: Determines which pods are eligible for failure
+  
+  pod-selection-criteria: |
+    - status.phase=Running
+    - metadata.labels.app in (ecommerce-frontend, ecommerce-backend, ecommerce-database)
+    - metadata.namespace=ecommerce-production
+  # Purpose: Criteria for selecting pods to fail
+  # Why needed: Ensures only appropriate pods are selected
+  # Impact: Only running e-commerce pods in production namespace are selected
+  # Value: Array of selection criteria
+  
+  exclude-pods: |
+    - system-pods
+    - critical-infrastructure
+    - single-instance-pods
+  # Purpose: Pods to exclude from failure experiments
+  # Why needed: Prevents failure of critical system components
+  # Impact: Critical pods are protected from failure
+  # Value: Array of exclusion criteria
+  
+  # =============================================================================
+  # MONITORING CONFIGURATION
+  # =============================================================================
+  # Purpose: Define monitoring parameters for the experiment
+  # Why needed: Enables comprehensive monitoring during experiments
+  # Impact: Provides visibility into experiment execution
+  
+  monitoring-interval: "5"
+  # Purpose: Interval between monitoring checks
+  # Why needed: Determines how frequently to check system status
+  # Impact: System is checked every 5 seconds during experiments
+  # Value: 5 seconds
+  
+  metrics-to-monitor: |
+    - pod-status
+    - service-endpoints
+    - resource-usage
+    - error-rates
+    - response-times
+  # Purpose: Metrics to monitor during experiments
+  # Why needed: Provides comprehensive monitoring coverage
+  # Impact: Multiple metrics are tracked during experiments
+  # Value: Array of metrics to monitor
+  
+  alert-thresholds: |
+    - error-rate: 10%
+    - response-time: 5s
+    - resource-usage: 90%
+  # Purpose: Thresholds for triggering alerts
+  # Why needed: Defines when alerts should be triggered
+  # Impact: Alerts are triggered when thresholds are exceeded
+  # Value: Object of threshold values
+  
+  # =============================================================================
+  # VALIDATION CRITERIA
+  # =============================================================================
+  # Purpose: Define success criteria for the experiment
+  # Why needed: Provides clear criteria for experiment success
+  # Impact: Enables objective evaluation of experiment results
+  
+  success-criteria: |
+    - pods-recreated-within-timeout
+    - services-remain-accessible
+    - no-data-loss
+    - monitoring-alerts-triggered
+    - recovery-time-under-threshold
+  # Purpose: Criteria for determining experiment success
+  # Why needed: Provides objective success metrics
+  # Impact: Experiments are evaluated against clear criteria
+  # Value: Array of success criteria
+  
+  failure-criteria: |
+    - pods-not-recreated
+    - services-unavailable
+    - data-loss-detected
+    - monitoring-failure
+    - recovery-timeout-exceeded
+  # Purpose: Criteria for determining experiment failure
+  # Why needed: Provides objective failure metrics
+  # Impact: Experiments are evaluated against clear failure criteria
+  # Value: Array of failure criteria
+  
+  # =============================================================================
+  # RECOVERY PROCEDURES
+  # =============================================================================
+  # Purpose: Define recovery procedures for the experiment
+  # Why needed: Provides procedures for handling experiment failures
+  # Impact: Enables systematic recovery from experiment issues
+  
+  automatic-recovery: "true"
+  # Purpose: Enable automatic recovery procedures
+  # Why needed: Provides automatic recovery capability
+  # Impact: System automatically attempts recovery from failures
+  # Value: true (enabled)
+  
+  manual-intervention-threshold: "120"
+  # Purpose: Time threshold for manual intervention
+  # Why needed: Defines when manual intervention is required
+  # Impact: Manual intervention is triggered after 120 seconds
+  # Value: 120 seconds
+  
+  rollback-procedures: |
+    - scale-deployments-to-original
+    - verify-service-endpoints
+    - check-data-integrity
+    - validate-monitoring-systems
+  # Purpose: Procedures for rolling back experiments
+  # Why needed: Provides systematic rollback procedures
+  # Impact: Experiments can be safely rolled back
+  # Value: Array of rollback procedures
+  
+  # =============================================================================
+  # REPORTING CONFIGURATION
+  # =============================================================================
+  # Purpose: Define reporting parameters for the experiment
+  # Why needed: Enables comprehensive reporting of experiment results
+  # Impact: Provides detailed experiment reports
+  
+  report-format: "json"
+  # Purpose: Format for experiment reports
+  # Why needed: Specifies report output format
+  # Impact: Reports are generated in JSON format
+  # Value: json
+  
+  report-location: "/tmp/chaos-reports"
+  # Purpose: Location for storing experiment reports
+  # Why needed: Provides centralized location for reports
+  # Impact: Reports are stored in specified location
+  # Value: /tmp/chaos-reports
+  
+  include-metrics: "true"
+  # Purpose: Include metrics in experiment reports
+  # Why needed: Provides comprehensive reporting
+  # Impact: Reports include detailed metrics
+  # Value: true (enabled)
+  
+  include-logs: "true"
+  # Purpose: Include logs in experiment reports
+  # Why needed: Provides comprehensive reporting
+  # Impact: Reports include detailed logs
+  # Value: true (enabled)

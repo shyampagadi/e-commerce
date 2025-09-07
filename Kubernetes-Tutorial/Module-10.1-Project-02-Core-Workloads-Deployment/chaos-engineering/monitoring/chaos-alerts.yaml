@@ -1,0 +1,298 @@
+# =============================================================================
+# CHAOS ENGINEERING ALERT RULES
+# =============================================================================
+# Prometheus alert rules for chaos engineering experiments.
+# Defines alerts for monitoring chaos experiment execution and system health.
+# =============================================================================
+
+# Purpose: Define alert rules for chaos engineering experiments
+# Why needed: Provides comprehensive alerting for chaos experiments
+# Impact: Enables proactive monitoring and alerting during experiments
+# Usage: Used by Prometheus to trigger alerts during chaos experiments
+# Returns: Alert configuration for chaos engineering monitoring
+
+groups:
+  # =============================================================================
+  # CHAOS EXPERIMENT ALERTS
+  # =============================================================================
+  # Purpose: Alert rules for chaos experiment execution
+  # Why needed: Monitors chaos experiment execution and provides alerts
+  
+  - name: chaos-experiments
+    rules:
+      # =============================================================================
+      # POD FAILURE EXPERIMENT ALERTS
+      # =============================================================================
+      # Purpose: Alerts for pod failure experiments
+      # Why needed: Monitors pod failure experiment execution
+      
+      - alert: PodFailureExperimentStarted
+        expr: chaos_experiment_active{experiment_type="pod-failure"} == 1
+        for: 0m
+        labels:
+          severity: info
+          experiment_type: pod-failure
+          component: chaos-engineering
+        annotations:
+          summary: "Pod failure chaos experiment started"
+          description: "A pod failure chaos experiment has been initiated. Monitoring pod recreation and service availability."
+          runbook_url: "https://docs.company.com/chaos-engineering/pod-failure"
+      
+      - alert: PodFailureExperimentFailed
+        expr: chaos_experiment_failed{experiment_type="pod-failure"} == 1
+        for: 0m
+        labels:
+          severity: warning
+          experiment_type: pod-failure
+          component: chaos-engineering
+        annotations:
+          summary: "Pod failure chaos experiment failed"
+          description: "A pod failure chaos experiment has failed. Check pod recreation and service availability."
+          runbook_url: "https://docs.company.com/chaos-engineering/pod-failure-troubleshooting"
+      
+      - alert: PodRecreationTimeout
+        expr: (time() - kube_pod_created{namespace="ecommerce-production"}) > 300
+        for: 5m
+        labels:
+          severity: critical
+          experiment_type: pod-failure
+          component: kubernetes
+        annotations:
+          summary: "Pod recreation timeout exceeded"
+          description: "Pod {{ $labels.pod }} has not been recreated within 5 minutes. Check deployment and replica sets."
+          runbook_url: "https://docs.company.com/kubernetes/pod-recreation-troubleshooting"
+      
+      # =============================================================================
+      # NETWORK PARTITION EXPERIMENT ALERTS
+      # =============================================================================
+      # Purpose: Alerts for network partition experiments
+      # Why needed: Monitors network partition experiment execution
+      
+      - alert: NetworkPartitionExperimentStarted
+        expr: chaos_experiment_active{experiment_type="network-partition"} == 1
+        for: 0m
+        labels:
+          severity: info
+          experiment_type: network-partition
+          component: chaos-engineering
+        annotations:
+          summary: "Network partition chaos experiment started"
+          description: "A network partition chaos experiment has been initiated. Monitoring network connectivity and service behavior."
+          runbook_url: "https://docs.company.com/chaos-engineering/network-partition"
+      
+      - alert: NetworkPartitionExperimentFailed
+        expr: chaos_experiment_failed{experiment_type="network-partition"} == 1
+        for: 0m
+        labels:
+          severity: warning
+          experiment_type: network-partition
+          component: chaos-engineering
+        annotations:
+          summary: "Network partition chaos experiment failed"
+          description: "A network partition chaos experiment has failed. Check network policies and connectivity."
+          runbook_url: "https://docs.company.com/chaos-engineering/network-partition-troubleshooting"
+      
+      - alert: NetworkConnectivityLost
+        expr: probe_success == 0
+        for: 2m
+        labels:
+          severity: critical
+          experiment_type: network-partition
+          component: network
+        annotations:
+          summary: "Network connectivity lost"
+          description: "Network connectivity to {{ $labels.instance }} has been lost. Check network policies and connectivity."
+          runbook_url: "https://docs.company.com/network/connectivity-troubleshooting"
+      
+      # =============================================================================
+      # RESOURCE EXHAUSTION EXPERIMENT ALERTS
+      # =============================================================================
+      # Purpose: Alerts for resource exhaustion experiments
+      # Why needed: Monitors resource exhaustion experiment execution
+      
+      - alert: ResourceExhaustionExperimentStarted
+        expr: chaos_experiment_active{experiment_type="resource-exhaustion"} == 1
+        for: 0m
+        labels:
+          severity: info
+          experiment_type: resource-exhaustion
+          component: chaos-engineering
+        annotations:
+          summary: "Resource exhaustion chaos experiment started"
+          description: "A resource exhaustion chaos experiment has been initiated. Monitoring resource usage and performance."
+          runbook_url: "https://docs.company.com/chaos-engineering/resource-exhaustion"
+      
+      - alert: ResourceExhaustionExperimentFailed
+        expr: chaos_experiment_failed{experiment_type="resource-exhaustion"} == 1
+        for: 0m
+        labels:
+          severity: warning
+          experiment_type: resource-exhaustion
+          component: chaos-engineering
+        annotations:
+          summary: "Resource exhaustion chaos experiment failed"
+          description: "A resource exhaustion chaos experiment has failed. Check resource usage and scaling behavior."
+          runbook_url: "https://docs.company.com/chaos-engineering/resource-exhaustion-troubleshooting"
+      
+      - alert: HighCPUUsage
+        expr: rate(container_cpu_usage_seconds_total[5m]) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          experiment_type: resource-exhaustion
+          component: kubernetes
+        annotations:
+          summary: "High CPU usage detected"
+          description: "Container {{ $labels.container }} in pod {{ $labels.pod }} is using {{ $value }} CPU. Check resource limits and scaling."
+          runbook_url: "https://docs.company.com/kubernetes/cpu-usage-troubleshooting"
+      
+      - alert: HighMemoryUsage
+        expr: container_memory_usage_bytes / container_spec_memory_limit_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          experiment_type: resource-exhaustion
+          component: kubernetes
+        annotations:
+          summary: "High memory usage detected"
+          description: "Container {{ $labels.container }} in pod {{ $labels.pod }} is using {{ $value }} memory. Check resource limits and scaling."
+          runbook_url: "https://docs.company.com/kubernetes/memory-usage-troubleshooting"
+      
+      # =============================================================================
+      # STORAGE FAILURE EXPERIMENT ALERTS
+      # =============================================================================
+      # Purpose: Alerts for storage failure experiments
+      # Why needed: Monitors storage failure experiment execution
+      
+      - alert: StorageFailureExperimentStarted
+        expr: chaos_experiment_active{experiment_type="storage-failure"} == 1
+        for: 0m
+        labels:
+          severity: info
+          experiment_type: storage-failure
+          component: chaos-engineering
+        annotations:
+          summary: "Storage failure chaos experiment started"
+          description: "A storage failure chaos experiment has been initiated. Monitoring storage health and data access."
+          runbook_url: "https://docs.company.com/chaos-engineering/storage-failure"
+      
+      - alert: StorageFailureExperimentFailed
+        expr: chaos_experiment_failed{experiment_type="storage-failure"} == 1
+        for: 0m
+        labels:
+          severity: warning
+          experiment_type: storage-failure
+          component: chaos-engineering
+        annotations:
+          summary: "Storage failure chaos experiment failed"
+          description: "A storage failure chaos experiment has failed. Check storage health and data integrity."
+          runbook_url: "https://docs.company.com/chaos-engineering/storage-failure-troubleshooting"
+      
+      - alert: PersistentVolumeUnbound
+        expr: kube_persistentvolume_status_phase{phase="Available"} == 1
+        for: 5m
+        labels:
+          severity: critical
+          experiment_type: storage-failure
+          component: storage
+        annotations:
+          summary: "Persistent volume is unbound"
+          description: "Persistent volume {{ $labels.persistentvolume }} is available but not bound to any PVC. Check storage configuration."
+          runbook_url: "https://docs.company.com/kubernetes/pv-troubleshooting"
+      
+      # =============================================================================
+      # MONITORING SYSTEM FAILURE ALERTS
+      # =============================================================================
+      # Purpose: Alerts for monitoring system failures
+      # Why needed: Monitors monitoring system health during experiments
+      
+      - alert: MonitoringSystemFailure
+        expr: up{job=~"prometheus|grafana|alertmanager"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          experiment_type: monitoring-failure
+          component: monitoring
+        annotations:
+          summary: "Monitoring system failure detected"
+          description: "Monitoring system {{ $labels.job }} is down. Check monitoring system health and connectivity."
+          runbook_url: "https://docs.company.com/monitoring/system-failure-troubleshooting"
+      
+      - alert: PrometheusTargetDown
+        expr: up{job="prometheus"} == 0
+        for: 5m
+        labels:
+          severity: warning
+          experiment_type: monitoring-failure
+          component: prometheus
+        annotations:
+          summary: "Prometheus target is down"
+          description: "Prometheus target {{ $labels.instance }} is down. Check target health and connectivity."
+          runbook_url: "https://docs.company.com/monitoring/prometheus-troubleshooting"
+      
+      # =============================================================================
+      # APPLICATION HEALTH ALERTS
+      # =============================================================================
+      # Purpose: Alerts for application health during experiments
+      # Why needed: Monitors application health during chaos experiments
+      
+      - alert: ApplicationHighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: application
+        annotations:
+          summary: "High application error rate"
+          description: "Application {{ $labels.service }} has error rate of {{ $value }}. Check application health and logs."
+          runbook_url: "https://docs.company.com/application/error-rate-troubleshooting"
+      
+      - alert: ApplicationHighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 5
+        for: 5m
+        labels:
+          severity: warning
+          component: application
+        annotations:
+          summary: "High application response time"
+          description: "Application {{ $labels.service }} has 95th percentile response time of {{ $value }}s. Check performance and resources."
+          runbook_url: "https://docs.company.com/application/response-time-troubleshooting"
+      
+      - alert: ServiceEndpointDown
+        expr: kube_endpoint_address_available == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: kubernetes
+        annotations:
+          summary: "Service endpoint is down"
+          description: "Service {{ $labels.service }} has no available endpoints. Check pod health and service configuration."
+          runbook_url: "https://docs.company.com/kubernetes/service-endpoint-troubleshooting"
+      
+      # =============================================================================
+      # EXPERIMENT RECOVERY ALERTS
+      # =============================================================================
+      # Purpose: Alerts for experiment recovery
+      # Why needed: Monitors recovery from chaos experiments
+      
+      - alert: ExperimentRecoveryTimeout
+        expr: (time() - chaos_experiment_start_time) > 600
+        for: 0m
+        labels:
+          severity: critical
+          component: chaos-engineering
+        annotations:
+          summary: "Chaos experiment recovery timeout"
+          description: "Chaos experiment {{ $labels.experiment_type }} has exceeded recovery timeout. Manual intervention may be required."
+          runbook_url: "https://docs.company.com/chaos-engineering/recovery-timeout-troubleshooting"
+      
+      - alert: ExperimentRecoverySuccessful
+        expr: chaos_experiment_recovered == 1
+        for: 0m
+        labels:
+          severity: info
+          component: chaos-engineering
+        annotations:
+          summary: "Chaos experiment recovery successful"
+          description: "Chaos experiment {{ $labels.experiment_type }} has recovered successfully. System is back to normal state."
+          runbook_url: "https://docs.company.com/chaos-engineering/recovery-success"

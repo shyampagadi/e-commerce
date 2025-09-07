@@ -1,0 +1,311 @@
+# =============================================================================
+# RESOURCE EXHAUSTION CHAOS EXPERIMENT DEFINITION
+# =============================================================================
+# Kubernetes YAML definition for resource exhaustion chaos experiments.
+# Defines the experiment parameters and constraints for resource constraint testing.
+# =============================================================================
+
+# Purpose: Define resource exhaustion chaos experiment parameters
+# Why needed: Provides structured experiment definition for resource exhaustion testing
+# Impact: Enables consistent and repeatable resource exhaustion experiments
+# Usage: Used by chaos engineering scripts to configure resource experiments
+# Returns: Experiment configuration for resource exhaustion testing
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: resource-exhaustion-experiment-config
+  namespace: ecommerce-production
+  labels:
+    app: chaos-engineering
+    experiment-type: resource-exhaustion
+    version: "1.0"
+data:
+  # =============================================================================
+  # EXPERIMENT CONFIGURATION
+  # =============================================================================
+  # Purpose: Define experiment configuration parameters
+  # Why needed: Provides centralized configuration for resource exhaustion experiments
+  # Impact: Enables consistent experiment execution across different environments
+  
+  experiment-name: "resource-exhaustion"
+  # Purpose: Specifies the experiment name
+  # Why needed: Identifies the experiment type
+  # Impact: Experiment is identified as resource exhaustion type
+  # Value: resource-exhaustion
+  
+  experiment-description: "Test application behavior when system resources (CPU, memory, disk) are exhausted or constrained"
+  # Purpose: Describes the experiment purpose
+  # Why needed: Provides context for the experiment
+  # Impact: Users understand what the experiment tests
+  # Value: Comprehensive description of resource exhaustion testing
+  
+  experiment-duration: "20m"
+  # Purpose: Sets the default experiment duration
+  # Why needed: Provides default duration for experiments
+  # Impact: Experiments run for specified duration by default
+  # Value: 20 minutes (can be overridden)
+  
+  # =============================================================================
+  # RESOURCE EXHAUSTION CONFIGURATION
+  # =============================================================================
+  # Purpose: Define resource exhaustion parameters
+  # Why needed: Specifies how resources are exhausted
+  # Impact: Determines the scope and method of resource constraint
+  
+  resource-types: |
+    - cpu
+    - memory
+    - disk
+    - network-io
+  # Purpose: Types of resources to exhaust
+  # Why needed: Provides different resource exhaustion scenarios
+  # Impact: Multiple resource types can be tested
+  # Value: Array of resource types
+  
+  default-resource-type: "cpu"
+  # Purpose: Default resource type for experiments
+  # Why needed: Provides default resource type when not specified
+  # Impact: Experiments use CPU exhaustion by default
+  # Value: cpu
+  
+  exhaustion-levels: |
+    - 80%
+    - 90%
+    - 95%
+    - 99%
+  # Purpose: Levels of resource exhaustion to test
+  # Why needed: Provides different exhaustion intensities
+  # Impact: Multiple exhaustion levels can be tested
+  # Value: Array of exhaustion percentages
+  
+  default-exhaustion-level: "90%"
+  # Purpose: Default exhaustion level for experiments
+  # Why needed: Provides default exhaustion level when not specified
+  # Impact: Experiments use 90% exhaustion by default
+  # Value: 90%
+  
+  # =============================================================================
+  # SAFETY CONSTRAINTS
+  # =============================================================================
+  # Purpose: Define safety constraints for the experiment
+  # Why needed: Ensures experiments don't break system safety
+  # Impact: Maintains system stability during experiments
+  
+  max-resource-usage: "95%"
+  # Purpose: Maximum resource usage allowed
+  # Why needed: Prevents complete resource exhaustion
+  # Impact: Limits resource usage to maintain system stability
+  # Value: 95% maximum
+  
+  min-available-resources: "5%"
+  # Purpose: Minimum resources that must remain available
+  # Why needed: Ensures system remains functional
+  # Impact: Maintains minimum resource availability
+  # Value: 5% minimum
+  
+  resource-recovery-timeout: "300"
+  # Purpose: Maximum time to wait for resource recovery
+  # Why needed: Prevents infinite resource constraint
+  # Impact: Resource constraints are automatically released after timeout
+  # Value: 300 seconds (5 minutes)
+  
+  # =============================================================================
+  # TARGET CONFIGURATION
+  # =============================================================================
+  # Purpose: Define target components for the experiment
+  # Why needed: Specifies which components to target for resource exhaustion
+  # Impact: Determines scope of the experiment
+  
+  target-components: |
+    - frontend
+    - backend
+    - database
+    - monitoring
+    - all
+  # Purpose: List of components to target for resource exhaustion
+  # Why needed: Provides options for experiment targeting
+  # Impact: Users can select specific components to test
+  # Value: Array of available targets
+  
+  default-target: "backend"
+  # Purpose: Default target component for experiments
+  # Why needed: Provides default target when not specified
+  # Impact: Experiments target backend components by default
+  # Value: backend
+  
+  # =============================================================================
+  # STRESS TESTING CONFIGURATION
+  # =============================================================================
+  # Purpose: Define stress testing parameters
+  # Why needed: Specifies how stress is applied to resources
+  # Impact: Determines the method of resource stress generation
+  
+  stress-pod-template: |
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: resource-stress-{resource-type}
+      namespace: ecommerce-production
+      labels:
+        app: chaos-engineering
+        experiment-type: resource-exhaustion
+    spec:
+      containers:
+      - name: stress
+        image: stress:latest
+        resources:
+          requests:
+            cpu: "{cpu-request}"
+            memory: "{memory-request}"
+          limits:
+            cpu: "{cpu-limit}"
+            memory: "{memory-limit}"
+        args:
+        - -c
+        - "{cpu-stress}"
+        - -m
+        - "{memory-stress}"
+  # Purpose: Template for creating stress pods
+  # Why needed: Provides template for stress pod creation
+  # Impact: Stress pods are created using this template
+  # Value: Kubernetes Pod YAML template
+  
+  stress-cleanup: "true"
+  # Purpose: Enable automatic cleanup of stress pods
+  # Why needed: Ensures stress pods are removed after experiment
+  # Impact: Stress pods are automatically cleaned up
+  # Value: true (enabled)
+  
+  # =============================================================================
+  # MONITORING CONFIGURATION
+  # =============================================================================
+  # Purpose: Define monitoring parameters for the experiment
+  # Why needed: Enables comprehensive monitoring during experiments
+  # Impact: Provides visibility into experiment execution
+  
+  monitoring-interval: "5"
+  # Purpose: Interval between monitoring checks
+  # Why needed: Determines how frequently to check resource usage
+  # Impact: Resources are checked every 5 seconds during experiments
+  # Value: 5 seconds
+  
+  metrics-to-monitor: |
+    - cpu-usage
+    - memory-usage
+    - disk-usage
+    - network-io
+    - pod-status
+    - node-resources
+  # Purpose: Metrics to monitor during experiments
+  # Why needed: Provides comprehensive resource monitoring
+  # Impact: Multiple resource metrics are tracked
+  # Value: Array of resource metrics
+  
+  resource-thresholds: |
+    - cpu-warning: 80%
+    - cpu-critical: 95%
+    - memory-warning: 85%
+    - memory-critical: 95%
+    - disk-warning: 90%
+    - disk-critical: 98%
+  # Purpose: Thresholds for resource alerts
+  # Why needed: Defines when resource alerts should be triggered
+  # Impact: Alerts are triggered when thresholds are exceeded
+  # Value: Object of resource thresholds
+  
+  # =============================================================================
+  # VALIDATION CRITERIA
+  # =============================================================================
+  # Purpose: Define success criteria for the experiment
+  # Why needed: Provides clear criteria for experiment success
+  # Impact: Enables objective evaluation of experiment results
+  
+  success-criteria: |
+    - resource-exhaustion-achieved
+    - performance-degradation-observed
+    - scaling-triggered-appropriately
+    - monitoring-alerts-triggered
+    - resource-recovery-successful
+  # Purpose: Criteria for determining experiment success
+  # Why needed: Provides objective success metrics
+  # Impact: Experiments are evaluated against clear criteria
+  # Value: Array of success criteria
+  
+  failure-criteria: |
+    - resource-exhaustion-failed
+    - unexpected-performance-impact
+    - scaling-failure
+    - monitoring-failure
+    - resource-recovery-failed
+  # Purpose: Criteria for determining experiment failure
+  # Why needed: Provides objective failure metrics
+  # Impact: Experiments are evaluated against clear failure criteria
+  # Value: Array of failure criteria
+  
+  # =============================================================================
+  # RECOVERY PROCEDURES
+  # =============================================================================
+  # Purpose: Define recovery procedures for the experiment
+  # Why needed: Provides procedures for handling experiment failures
+  # Impact: Enables systematic recovery from experiment issues
+  
+  automatic-recovery: "true"
+  # Purpose: Enable automatic recovery procedures
+  # Why needed: Provides automatic recovery capability
+  # Impact: System automatically attempts recovery from failures
+  # Value: true (enabled)
+  
+  stress-pod-cleanup: "true"
+  # Purpose: Enable automatic stress pod cleanup
+  # Why needed: Ensures stress pods are removed
+  # Impact: Stress pods are automatically cleaned up
+  # Value: true (enabled)
+  
+  resource-recovery-timeout: "180"
+  # Purpose: Timeout for resource recovery
+  # Why needed: Defines maximum time for resource recovery
+  # Impact: Resource recovery times out after 180 seconds
+  # Value: 180 seconds (3 minutes)
+  
+  rollback-procedures: |
+    - remove-stress-pods
+    - verify-resource-availability
+    - check-pod-status
+    - validate-scaling-behavior
+    - test-application-performance
+  # Purpose: Procedures for rolling back experiments
+  # Why needed: Provides systematic rollback procedures
+  # Impact: Experiments can be safely rolled back
+  # Value: Array of rollback procedures
+  
+  # =============================================================================
+  # REPORTING CONFIGURATION
+  # =============================================================================
+  # Purpose: Define reporting parameters for the experiment
+  # Why needed: Enables comprehensive reporting of experiment results
+  # Impact: Provides detailed experiment reports
+  
+  report-format: "json"
+  # Purpose: Format for experiment reports
+  # Why needed: Specifies report output format
+  # Impact: Reports are generated in JSON format
+  # Value: json
+  
+  report-location: "/tmp/chaos-reports"
+  # Purpose: Location for storing experiment reports
+  # Why needed: Provides centralized location for reports
+  # Impact: Reports are stored in specified location
+  # Value: /tmp/chaos-reports
+  
+  include-resource-metrics: "true"
+  # Purpose: Include resource metrics in experiment reports
+  # Why needed: Provides comprehensive resource reporting
+  # Impact: Reports include detailed resource metrics
+  # Value: true (enabled)
+  
+  include-performance-data: "true"
+  # Purpose: Include performance data in experiment reports
+  # Why needed: Provides comprehensive performance reporting
+  # Impact: Reports include detailed performance data
+  # Value: true (enabled)
