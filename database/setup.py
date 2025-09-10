@@ -54,15 +54,15 @@ from dotenv import load_dotenv
 # Project paths
 PROJECT_ROOT = Path(__file__).parent.parent
 ENV_PATH = PROJECT_ROOT / ".env"
-BACKEND_PATH = PROJECT_ROOT / "backend"
-UPLOADS_PATH = BACKEND_PATH / "uploads" / "products"
+BACKEND_PATH = PROJECT_ROOT  # Changed: backend files are in project root when containerized
+UPLOADS_PATH = PROJECT_ROOT / "uploads" / "products"  # Changed: uploads in project root
 BACKUP_PATH = PROJECT_ROOT / "database" / "backups"
 
 # Load environment variables
 load_dotenv(ENV_PATH)
 
 # Add backend to Python path for imports
-sys.path.insert(0, str(BACKEND_PATH))
+sys.path.insert(0, str(PROJECT_ROOT))  # Changed: project root contains the app module
 
 # Database configuration - UPDATE THESE OR USE .env FILE
 DB_CONFIG = {
@@ -231,18 +231,119 @@ def validate_database() -> bool:
 
 def initialize_database_schema() -> bool:
     """
-    Initialize database schema by creating all tables.
+    Initialize complete database schema with extensions, functions, and tables.
     
     This function:
-    1. Drops all existing tables (clean slate)
-    2. Creates all tables defined in SQLAlchemy models
-    3. Verifies table creation was successful
+    1. Creates PostgreSQL extensions
+    2. Creates custom functions and types
+    3. Drops all existing tables (clean slate)
+    4. Creates all tables defined in SQLAlchemy models
+    5. Verifies table creation was successful
     """
-    print_step("Initializing database schema...")
+    print_step("Initializing complete database schema...")
     
     try:
         # Import SQLAlchemy models and engine
         from app.database import Base, engine
+        # Import all models to ensure they're registered with Base
+        from app.models import User, Category, Product, CartItem, Order, OrderItem
+        
+        # Create database extensions and functions
+        print_info("Setting up PostgreSQL extensions and functions...")
+        with engine.connect() as conn:
+            # Enable required PostgreSQL extensions
+            conn.execute(text('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"'))
+            conn.execute(text('CREATE EXTENSION IF NOT EXISTS "pg_trgm"'))
+            conn.execute(text('CREATE EXTENSION IF NOT EXISTS "unaccent"'))
+            
+            # Set timezone to UTC
+            conn.execute(text("SET timezone = 'UTC'"))
+            
+            # Create custom function for updating timestamps
+            conn.execute(text("""
+                CREATE OR REPLACE FUNCTION update_updated_at_column()
+                RETURNS TRIGGER AS $$
+                BEGIN
+                    NEW.updated_at = CURRENT_TIMESTAMP;
+                    RETURN NEW;
+                END;
+                $$ language 'plpgsql'
+            """))
+            
+            # Create slug generation function
+            conn.execute(text("""
+                CREATE OR REPLACE FUNCTION generate_slug(input_text TEXT)
+                RETURNS TEXT AS $$
+                BEGIN
+                    RETURN lower(
+                        regexp_replace(
+                            regexp_replace(
+                                regexp_replace(input_text, '[^a-zA-Z0-9\\s-]', '', 'g'),
+                                '\\s+', '-', 'g'
+                            ),
+                            '-+', '-', 'g'
+                        )
+                    );
+                END;
+                $$ LANGUAGE plpgsql
+            """))
+            
+            # Create sequences
+            conn.execute(text("""
+                CREATE SEQUENCE IF NOT EXISTS order_number_seq
+                    START WITH 1000
+                    INCREMENT BY 1
+                    NO MAXVALUE
+                    CACHE 1
+            """))
+            
+            conn.execute(text("""
+                CREATE SEQUENCE IF NOT EXISTS sku_seq
+                    START WITH 1
+                    INCREMENT BY 1
+                    NO MAXVALUE
+                    CACHE 1
+            """))
+            
+            # Create custom types/enums
+            conn.execute(text("""
+                DO $$ BEGIN
+                    CREATE TYPE order_status AS ENUM (
+                        'pending', 'confirmed', 'processing',
+                        'shipped', 'delivered', 'cancelled', 'refunded'
+                    );
+                EXCEPTION
+                    WHEN duplicate_object THEN null;
+                END $$
+            """))
+            
+            conn.execute(text("""
+                DO $$ BEGIN
+                    CREATE TYPE payment_status AS ENUM (
+                        'pending', 'processing', 'completed', 'failed', 'refunded'
+                    );
+                EXCEPTION
+                    WHEN duplicate_object THEN null;
+                END $$
+            """))
+            
+            conn.execute(text("""
+                DO $$ BEGIN
+                    CREATE TYPE user_role AS ENUM (
+                        'customer', 'admin', 'moderator'
+                    );
+                EXCEPTION
+                    WHEN duplicate_object THEN null;
+                END $$
+            """))
+            
+            # Create schemas
+            conn.execute(text('CREATE SCHEMA IF NOT EXISTS audit'))
+            conn.execute(text('CREATE SCHEMA IF NOT EXISTS staging'))
+            
+            conn.commit()
+        
+        print_success("PostgreSQL extensions and functions created")
         
         # Drop existing tables if they exist
         print_info("Dropping existing tables...")
@@ -714,6 +815,10 @@ def init_database_clean() -> bool:
         return False
     
     try:
+        # Import all models first to register them with Base
+        from app.database import Base, engine, SessionLocal
+        from app.models import User, Category, Product, CartItem, Order, OrderItem
+        
         # Initialize schema
         if not initialize_database_schema():
             return False
@@ -766,6 +871,10 @@ def init_database_sample() -> bool:
         return False
     
     try:
+        # Import all models first to register them with Base
+        from app.database import Base, engine, SessionLocal
+        from app.models import User, Category, Product, CartItem, Order, OrderItem
+        
         # Initialize schema
         if not initialize_database_schema():
             return False

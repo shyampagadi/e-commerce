@@ -1,0 +1,123 @@
+version: '3.8'
+
+# ===========================================
+# E-COMMERCE APPLICATION DOCKER COMPOSE
+# ===========================================
+# This file defines all services needed for the e-commerce application
+# Services will start in this order: Database → Setup → Backend → Frontend
+
+services:
+  # ===========================================
+  # SERVICE 1: PostgreSQL Database
+  # ===========================================
+  # TODO: Add PostgreSQL service
+  # - Use postgres:15-alpine image
+  # - Set container name: ecommerce-db
+  # - Environment: POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD
+  # - Port: 5432:5432
+  # - Volume: postgres_data for persistence
+  # - Health check: pg_isready command
+  
+  database:
+    # Add your database configuration here
+    image: postgres:17.6-alpine
+    container_name: ecommerce_db
+    restart: unless_stopped
+
+    environment:
+      - POSTGRES_DB=ecommerce_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=admin
+      - POSTGRES_INITDB_ARGS="--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+
+    ports:
+      - 5432:5432
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    networks:
+      - ecommerce-network
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ecommerce_db"]
+      interval: 1m30s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
+
+
+
+  # ===========================================
+  # SERVICE 2: Database Setup (Runs Once)
+  # ===========================================
+  # TODO: Add database setup service
+  # - Build from ./backend/Dockerfile
+  # - Set container name: ecommerce-db-setup
+  # - Environment: DATABASE_URL and DB connection details
+  # - Command: python database/setup.py --all
+  # - Volumes: Mount ./database and ./backend folders
+  # - Depends on: database (healthy)
+  # - Restart: "no" (run once and exit)
+    
+  db-setup:
+    # Add your database setup configuration here
+
+  # ===========================================
+  # SERVICE 3: Backend API (FastAPI)
+  # ===========================================
+  # TODO: Add backend service
+  # - Build from ./backend/Dockerfile
+  # - Set container name: ecommerce-backend
+  # - Environment: DATABASE_URL, SECRET_KEY, CORS settings
+  # - Port: 8000:8000
+  # - Volumes: Mount ./backend and uploads volume
+  # - Depends on: database (healthy) AND db-setup (completed)
+  # - Health check: curl to /health endpoint
+  
+  backend:
+    # Add your backend configuration here
+
+  # ===========================================
+  # SERVICE 4: Frontend (React)
+  # ===========================================
+  # TODO: Add frontend service
+  # - Build from ./frontend/Dockerfile
+  # - Set container name: ecommerce-frontend
+  # - Environment: REACT_APP_API_URL settings
+  # - Port: 3000:3000
+  # - Volumes: Mount ./frontend folder
+  # - Depends on: backend (healthy)
+  
+  frontend:
+    # Add your frontend configuration here
+
+# ===========================================
+# NETWORKS
+# ===========================================
+# TODO: Define network for service communication
+networks:
+  # Add ecommerce-network here
+  ecommerce-network:
+    driver:bridge
+
+
+# ===========================================
+# VOLUMES
+# ===========================================
+# TODO: Define persistent volumes
+volumes:
+  # Add postgres_data volume here
+  # Add backend_uploads volume here
+  postgres_data:
+    driver:local
+
+# ===========================================
+# INSTRUCTIONS FOR COMPLETION:
+# ===========================================
+# 1. Fill in each service configuration
+# 2. Add proper environment variables
+# 3. Set up volume mounts correctly
+# 4. Configure health checks
+# 5. Set service dependencies
+# 6. Test with: docker-compose up -d

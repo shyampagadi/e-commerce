@@ -1,0 +1,147 @@
+version: '3.8'
+
+services:
+  # ===========================================
+  # 1. PostgreSQL Database
+  # ===========================================
+  database:
+    image: postgres:15-alpine
+    container_name: ecommerce-db
+    restart: unless-stopped
+    
+    environment:
+      POSTGRES_DB: ecommerce_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+    
+    ports:
+      - "5432:5432"
+    
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    
+    networks:
+      - ecommerce-network
+    
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ecommerce_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===========================================
+  # 2. Database Setup (Run Once)
+  # ===========================================
+  db-setup:
+    build:
+      context: .
+      dockerfile: ./backend/Dockerfile
+    
+    container_name: ecommerce-db-setup
+    
+    environment:
+      DATABASE_URL: postgresql://postgres:admin@database:5432/ecommerce_db
+      DB_HOST: database
+      DB_PORT: 5432
+      DB_NAME: ecommerce_db
+      DB_USER: postgres
+      DB_PASSWORD: admin
+    
+    command: python database/setup.py --all
+    
+    volumes:
+      - ./database:/app/database:ro
+      - ./backend:/app:ro
+    
+    networks:
+      - ecommerce-network
+    
+    depends_on:
+      database:
+        condition: service_healthy
+    
+    restart: "no"
+
+  # ===========================================
+  # 3. Backend API (FastAPI)
+  # ===========================================
+  backend:
+    build:
+      context: .
+      dockerfile: ./backend/Dockerfile
+    
+    container_name: ecommerce-backend
+    restart: unless-stopped
+    
+    environment:
+      DATABASE_URL: postgresql://postgres:admin@database:5432/ecommerce_db
+      SECRET_KEY: dev-secret-key-change-in-production
+      DEBUG: "true"
+      BACKEND_CORS_ORIGINS: '["http://localhost:3000"]'
+    
+    ports:
+      - "8000:8000"
+    
+    volumes:
+      - ./backend:/app:ro
+      - backend_uploads:/app/uploads
+    
+    networks:
+      - ecommerce-network
+    
+    depends_on:
+      database:
+        condition: service_healthy
+      db-setup:
+        condition: service_completed_successfully
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ===========================================
+  # 4. Frontend (React)
+  # ===========================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    
+    container_name: ecommerce-frontend
+    restart: unless-stopped
+    
+    environment:
+      REACT_APP_API_URL: http://localhost:8000
+      REACT_APP_API_BASE_URL: http://localhost:8000/api/v1
+    
+    ports:
+      - "3000:3000"
+    
+    volumes:
+      - ./frontend:/app:ro
+      - /app/node_modules
+    
+    networks:
+      - ecommerce-network
+    
+    depends_on:
+      backend:
+        condition: service_healthy
+
+# ===========================================
+# Networks
+# ===========================================
+networks:
+  ecommerce-network:
+    driver: bridge
+
+# ===========================================
+# Volumes
+# ===========================================
+volumes:
+  postgres_data:
+    driver: local
+  backend_uploads:
+    driver: local

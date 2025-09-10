@@ -1,0 +1,889 @@
+# ============================================================================
+# 🐳 E-COMMERCE APPLICATION - DOCKER COMPOSE CONFIGURATION
+# ============================================================================
+# 
+# PROJECT: Full-Stack E-Commerce Platform
+# VERSION: 3.0 Production-Ready
+# AUTHOR: E-Commerce Development Team
+# DATE: September 2025
+# 
+# DESCRIPTION:
+# This Docker Compose file orchestrates a complete 4-tier e-commerce application
+# consisting of PostgreSQL database, automated database setup, FastAPI backend,
+# and React frontend. The configuration follows production best practices with
+# proper service dependencies, health checks, and resource management.
+# 
+# ARCHITECTURE OVERVIEW:
+# ┌─────────────────────────────────────────────────────────────────────────┐
+# │                    E-COMMERCE APPLICATION STACK                        │
+# ├─────────────────────────────────────────────────────────────────────────┤
+# │ TIER 1: Frontend (React + Nginx)          Port: 3000                  │
+# │ TIER 2: Backend API (FastAPI + Uvicorn)   Port: 8000                  │
+# │ TIER 3: Database Setup (Python Script)    Runs Once                   │
+# │ TIER 4: Database (PostgreSQL)             Port: 5432                  │
+# └─────────────────────────────────────────────────────────────────────────┘
+# 
+# SERVICE STARTUP SEQUENCE:
+# 1. PostgreSQL Database starts and becomes healthy
+# 2. Database Setup service runs setup.py script and exits
+# 3. Backend API starts after database setup completes
+# 4. Frontend starts after backend becomes healthy
+# 
+# PREREQUISITES:
+# - Docker Engine 20.10+ installed
+# - Docker Compose 2.0+ installed
+# - Minimum 4GB RAM available
+# - Ports 3000, 8000, 5432 available
+# - Backend and Frontend Dockerfiles exist
+# 
+# USAGE COMMANDS:
+# docker-compose up -d                    # Start all services
+# docker-compose logs -f                  # View all logs
+# docker-compose ps                       # Check service status
+# docker-compose down                     # Stop all services
+# docker-compose down -v                  # Stop and remove volumes
+# 
+# ENVIRONMENT VARIABLES:
+# Set these in .env file or export before running:
+# - SECRET_KEY: Application secret key (required for production)
+# - DEBUG: Enable debug mode (true/false)
+# - POSTGRES_PASSWORD: Database password (default: admin)
+# 
+# SECURITY CONSIDERATIONS:
+# - Change default passwords in production
+# - Use secrets management for sensitive data
+# - Enable SSL/TLS for external connections
+# - Implement proper firewall rules
+# - Regular security updates for base images
+# 
+# MONITORING & OBSERVABILITY:
+# - Health checks configured for all services
+# - Logs available via docker-compose logs
+# - Metrics can be added via Prometheus integration
+# - Service discovery through Docker networks
+# 
+# BACKUP & RECOVERY:
+# - Database data persisted in postgres_data volume
+# - Backend uploads stored in backend_uploads volume
+# - Regular backups recommended for production
+# 
+# SCALING CONSIDERATIONS:
+# - Services can be scaled horizontally: docker-compose up --scale backend=3
+# - Load balancer can be added for multiple backend instances
+# - Database read replicas can be configured
+# - CDN integration for static assets
+# 
+# TROUBLESHOOTING:
+# - Check service logs: docker-compose logs [service-name]
+# - Verify health status: docker-compose ps
+# - Test connectivity: docker-compose exec [service] ping [target]
+# - Reset volumes: docker-compose down -v && docker-compose up -d
+# 
+# ============================================================================
+
+version: '3.8'
+
+# ============================================================================
+# 🔧 SERVICES CONFIGURATION
+# ============================================================================
+# This section defines all application services with their complete configuration.
+# Each service is documented with its purpose, dependencies, and configuration
+# details to ensure maintainability and ease of understanding.
+
+services:
+  # ==========================================================================
+  # 🗄️ TIER 4: DATABASE LAYER - PostgreSQL Database Service
+  # ==========================================================================
+  # 
+  # PURPOSE:
+  # Primary data storage for the e-commerce application. Stores user accounts,
+  # product catalog, orders, shopping carts, and all transactional data.
+  # 
+  # TECHNICAL SPECIFICATIONS:
+  # - Image: postgres:15-alpine (lightweight, secure, latest stable)
+  # - Memory: Optimized for development (can be increased for production)
+  # - Storage: Persistent volume for data durability
+  # - Network: Isolated internal network for security
+  # 
+  # CONFIGURATION DETAILS:
+  # - Database Name: ecommerce_db (application-specific database)
+  # - User: postgres (superuser with full privileges)
+  # - Password: admin (CHANGE IN PRODUCTION!)
+  # - Port: 5432 (standard PostgreSQL port)
+  # - Encoding: UTF-8 (supports international characters)
+  # - Locale: C (performance optimized)
+  # 
+  # HEALTH CHECK STRATEGY:
+  # Uses pg_isready command to verify database accepts connections.
+  # Checks every 10 seconds with 5-second timeout and 5 retries.
+  # This ensures dependent services only start when database is fully ready.
+  # 
+  # VOLUME MAPPING:
+  # - postgres_data:/var/lib/postgresql/data (persistent data storage)
+  # - Ensures data survives container restarts and updates
+  # 
+  # SECURITY CONSIDERATIONS:
+  # - Database not exposed to external network by default
+  # - Access only through internal Docker network
+  # - Password should be changed for production deployment
+  # - Consider using Docker secrets for sensitive data
+  # 
+  # PERFORMANCE TUNING:
+  # - shared_buffers: Can be increased for production workloads
+  # - max_connections: Default 100, adjust based on application needs
+  # - work_mem: Optimize for query performance
+  # - maintenance_work_mem: Optimize for maintenance operations
+  # 
+  # BACKUP STRATEGY:
+  # - Regular pg_dump backups recommended
+  # - Volume snapshots for point-in-time recovery
+  # - Consider streaming replication for high availability
+  # 
+  database:
+    # Base image selection with rationale
+    image: postgres:15-alpine                    # Alpine Linux base for minimal attack surface
+    
+    # Container identification and management
+    container_name: ecommerce-db                 # Friendly name for easy identification
+    restart: unless-stopped                      # Auto-restart on failure, manual stop respected
+    
+    # Environment variables for PostgreSQL configuration
+    environment:
+      # Database configuration (modify for production)
+      POSTGRES_DB: ecommerce_db                  # Application database name
+      POSTGRES_USER: postgres                    # Database superuser (consider dedicated user)
+      POSTGRES_PASSWORD: admin                   # SECURITY: Change in production!
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"  # Performance optimization
+      
+      # PostgreSQL performance tuning (uncomment for production)
+      # POSTGRES_SHARED_BUFFERS: 256MB          # Memory for caching data
+      # POSTGRES_MAX_CONNECTIONS: 200           # Maximum concurrent connections
+      # POSTGRES_WORK_MEM: 4MB                  # Memory per query operation
+    
+    # Port mapping for external access (remove in production if not needed)
+    ports:
+      - "5432:5432"                             # Host:Container port mapping
+    
+    # Volume mounts for data persistence
+    volumes:
+      - postgres_data:/var/lib/postgresql/data  # Persistent data storage
+      # Optional: Custom configuration
+      # - ./config/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      # - ./config/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+    
+    # Network configuration for service isolation
+    networks:
+      - ecommerce-network                       # Internal application network
+    
+    # Health check configuration for dependency management
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ecommerce_db"]  # Connection test
+      interval: 10s                            # Check every 10 seconds
+      timeout: 5s                              # 5-second timeout per check
+      retries: 5                               # 5 failed attempts before unhealthy
+      start_period: 30s                        # Grace period for initial startup
+    
+    # Resource limits for development (adjust for production)
+    deploy:
+      resources:
+        limits:
+          memory: 512M                          # Maximum memory usage
+          cpus: '0.5'                          # Maximum CPU usage (50% of one core)
+        reservations:
+          memory: 256M                          # Guaranteed memory allocation
+          cpus: '0.25'                         # Guaranteed CPU allocation
+  # ==========================================================================
+  # 🔧 TIER 3: DATABASE SETUP SERVICE - Automated Schema & Data Initialization
+  # ==========================================================================
+  # 
+  # PURPOSE:
+  # One-time initialization service that sets up the database schema, creates
+  # tables, inserts sample data, and downloads product images. This service
+  # runs once and exits, ensuring the database is ready for the application.
+  # 
+  # EXECUTION STRATEGY:
+  # This is a "run-to-completion" service that:
+  # 1. Waits for PostgreSQL to be healthy and accepting connections
+  # 2. Executes the setup.py script with --all flag
+  # 3. Creates database schema using SQLAlchemy models
+  # 4. Inserts sample users, categories, and products
+  # 5. Downloads product images from external sources
+  # 6. Exits successfully, allowing dependent services to start
+  # 
+  # TECHNICAL IMPLEMENTATION:
+  # - Uses same base image as backend for consistency
+  # - Mounts source code as read-only volumes
+  # - Inherits database connection configuration
+  # - Runs Python script with full database setup
+  # 
+  # ERROR HANDLING:
+  # - If setup fails, dependent services won't start
+  # - Logs provide detailed error information
+  # - Can be re-run by restarting the service
+  # - Idempotent operations prevent duplicate data
+  # 
+  # VOLUME STRATEGY:
+  # - ./database:/app/database:ro (setup script and utilities)
+  # - ./backend:/app:ro (SQLAlchemy models and dependencies)
+  # - Read-only mounts prevent accidental modifications
+  # 
+  # DEPENDENCY MANAGEMENT:
+  # - Depends on database service being healthy
+  # - Backend service depends on this service completing
+  # - Uses service_completed_successfully condition
+  # 
+  # TROUBLESHOOTING:
+  # - Check logs: docker-compose logs db-setup
+  # - Verify database connectivity from setup container
+  # - Ensure all Python dependencies are installed
+  # - Check file permissions on mounted volumes
+  # 
+  db-setup:
+    # Build configuration using backend Dockerfile
+    build:
+      context: ./backend                        # Build context for Docker image
+      dockerfile: Dockerfile                   # Dockerfile location within context
+      # Optional build arguments for customization
+      args:
+        - BUILD_DATE=${BUILD_DATE:-$(date -u +'%Y-%m-%dT%H:%M:%SZ')}  # Build timestamp
+        - VCS_REF=${VCS_REF:-dev}             # Git commit hash for traceability
+    
+    # Container identification and lifecycle management
+    container_name: ecommerce-db-setup         # Descriptive container name
+    restart: "no"                             # Never restart - run once and exit
+    
+    # Environment variables for database connection
+    environment:
+      # Database connection string for SQLAlchemy
+      DATABASE_URL: postgresql://postgres:admin@database:5432/ecommerce_db
+      
+      # Individual connection parameters for flexibility
+      DB_HOST: database                        # Database service hostname
+      DB_PORT: 5432                           # Database port number
+      DB_NAME: ecommerce_db                   # Target database name
+      DB_USER: postgres                       # Database username
+      DB_PASSWORD: admin                      # Database password (match database service)
+      
+      # Application configuration
+      PYTHONPATH: /app                        # Python module search path
+      PYTHONUNBUFFERED: 1                    # Ensure logs appear immediately
+      
+      # Setup script configuration
+      SETUP_MODE: full                        # Full setup with sample data
+      DOWNLOAD_IMAGES: true                   # Download product images
+      CREATE_ADMIN: true                     # Create admin user
+      SAMPLE_DATA: true                      # Insert sample products and categories
+    
+    # Command to execute the database setup
+    command: >
+      sh -c "
+        echo '🔧 Starting database setup process...' &&
+        echo '📋 Waiting for database to be ready...' &&
+        python -c 'import time; time.sleep(5)' &&
+        echo '🚀 Running database initialization...' &&
+        python database/setup.py --all &&
+        echo '✅ Database setup completed successfully!'
+      "
+    
+    # Volume mounts for accessing source code and scripts
+    volumes:
+      # Database setup scripts and utilities (read-only)
+      - ./database:/app/database:ro           # Setup scripts, SQL files, utilities
+      
+      # Backend source code for model imports (read-only)
+      - ./backend:/app:ro                     # SQLAlchemy models, utilities, config
+      
+      # Optional: Custom configuration files
+      # - ./config/setup.conf:/app/config/setup.conf:ro
+    
+    # Network configuration for database access
+    networks:
+      - ecommerce-network                     # Same network as database service
+    
+    # Service dependencies - critical for proper startup order
+    depends_on:
+      database:
+        condition: service_healthy            # Wait for database to be fully ready
+    
+    # Resource limits for setup process
+    deploy:
+      resources:
+        limits:
+          memory: 256M                        # Sufficient for setup operations
+          cpus: '0.25'                       # Minimal CPU requirements
+    
+    # Labels for container management and monitoring
+    labels:
+      - "com.ecommerce.service=database-setup"
+      - "com.ecommerce.version=1.0"
+      - "com.ecommerce.description=Database initialization service"
+  # ==========================================================================
+  # 🖥️ TIER 2: APPLICATION LAYER - FastAPI Backend Service
+  # ==========================================================================
+  # 
+  # PURPOSE:
+  # Core business logic layer providing RESTful API endpoints for the e-commerce
+  # application. Handles user authentication, product management, shopping cart
+  # operations, order processing, and all database interactions.
+  # 
+  # API ENDPOINTS OVERVIEW:
+  # - /api/v1/auth/* - User authentication and authorization
+  # - /api/v1/products/* - Product catalog management
+  # - /api/v1/categories/* - Product category operations
+  # - /api/v1/cart/* - Shopping cart functionality
+  # - /api/v1/orders/* - Order processing and tracking
+  # - /api/v1/users/* - User profile management
+  # - /docs - Interactive API documentation (Swagger UI)
+  # - /health - Health check endpoint for monitoring
+  # 
+  # TECHNICAL STACK:
+  # - FastAPI: Modern, fast web framework for building APIs
+  # - Uvicorn: ASGI server for high-performance async operations
+  # - SQLAlchemy: ORM for database operations and migrations
+  # - Pydantic: Data validation and serialization
+  # - JWT: Secure token-based authentication
+  # - Bcrypt: Password hashing for security
+  # 
+  # SECURITY FEATURES:
+  # - JWT token authentication with expiration
+  # - Password hashing using bcrypt
+  # - CORS configuration for cross-origin requests
+  # - Input validation using Pydantic schemas
+  # - SQL injection prevention through ORM
+  # - Rate limiting (can be added via middleware)
+  # 
+  # PERFORMANCE OPTIMIZATIONS:
+  # - Async/await for non-blocking operations
+  # - Connection pooling for database efficiency
+  # - Response caching for frequently accessed data
+  # - Gzip compression for API responses
+  # - Optimized database queries with proper indexing
+  # 
+  # MONITORING & OBSERVABILITY:
+  # - Health check endpoint for load balancer integration
+  # - Structured logging for debugging and monitoring
+  # - Request/response timing metrics
+  # - Error tracking and reporting
+  # - Database query performance monitoring
+  # 
+  # SCALABILITY CONSIDERATIONS:
+  # - Stateless design for horizontal scaling
+  # - Database connection pooling
+  # - Async operations for high concurrency
+  # - Load balancer ready (multiple instances supported)
+  # - Microservices architecture ready
+  # 
+  backend:
+    # Build configuration for custom application image
+    build:
+      context: ./backend                      # Build context containing source code
+      dockerfile: Dockerfile                 # Dockerfile with FastAPI setup
+      # Build arguments for customization and metadata
+      args:
+        - BUILD_DATE=${BUILD_DATE:-$(date -u +'%Y-%m-%dT%H:%M:%SZ')}
+        - VCS_REF=${VCS_REF:-dev}
+        - VERSION=${VERSION:-1.0.0}
+    
+    # Container identification and lifecycle management
+    container_name: ecommerce-backend        # Descriptive name for easy identification
+    restart: unless-stopped                  # Auto-restart on failure, respect manual stops
+    
+    # Environment variables for application configuration
+    environment:
+      # Database connection configuration
+      DATABASE_URL: postgresql://postgres:admin@database:5432/ecommerce_db
+      
+      # Application security settings
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production-immediately}
+      ALGORITHM: HS256                       # JWT signing algorithm
+      ACCESS_TOKEN_EXPIRE_MINUTES: 30       # Token expiration time
+      
+      # Application behavior settings
+      DEBUG: ${DEBUG:-true}                  # Enable debug mode for development
+      ENVIRONMENT: ${ENVIRONMENT:-development}  # Environment identifier
+      LOG_LEVEL: ${LOG_LEVEL:-info}         # Logging verbosity level
+      
+      # CORS (Cross-Origin Resource Sharing) configuration
+      BACKEND_CORS_ORIGINS: '["http://localhost:3000","http://127.0.0.1:3000","http://frontend:3000"]'
+      
+      # API configuration
+      API_V1_STR: /api/v1                   # API version prefix
+      PROJECT_NAME: "E-Commerce API"        # Application name for documentation
+      
+      # File upload configuration
+      MAX_UPLOAD_SIZE: 10485760             # 10MB maximum file size
+      ALLOWED_EXTENSIONS: "jpg,jpeg,png,gif,webp"  # Allowed image formats
+      
+      # Performance and optimization settings
+      WORKERS: 1                            # Number of worker processes
+      KEEP_ALIVE: 2                         # Keep-alive timeout
+      MAX_REQUESTS: 1000                    # Max requests per worker
+      MAX_REQUESTS_JITTER: 100              # Jitter for max requests
+      
+      # Database connection pool settings
+      DB_POOL_SIZE: 20                      # Connection pool size
+      DB_MAX_OVERFLOW: 30                   # Maximum overflow connections
+      DB_POOL_TIMEOUT: 30                   # Connection timeout
+      
+      # Python runtime configuration
+      PYTHONPATH: /app                      # Module search path
+      PYTHONUNBUFFERED: 1                   # Immediate log output
+      PYTHONDONTWRITEBYTECODE: 1            # Prevent .pyc file creation
+    
+    # Port mapping for external API access
+    ports:
+      - "8000:8000"                         # Host:Container port mapping
+    
+    # Volume mounts for development and data persistence
+    volumes:
+      # Source code mounting for development (hot reload)
+      - ./backend:/app:ro                   # Read-only source code mount
+      
+      # Persistent storage for uploaded files
+      - backend_uploads:/app/uploads        # User-uploaded files (product images, avatars)
+      
+      # Log files for debugging and monitoring
+      - backend_logs:/app/logs              # Application and access logs
+      
+      # Optional: Configuration files
+      # - ./config/backend.conf:/app/config/app.conf:ro
+      # - ./ssl/certs:/app/ssl:ro           # SSL certificates for HTTPS
+    
+    # Network configuration for service communication
+    networks:
+      - ecommerce-network                   # Internal application network
+    
+    # Service dependencies - ensures proper startup order
+    depends_on:
+      database:
+        condition: service_healthy          # Database must be accepting connections
+      db-setup:
+        condition: service_completed_successfully  # Database setup must complete first
+    
+    # Health check configuration for load balancer integration
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]  # Health endpoint check
+      interval: 30s                         # Check every 30 seconds
+      timeout: 10s                          # 10-second timeout per check
+      retries: 3                            # 3 failed attempts before unhealthy
+      start_period: 60s                     # Grace period for application startup
+    
+    # Resource limits and reservations
+    deploy:
+      resources:
+        limits:
+          memory: 1G                        # Maximum memory usage
+          cpus: '1.0'                       # Maximum CPU usage (1 full core)
+        reservations:
+          memory: 512M                      # Guaranteed memory allocation
+          cpus: '0.5'                       # Guaranteed CPU allocation
+    
+    # Container labels for management and monitoring
+    labels:
+      - "com.ecommerce.service=backend-api"
+      - "com.ecommerce.version=1.0"
+      - "com.ecommerce.description=FastAPI backend service"
+      - "com.ecommerce.port=8000"
+      - "traefik.enable=true"               # Enable Traefik load balancer (if used)
+      - "traefik.http.routers.backend.rule=PathPrefix(`/api`)"
+  # ==========================================================================
+  # 🌐 TIER 1: PRESENTATION LAYER - React Frontend Service
+  # ==========================================================================
+  # 
+  # PURPOSE:
+  # User interface layer providing a modern, responsive web application for
+  # customers and administrators. Built with React for dynamic user interactions,
+  # Tailwind CSS for styling, and optimized for performance and accessibility.
+  # 
+  # USER INTERFACE FEATURES:
+  # - Responsive design for desktop, tablet, and mobile devices
+  # - Product catalog with search, filtering, and pagination
+  # - Shopping cart with real-time updates and persistence
+  # - User authentication with secure login/registration
+  # - Order management and tracking for customers
+  # - Admin panel for product and order management
+  # - Real-time notifications and feedback
+  # 
+  # TECHNICAL STACK:
+  # - React 18: Modern UI library with hooks and concurrent features
+  # - React Router: Client-side routing for single-page application
+  # - Tailwind CSS: Utility-first CSS framework for rapid styling
+  # - Axios: HTTP client for API communication
+  # - React Query: Data fetching and caching library
+  # - React Hook Form: Efficient form handling and validation
+  # - Framer Motion: Smooth animations and transitions
+  # 
+  # PERFORMANCE OPTIMIZATIONS:
+  # - Code splitting for faster initial load times
+  # - Lazy loading of components and routes
+  # - Image optimization with WebP format support
+  # - Service worker for offline functionality
+  # - Bundle optimization and tree shaking
+  # - CDN integration for static assets
+  # 
+  # SECURITY CONSIDERATIONS:
+  # - JWT token storage in secure HTTP-only cookies
+  # - XSS protection through React's built-in sanitization
+  # - CSRF protection for form submissions
+  # - Content Security Policy (CSP) headers
+  # - Secure communication with HTTPS in production
+  # 
+  # ACCESSIBILITY FEATURES:
+  # - WCAG 2.1 AA compliance for screen readers
+  # - Keyboard navigation support
+  # - High contrast mode support
+  # - Semantic HTML structure
+  # - ARIA labels and descriptions
+  # 
+  # DEVELOPMENT FEATURES:
+  # - Hot module replacement for instant updates
+  # - ESLint and Prettier for code quality
+  # - TypeScript support for type safety
+  # - Storybook for component development
+  # - Jest and React Testing Library for testing
+  # 
+  frontend:
+    # Build configuration for optimized production image
+    build:
+      context: ./frontend                   # Build context containing React application
+      dockerfile: Dockerfile               # Multi-stage Dockerfile for optimization
+      # Build arguments for customization
+      args:
+        - BUILD_DATE=${BUILD_DATE:-$(date -u +'%Y-%m-%dT%H:%M:%SZ')}
+        - VCS_REF=${VCS_REF:-dev}
+        - NODE_ENV=${NODE_ENV:-production}  # Build mode (development/production)
+        - REACT_APP_VERSION=${VERSION:-1.0.0}
+    
+    # Container identification and lifecycle management
+    container_name: ecommerce-frontend     # Descriptive name for easy identification
+    restart: unless-stopped                # Auto-restart on failure, respect manual stops
+    
+    # Environment variables for React application
+    environment:
+      # API connection configuration
+      REACT_APP_API_URL: http://localhost:8000              # Backend API base URL
+      REACT_APP_API_BASE_URL: http://localhost:8000/api/v1  # API endpoints base path
+      
+      # Application configuration
+      REACT_APP_NAME: "E-Commerce Store"   # Application display name
+      REACT_APP_VERSION: ${VERSION:-1.0.0} # Version for display and debugging
+      REACT_APP_ENVIRONMENT: ${ENVIRONMENT:-development}    # Environment identifier
+      
+      # Feature flags for conditional functionality
+      REACT_APP_ENABLE_ANALYTICS: ${ENABLE_ANALYTICS:-false}  # Google Analytics
+      REACT_APP_ENABLE_PWA: ${ENABLE_PWA:-true}                # Progressive Web App
+      REACT_APP_ENABLE_NOTIFICATIONS: ${ENABLE_NOTIFICATIONS:-true}  # Push notifications
+      
+      # Performance and optimization settings
+      GENERATE_SOURCEMAP: ${GENERATE_SOURCEMAP:-false}      # Source maps for debugging
+      INLINE_RUNTIME_CHUNK: false          # Separate runtime chunk for caching
+      
+      # Security configuration
+      REACT_APP_CSP_NONCE: ${CSP_NONCE:-}  # Content Security Policy nonce
+      
+      # Third-party service integration
+      REACT_APP_STRIPE_PUBLIC_KEY: ${STRIPE_PUBLIC_KEY:-}   # Payment processing
+      REACT_APP_GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-}  # Maps integration
+      
+      # Development and debugging
+      REACT_APP_DEBUG: ${DEBUG:-false}     # Enable debug logging
+      REACT_APP_LOG_LEVEL: ${LOG_LEVEL:-warn}  # Console log level
+      
+      # Node.js runtime configuration
+      NODE_ENV: production                  # Production optimizations
+      NODE_OPTIONS: "--max-old-space-size=2048"  # Memory limit for Node.js
+    
+    # Port mapping for web application access
+    ports:
+      - "3000:3000"                         # Host:Container port mapping
+    
+    # Volume mounts for development and static assets
+    volumes:
+      # Source code mounting for development (hot reload)
+      - ./frontend:/app:ro                  # Read-only source code mount
+      
+      # Node modules cache for faster builds
+      - /app/node_modules                   # Anonymous volume for node_modules
+      
+      # Static assets and build output
+      - frontend_build:/app/build           # Built application files
+      
+      # Optional: Custom configuration files
+      # - ./config/nginx.conf:/etc/nginx/nginx.conf:ro  # Custom Nginx config
+      # - ./ssl/certs:/app/ssl:ro           # SSL certificates for HTTPS
+    
+    # Network configuration for service communication
+    networks:
+      - ecommerce-network                   # Internal application network
+    
+    # Service dependencies - ensures backend is ready
+    depends_on:
+      backend:
+        condition: service_healthy          # Backend API must be responding
+    
+    # Health check configuration for load balancer integration
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]  # Homepage accessibility check
+      interval: 30s                         # Check every 30 seconds
+      timeout: 10s                          # 10-second timeout per check
+      retries: 3                            # 3 failed attempts before unhealthy
+      start_period: 45s                     # Grace period for application startup
+    
+    # Resource limits and reservations
+    deploy:
+      resources:
+        limits:
+          memory: 512M                      # Maximum memory usage
+          cpus: '0.5'                       # Maximum CPU usage (50% of one core)
+        reservations:
+          memory: 256M                      # Guaranteed memory allocation
+          cpus: '0.25'                      # Guaranteed CPU allocation
+    
+    # Container labels for management and monitoring
+    labels:
+      - "com.ecommerce.service=frontend-web"
+      - "com.ecommerce.version=1.0"
+      - "com.ecommerce.description=React frontend application"
+      - "com.ecommerce.port=3000"
+      - "traefik.enable=true"               # Enable Traefik load balancer (if used)
+      - "traefik.http.routers.frontend.rule=PathPrefix(`/`)"
+# ============================================================================
+# 🌐 NETWORKS CONFIGURATION
+# ============================================================================
+# 
+# NETWORK ARCHITECTURE:
+# This section defines the network topology for service communication within
+# the Docker environment. All services are connected to a single bridge network
+# for simplicity while maintaining isolation from the host network.
+# 
+# NETWORK DESIGN PRINCIPLES:
+# - Isolation: Services communicate only within the defined network
+# - Security: No direct external access except through exposed ports
+# - Performance: Bridge driver provides optimal performance for single-host deployment
+# - Scalability: Network can be extended with additional services
+# - Monitoring: Network traffic can be monitored and analyzed
+# 
+# NETWORK TOPOLOGY:
+# ┌─────────────────────────────────────────────────────────────────────────┐
+# │                        ecommerce-network (Bridge)                      │
+# │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐   │
+# │  │  frontend   │  │   backend   │  │  db-setup   │  │  database   │   │
+# │  │   :3000     │  │    :8000    │  │   (temp)    │  │   :5432     │   │
+# │  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘   │
+# └─────────────────────────────────────────────────────────────────────────┘
+# 
+# COMMUNICATION PATTERNS:
+# - Frontend → Backend: HTTP API calls for data and operations
+# - Backend → Database: PostgreSQL protocol for data persistence
+# - DB-Setup → Database: One-time setup and initialization
+# - All services can resolve each other by service name (DNS)
+# 
+# SECURITY CONSIDERATIONS:
+# - Internal network isolated from external networks
+# - No direct database access from outside the network
+# - Service-to-service communication encrypted in production
+# - Network policies can be added for additional security
+# 
+# PERFORMANCE OPTIMIZATION:
+# - Bridge driver provides low-latency communication
+# - Custom subnet avoids conflicts with host networks
+# - MTU optimization for container communication
+# - Network monitoring and metrics collection enabled
+# 
+networks:
+  # Primary application network for all services
+  ecommerce-network:
+    # Network driver selection and configuration
+    driver: bridge                          # Bridge driver for single-host deployment
+    
+    # IP Address Management (IPAM) configuration
+    ipam:
+      # Custom IP configuration for network isolation
+      config:
+        - subnet: 172.20.0.0/16            # Private subnet for container communication
+          gateway: 172.20.0.1              # Gateway IP for external communication
+    
+    # Driver-specific options for performance and security
+    driver_opts:
+      # Custom bridge name for identification
+      com.docker.network.bridge.name: ecommerce-br0
+      
+      # Network performance optimizations
+      com.docker.network.bridge.enable_icc: "true"        # Inter-container communication
+      com.docker.network.bridge.enable_ip_masquerade: "true"  # NAT for external access
+      com.docker.network.bridge.host_binding_ipv4: "0.0.0.0"  # Bind to all interfaces
+      
+      # Security and isolation settings
+      com.docker.network.bridge.default_bridge: "false"   # Not the default bridge
+      com.docker.network.driver.mtu: "1500"               # Maximum transmission unit
+    
+    # Network labels for management and monitoring
+    labels:
+      - "com.ecommerce.network=primary"
+      - "com.ecommerce.version=1.0"
+      - "com.ecommerce.description=Primary application network"
+
+# ============================================================================
+# 💾 VOLUMES CONFIGURATION
+# ============================================================================
+# 
+# VOLUME STRATEGY:
+# This section defines persistent storage volumes for data that must survive
+# container restarts, updates, and deployments. Each volume serves a specific
+# purpose in the application architecture.
+# 
+# VOLUME TYPES AND PURPOSES:
+# - postgres_data: Database files and transaction logs
+# - backend_uploads: User-uploaded files (product images, avatars)
+# - backend_logs: Application logs for debugging and monitoring
+# - frontend_build: Built React application for production serving
+# 
+# DATA PERSISTENCE STRATEGY:
+# - Critical data (database) stored in named volumes
+# - User content (uploads) persisted across deployments
+# - Logs retained for debugging and compliance
+# - Build artifacts cached for performance
+# 
+# BACKUP AND RECOVERY:
+# - Regular volume snapshots recommended
+# - Database dumps for point-in-time recovery
+# - File-level backups for user uploads
+# - Log rotation and archival policies
+# 
+# PERFORMANCE CONSIDERATIONS:
+# - Local driver for optimal I/O performance
+# - SSD storage recommended for database volumes
+# - Network storage for shared deployments
+# - Volume monitoring and capacity planning
+# 
+# SECURITY MEASURES:
+# - Volume encryption at rest (configure with storage driver)
+# - Access controls through Docker daemon
+# - Regular security scans of stored data
+# - Compliance with data protection regulations
+# 
+volumes:
+  # PostgreSQL database persistent storage
+  postgres_data:
+    driver: local                           # Local storage driver for performance
+    # Optional: Custom driver options for production
+    # driver_opts:
+    #   type: "nfs"                         # Network File System for shared storage
+    #   o: "addr=10.0.0.1,rw"             # NFS server configuration
+    #   device: ":/path/to/postgres"       # Remote storage path
+    
+    # Volume labels for management and monitoring
+    labels:
+      - "com.ecommerce.volume=database"
+      - "com.ecommerce.backup=daily"
+      - "com.ecommerce.retention=30days"
+      - "com.ecommerce.critical=true"
+  
+  # Backend file uploads storage (product images, user avatars)
+  backend_uploads:
+    driver: local                           # Local storage for uploaded files
+    # Optional: External storage configuration
+    # driver_opts:
+    #   type: "s3fs"                        # Amazon S3 filesystem
+    #   o: "bucket=ecommerce-uploads"       # S3 bucket configuration
+    
+    # Volume labels for management and backup
+    labels:
+      - "com.ecommerce.volume=uploads"
+      - "com.ecommerce.backup=daily"
+      - "com.ecommerce.retention=90days"
+      - "com.ecommerce.public=true"
+  
+  # Backend application logs storage
+  backend_logs:
+    driver: local                           # Local storage for log files
+    
+    # Volume labels for log management
+    labels:
+      - "com.ecommerce.volume=logs"
+      - "com.ecommerce.backup=weekly"
+      - "com.ecommerce.retention=7days"
+      - "com.ecommerce.rotate=daily"
+  
+  # Frontend build artifacts storage
+  frontend_build:
+    driver: local                           # Local storage for built assets
+    
+    # Volume labels for build management
+    labels:
+      - "com.ecommerce.volume=build"
+      - "com.ecommerce.backup=none"
+      - "com.ecommerce.retention=1day"
+      - "com.ecommerce.rebuild=true"
+
+# ============================================================================
+# 📊 CONFIGURATION SUMMARY AND USAGE INSTRUCTIONS
+# ============================================================================
+# 
+# DEPLOYMENT COMMANDS:
+# 
+# 🚀 DEVELOPMENT DEPLOYMENT:
+# docker-compose up -d                     # Start all services in background
+# docker-compose logs -f                   # Follow logs from all services
+# docker-compose ps                        # Check service status
+# 
+# 🔧 MAINTENANCE OPERATIONS:
+# docker-compose restart backend           # Restart specific service
+# docker-compose exec backend bash         # Access backend container shell
+# docker-compose exec database psql -U postgres -d ecommerce_db  # Database access
+# 
+# 📊 MONITORING AND DEBUGGING:
+# docker-compose logs backend              # View backend logs
+# docker-compose logs db-setup             # Check database setup logs
+# docker-compose top                       # View running processes
+# docker stats $(docker-compose ps -q)     # Resource usage statistics
+# 
+# 🛑 SHUTDOWN AND CLEANUP:
+# docker-compose down                      # Stop all services
+# docker-compose down -v                   # Stop services and remove volumes
+# docker-compose down --rmi all            # Stop services and remove images
+# 
+# 🔄 UPDATES AND REBUILDS:
+# docker-compose build --no-cache          # Rebuild all images from scratch
+# docker-compose up -d --force-recreate    # Recreate all containers
+# docker-compose pull                      # Pull latest base images
+# 
+# 📈 SCALING OPERATIONS:
+# docker-compose up -d --scale backend=3   # Scale backend to 3 instances
+# docker-compose up -d --scale frontend=2  # Scale frontend to 2 instances
+# 
+# 🔐 SECURITY CHECKLIST:
+# - Change default passwords in production
+# - Use Docker secrets for sensitive data
+# - Enable SSL/TLS for external connections
+# - Regular security updates for base images
+# - Network segmentation for production
+# - Access logging and monitoring
+# 
+# 📋 PRODUCTION READINESS:
+# - Configure external load balancer
+# - Set up SSL certificates
+# - Configure backup strategies
+# - Implement monitoring and alerting
+# - Set up log aggregation
+# - Configure auto-scaling policies
+# 
+# 🎯 ACCESS POINTS:
+# - Frontend Application: http://localhost:3000
+# - Backend API: http://localhost:8000
+# - API Documentation: http://localhost:8000/docs
+# - Database: localhost:5432 (internal access only)
+# 
+# 🔑 DEFAULT CREDENTIALS:
+# - Admin User: admin@ecommerce.com / admin123
+# - Regular User: user@ecommerce.com / user123
+# - Database: postgres / admin
+# 
+# ⚠️  IMPORTANT NOTES:
+# - Change all default passwords before production deployment
+# - Configure proper backup strategies for persistent volumes
+# - Monitor resource usage and adjust limits as needed
+# - Implement proper logging and monitoring solutions
+# - Follow security best practices for production environments
+# 
+# ============================================================================

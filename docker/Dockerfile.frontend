@@ -36,9 +36,13 @@ COPY docker/security-headers.conf /etc/nginx/conf.d/
 
 COPY --from=builder /app/build /usr/share/nginx/html
 
-RUN addgroup -g 1001 -S nginx-user && \
+# Create directories for non-root nginx
+RUN mkdir -p /var/cache/nginx/client_temp /var/cache/nginx/proxy_temp /var/cache/nginx/fastcgi_temp /var/cache/nginx/uwsgi_temp /var/cache/nginx/scgi_temp && \
+    mkdir -p /var/log/nginx && \
+    mkdir -p /var/run && \
+    addgroup -g 1001 -S nginx-user && \
     adduser -S -D -H -u 1001 -h /var/cache/nginx -s /sbin/nologin -G nginx-user nginx-user && \
-    chown -R nginx-user:nginx-user /usr/share/nginx/html /var/cache/nginx /var/log/nginx /etc/nginx/conf.d
+    chown -R nginx-user:nginx-user /usr/share/nginx/html /var/cache/nginx /var/log/nginx /var/run /etc/nginx/conf.d
 
 USER nginx-user
 
@@ -46,4 +50,4 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
   CMD curl -f http://localhost/ || exit 1
 
 EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["nginx", "-g", "daemon off; pid /var/run/nginx.pid;"]
