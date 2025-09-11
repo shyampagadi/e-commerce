@@ -1,94 +1,113 @@
-# Architecture Decision Records (ADR) Index
+# Architecture Decision Records (ADRs) - Module 00
 
 ## Overview
-
-This directory contains Architecture Decision Records (ADRs) that document significant architectural decisions made during the system design process. ADRs provide a historical record of why decisions were made and help maintain consistency across the project.
-
-## ADR Template
-
-See [templates/ADR-TEMPLATE.md](templates/ADR-TEMPLATE.md) for the standard ADR format.
+This directory contains Architecture Decision Records (ADRs) for Module-00: System Design Fundamentals. ADRs document important architectural decisions made during the system design process.
 
 ## ADR Status Legend
-
 - **Proposed**: Decision is under consideration
 - **Accepted**: Decision has been approved and implemented
-- **Rejected**: Decision was considered but not adopted
-- **Deprecated**: Decision is no longer current
+- **Deprecated**: Decision is no longer recommended
 - **Superseded**: Decision has been replaced by a newer ADR
 
-## Current ADRs
+## Current ADRs for Module-00
 
-### Module 00: System Design Fundamentals
+### ADR-00-001: Architecture Pattern Selection Framework
+- **Status**: Accepted
+- **Date**: 2024-01-15
+- **Decision**: Use systematic pattern selection framework for architectural decisions
+- **Rationale**: Ensures consistent and well-reasoned architectural choices
+- **File**: [architecture-pattern-selection.md](./architecture-pattern-selection.md)
 
-| ADR | Title | Status | Date | Author |
-|-----|-------|--------|------|--------|
-| 00-001 | [Architecture Pattern Selection Framework](architecture-pattern-selection.md) | Accepted | 2024-01-15 | System Design Team |
-| 00-002 | [Documentation Standards and Tools](documentation-standards.md) | Proposed | 2024-01-15 | System Design Team |
-| 00-003 | [AWS Account Structure and Security](aws-account-structure.md) | Accepted | 2024-01-15 | System Design Team |
+### ADR-00-002: System Design Methodology
+- **Status**: Accepted
+- **Date**: 2024-01-15
+- **Decision**: Adopt structured system design methodology with requirements analysis
+- **Rationale**: Provides systematic approach to complex system design challenges
+- **File**: [system-design-methodology.md](./system-design-methodology.md)
 
-### Module 01: Infrastructure and Compute Layer
+### ADR-00-003: Quality Attributes Framework
+- **Status**: Accepted
+- **Date**: 2024-01-15
+- **Decision**: Use quality attributes as primary drivers for architectural decisions
+- **Rationale**: Ensures non-functional requirements are properly addressed
+- **File**: [quality-attributes-framework.md](./quality-attributes-framework.md)
 
-| ADR | Title | Status | Date | Author |
-|-----|-------|--------|------|--------|
-| 01-001 | [Compute Resource Selection Criteria](compute-resource-selection.md) | Proposed | 2024-01-15 | System Design Team |
-| 01-002 | [Auto-scaling Strategy and Policies](auto-scaling-strategy.md) | Proposed | 2024-01-15 | System Design Team |
+### ADR-00-004: Documentation Standards
+- **Status**: Accepted
+- **Date**: 2024-01-15
+- **Decision**: Implement comprehensive documentation standards for all architectural decisions
+- **Rationale**: Maintains knowledge and enables effective team collaboration
+- **File**: [documentation-standards.md](./documentation-standards.md)
 
-### Module 02: Networking and Connectivity
+### ADR-00-005: Technology Evaluation Criteria
+- **Status**: Accepted
+- **Date**: 2024-01-15
+- **Decision**: Use standardized criteria for evaluating and selecting technologies
+- **Rationale**: Ensures objective and consistent technology selection process
+- **File**: [technology-evaluation-criteria.md](./technology-evaluation-criteria.md)
 
-| ADR | Title | Status | Date | Author |
-|-----|-------|--------|------|--------|
-| 02-001 | [Load Balancing Strategy](load-balancing-strategy.md) | Proposed | 2024-01-15 | System Design Team |
-| 02-002 | [API Gateway Architecture](api-gateway-architecture.md) | Proposed | 2024-01-15 | System Design Team |
-
-## ADR Guidelines
+## Guidelines for Creating ADRs
 
 ### When to Create an ADR
+- Fundamental architectural pattern decisions
+- System design methodology choices
+- Quality attribute prioritization decisions
+- Documentation and process standards
+- Technology evaluation frameworks
 
-Create an ADR when making decisions that:
-- Affect multiple components or modules
-- Have long-term architectural implications
-- Involve significant trade-offs
-- Impact system performance, security, or maintainability
-- Require coordination across teams
+### ADR Template
+Use the following template for new ADRs:
 
-### ADR Naming Convention
+```markdown
+# ADR-00-XXX: [Decision Title]
 
-Format: `{Module-Number}-{Sequence-Number}-{Short-Description}.md`
+## Status
+[Proposed/Accepted/Deprecated/Superseded]
 
-Examples:
-- `00-001-architecture-pattern-selection.md`
-- `01-002-auto-scaling-strategy.md`
-- `02-003-api-gateway-architecture.md`
+## Context
+[Background and problem statement]
 
-### ADR Review Process
+## Decision
+[The architectural decision made]
 
-1. **Proposal**: Create ADR with "Proposed" status
-2. **Review**: Team reviews and provides feedback
-3. **Discussion**: Address concerns and refine decision
-4. **Decision**: Update status to "Accepted" or "Rejected"
-5. **Implementation**: Execute the decision
-6. **Validation**: Verify decision meets requirements
+## Rationale
+[Why this decision was made]
 
-### ADR Maintenance
+## Consequences
+[Positive and negative consequences]
 
-- **Regular Reviews**: Quarterly review of all ADRs
-- **Status Updates**: Keep status current with implementation
-- **Deprecation**: Mark obsolete ADRs as "Deprecated"
-- **Superseding**: Create new ADR when replacing old decisions
+## Alternatives Considered
+[Other options that were considered]
+
+## Implementation Notes
+[How to implement this decision]
+
+## Related ADRs
+[Links to related ADRs]
+```
+
+### Naming Convention
+- Format: `ADR-00-XXX-descriptive-name.md`
+- XXX: Three-digit number (001, 002, 003, etc.)
+- Use kebab-case for descriptive name
+
+## Review Process
+
+### ADR Review Steps
+1. **Draft**: Create ADR with proposed status
+2. **Review**: Technical team reviews the ADR
+3. **Discussion**: Address feedback and concerns
+4. **Approval**: Change status to accepted
+5. **Implementation**: Implement the decision
+6. **Monitoring**: Monitor consequences and update if needed
 
 ## Related Documentation
+- [Module-00 README](../README.md)
+- [System Design Concepts](../concepts/)
+- [AWS Implementation](../aws/)
+- [Projects](../projects/)
+- [Exercises](../exercises/)
 
-- [Design Documentation](../concepts/design-documentation.md)
-- [Architecture Patterns Overview](../concepts/architecture-patterns-overview.md)
-- [System Design Building Blocks](../concepts/system-design-building-blocks.md)
-
-## Contributing
-
-When creating a new ADR:
-
-1. Copy the template from `templates/ADR-TEMPLATE.md`
-2. Follow the naming convention
-3. Fill in all required sections
-4. Submit for team review
-5. Update this index when ADR is accepted
-
+---
+**Last Updated**: 2024-01-15
+**Version**: 1.0
