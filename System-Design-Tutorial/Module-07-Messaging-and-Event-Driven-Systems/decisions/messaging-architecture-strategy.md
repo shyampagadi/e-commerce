@@ -46,137 +46,95 @@ We will implement a hybrid messaging architecture using multiple AWS services:
 ## Implementation Strategy
 
 ### Phase 1: Core Messaging Infrastructure
-```yaml
-Services:
-  - EventBridge Custom Bus (ecommerce-events)
-  - SQS Queues (Standard and FIFO)
-  - SNS Topics with filtering
-  - Dead Letter Queues for error handling
-
-Timeline: 4 weeks
-Priority: High
-```
+- **Services**: EventBridge Custom Bus, SQS Queues, SNS Topics, Dead Letter Queues
+- **Timeline**: 4 weeks
+- **Priority**: High
+- **Focus**: Core messaging infrastructure setup
 
 ### Phase 2: Event Streaming Platform
-```yaml
-Services:
-  - MSK Cluster for analytics
-  - Kinesis Data Streams for real-time processing
-  - EventBridge Archive for replay capability
-
-Timeline: 6 weeks
-Priority: Medium
-```
+- **Services**: MSK Cluster, Kinesis Data Streams, EventBridge Archive
+- **Timeline**: 6 weeks
+- **Priority**: Medium
+- **Focus**: High-throughput event streaming capabilities
 
 ### Phase 3: Enterprise Integration
-```yaml
-Services:
-  - Amazon MQ for legacy systems
-  - Cross-region replication
-  - Advanced monitoring and alerting
-
-Timeline: 4 weeks
-Priority: Low
-```
+- **Services**: Amazon MQ, Cross-region replication, Advanced monitoring
+- **Timeline**: 4 weeks
+- **Priority**: Low
+- **Focus**: Enterprise integration and advanced features
 
 ## Architecture Patterns
 
 ### Event-Driven Microservices
-```python
-# Example: Order processing flow
-class OrderEventFlow:
-    def __init__(self):
-        self.eventbridge = EventBridgeClient('ecommerce-events')
-        self.sqs = SQSClient()
-    
-    def process_order_placed(self, order_data):
-        # Publish to EventBridge for routing
-        self.eventbridge.put_event(
-            source='ecommerce.orders',
-            detail_type='Order Placed',
-            detail=order_data
-        )
-        
-        # Send to FIFO queue for sequential processing
-        self.sqs.send_message(
-            queue_url='order-processing.fifo',
-            message_body=order_data,
-            message_group_id=f"customer_{order_data['customer_id']}"
-        )
-```
+
+**Order Processing Flow**
+- **Event Publishing**: Publish order events to EventBridge for routing
+- **Message Queuing**: Send to FIFO queue for sequential processing
+- **Customer Grouping**: Group messages by customer for ordering
+- **Event Routing**: Route events to multiple subscribers
+
+**Service Integration**
+- **EventBridge**: Central event bus for application integration
+- **SQS**: Reliable message queuing for asynchronous processing
+- **Message Grouping**: Group messages for ordered processing
+- **Event Distribution**: Distribute events to multiple services
 
 ### Saga Pattern Implementation
-```python
-# Distributed transaction coordination
-class OrderSaga:
-    def __init__(self):
-        self.state_machine = StepFunctions()
-        self.eventbridge = EventBridgeClient()
-    
-    def start_order_saga(self, order_id):
-        # Coordinate across multiple services
-        saga_definition = {
-            'payment_processing': PaymentService,
-            'inventory_reservation': InventoryService,
-            'shipping_arrangement': ShippingService,
-            'notification_sending': NotificationService
-        }
-        
-        return self.state_machine.start_execution(
-            state_machine_arn='order-saga-sm',
-            input={'orderId': order_id, 'saga': saga_definition}
-        )
-```
+
+**Distributed Transaction Coordination**
+- **State Machine**: Use Step Functions for saga orchestration
+- **Service Coordination**: Coordinate across multiple services
+- **Transaction Management**: Manage distributed transactions
+- **Compensation Logic**: Implement compensation for failures
+
+**Saga Definition**
+- **Payment Processing**: Handle payment service integration
+- **Inventory Reservation**: Manage inventory service coordination
+- **Shipping Arrangement**: Coordinate shipping service
+- **Notification Sending**: Handle notification service integration
 
 ## Message Design Standards
 
 ### Event Schema Structure
-```json
-{
-  "eventId": "uuid-v4",
-  "eventType": "OrderPlaced",
-  "eventVersion": "1.0",
-  "source": "ecommerce.orders",
-  "timestamp": "2024-01-15T10:30:00Z",
-  "correlationId": "correlation-uuid",
-  "causationId": "command-uuid",
-  "data": {
-    "orderId": "order-123",
-    "customerId": "customer-456",
-    "items": [...],
-    "totalAmount": 299.99,
-    "currency": "USD"
-  },
-  "metadata": {
-    "userId": "user-789",
-    "sessionId": "session-abc",
-    "userAgent": "Mozilla/5.0...",
-    "ipAddress": "192.168.1.1"
-  }
-}
-```
+
+**Event Structure**
+- **Event ID**: Unique identifier for each event
+- **Event Type**: Type of event for routing and processing
+- **Event Version**: Version for schema evolution
+- **Source**: Source system or service
+- **Timestamp**: Event creation timestamp
+
+**Event Data**
+- **Business Data**: Core business information
+- **Correlation ID**: Track related events
+- **Causation ID**: Track command that caused event
+- **Metadata**: Additional context information
+
+**Schema Standards**
+- **Standardized Format**: Consistent event structure
+- **Versioning**: Support for schema evolution
+- **Metadata**: Rich metadata for tracing and debugging
+- **Extensibility**: Support for future enhancements
 
 ### Message Routing Strategy
-```yaml
-Routing Rules:
-  High Priority Events:
-    - Payment failures
-    - Fraud alerts
-    - System errors
-    Route: Direct SQS → Immediate processing
-  
-  Business Events:
-    - Order placed/cancelled
-    - Inventory changes
-    - Customer updates
-    Route: EventBridge → Multiple subscribers
-  
-  Analytics Events:
-    - User behavior
-    - Performance metrics
-    - Business intelligence
-    Route: MSK → Stream processing
-```
+
+**High Priority Events**
+- **Events**: Payment failures, fraud alerts, system errors
+- **Routing**: Direct SQS for immediate processing
+- **Purpose**: Critical events requiring immediate attention
+- **Processing**: Synchronous processing for critical events
+
+**Business Events**
+- **Events**: Order placed/cancelled, inventory changes, customer updates
+- **Routing**: EventBridge to multiple subscribers
+- **Purpose**: Business events requiring multiple service coordination
+- **Processing**: Asynchronous processing with event distribution
+
+**Analytics Events**
+- **Events**: User behavior, performance metrics, business intelligence
+- **Routing**: MSK for stream processing
+- **Purpose**: High-volume analytics and reporting
+- **Processing**: Stream processing for real-time analytics
 
 ## Performance Targets
 
@@ -202,122 +160,94 @@ Routing Rules:
 ## Security Architecture
 
 ### Access Control
-```yaml
-IAM Policies:
-  Service-to-Service:
-    - Least privilege access
-    - Resource-based policies
-    - Cross-account access controls
-  
-  Application Access:
-    - Role-based permissions
-    - Temporary credentials
-    - API key management
-  
-  Data Protection:
-    - Encryption at rest (KMS)
-    - Encryption in transit (TLS 1.2+)
-    - Message-level encryption for PII
-```
+
+**IAM Policies**
+- **Service-to-Service**: Least privilege access, resource-based policies
+- **Application Access**: Role-based permissions, temporary credentials
+- **Data Protection**: Encryption at rest and in transit, message-level encryption
+
+**Security Controls**
+- **Access Management**: Fine-grained access control
+- **Credential Management**: Secure credential handling
+- **Data Protection**: Comprehensive encryption strategy
+- **Audit Logging**: Complete audit trail
 
 ### Network Security
-```yaml
-Network Controls:
-  VPC Endpoints:
-    - Private connectivity to AWS services
-    - No internet gateway traversal
-  
-  Security Groups:
-    - Restrictive inbound rules
-    - Service-specific outbound rules
-  
-  Network ACLs:
-    - Subnet-level controls
-    - Defense in depth
-```
+
+**Network Controls**
+- **VPC Endpoints**: Private connectivity to AWS services
+- **Security Groups**: Restrictive inbound and outbound rules
+- **Network ACLs**: Subnet-level controls and defense in depth
+
+**Security Strategy**
+- **Private Connectivity**: No internet gateway traversal
+- **Defense in Depth**: Multiple layers of security
+- **Network Isolation**: Isolated network segments
+- **Traffic Control**: Controlled traffic flow
 
 ## Monitoring and Observability
 
 ### Key Metrics
-```yaml
-Business Metrics:
-  - Message processing rate
-  - End-to-end latency
-  - Error rates by service
-  - Dead letter queue depth
 
-Technical Metrics:
-  - Queue depth and age
-  - Consumer lag
-  - Throughput utilization
-  - Resource consumption
+**Business Metrics**
+- **Message Processing Rate**: Track message processing throughput
+- **End-to-End Latency**: Monitor processing latency
+- **Error Rates**: Track errors by service
+- **Dead Letter Queue Depth**: Monitor failed message queues
 
-Operational Metrics:
-  - Service availability
-  - Alert response time
-  - Recovery time objective (RTO)
-  - Recovery point objective (RPO)
-```
+**Technical Metrics**
+- **Queue Depth and Age**: Monitor queue performance
+- **Consumer Lag**: Track consumer processing lag
+- **Throughput Utilization**: Monitor throughput usage
+- **Resource Consumption**: Track resource usage
+
+**Operational Metrics**
+- **Service Availability**: Monitor service uptime
+- **Alert Response Time**: Track alert response times
+- **Recovery Objectives**: Monitor RTO and RPO
+- **Performance Metrics**: Track key performance indicators
 
 ### Alerting Strategy
-```yaml
-Critical Alerts:
-  - Message processing failures
-  - Queue depth exceeding thresholds
-  - Service unavailability
-  - Security violations
 
-Warning Alerts:
-  - Performance degradation
-  - Capacity approaching limits
-  - Unusual traffic patterns
-  - Configuration drift
-```
+**Critical Alerts**
+- **Message Processing Failures**: Alert on processing failures
+- **Queue Depth Thresholds**: Alert on queue depth limits
+- **Service Unavailability**: Alert on service downtime
+- **Security Violations**: Alert on security issues
+
+**Warning Alerts**
+- **Performance Degradation**: Alert on performance issues
+- **Capacity Limits**: Alert on approaching capacity limits
+- **Traffic Patterns**: Alert on unusual traffic patterns
+- **Configuration Drift**: Alert on configuration changes
 
 ## Cost Optimization
 
 ### Service Cost Analysis
-```yaml
-Cost Drivers:
-  EventBridge:
-    - $1.00 per million events
-    - Archive storage costs
-    - Cross-region replication
-  
-  SQS:
-    - $0.40 per million requests
-    - FIFO premium pricing
-    - Data transfer costs
-  
-  SNS:
-    - $0.50 per million publishes
-    - Delivery attempt charges
-    - SMS/email costs
-  
-  MSK:
-    - Instance hours
-    - Storage costs
-    - Data transfer
-```
+
+**Cost Drivers**
+- **EventBridge**: $1.00 per million events, archive storage, cross-region replication
+- **SQS**: $0.40 per million requests, FIFO premium pricing, data transfer
+- **SNS**: $0.50 per million publishes, delivery attempts, SMS/email costs
+- **MSK**: Instance hours, storage costs, data transfer
+
+**Cost Optimization**
+- **Message Batching**: Reduce API calls and improve throughput
+- **Right-sizing**: Monitor utilization and adjust capacity
+- **Lifecycle Management**: Message retention policies and data cleanup
 
 ### Optimization Strategies
-```yaml
-Cost Reduction:
-  Message Batching:
-    - Reduce API calls
-    - Improve throughput
-    - Lower per-message costs
-  
-  Right-sizing:
-    - Monitor utilization
-    - Adjust capacity
-    - Use reserved capacity
-  
-  Lifecycle Management:
-    - Message retention policies
-    - Archive old events
-    - Delete unnecessary data
-```
+
+**Cost Reduction Techniques**
+- **Message Batching**: Batch messages to reduce API calls
+- **Right-sizing**: Monitor and adjust capacity based on usage
+- **Lifecycle Management**: Implement retention policies and data cleanup
+
+**Cost Monitoring**
+- **Usage Tracking**: Track usage patterns and costs
+- **Budget Alerts**: Set up budget alerts and controls
+- **Cost Analysis**: Regular cost analysis and optimization
+- **Resource Optimization**: Optimize resource usage and costs
 
 ## Migration Strategy
 
@@ -348,45 +278,33 @@ Cost Reduction:
 ## Risks and Mitigation
 
 ### Technical Risks
-```yaml
-Risk: Message Loss
-Mitigation:
-  - Dead letter queues
-  - Message persistence
-  - Retry mechanisms
-  - Monitoring and alerting
 
-Risk: Performance Degradation
-Mitigation:
-  - Auto-scaling
-  - Circuit breakers
-  - Load balancing
-  - Performance testing
+**Message Loss Risk**
+- **Mitigation**: Dead letter queues, message persistence, retry mechanisms
+- **Monitoring**: Comprehensive monitoring and alerting
+- **Recovery**: Automated recovery mechanisms
 
-Risk: Security Vulnerabilities
-Mitigation:
-  - Encryption everywhere
-  - Access controls
-  - Security scanning
-  - Incident response plan
-```
+**Performance Degradation Risk**
+- **Mitigation**: Auto-scaling, circuit breakers, load balancing
+- **Testing**: Performance testing and optimization
+- **Monitoring**: Performance monitoring and alerting
+
+**Security Vulnerabilities Risk**
+- **Mitigation**: Encryption everywhere, access controls, security scanning
+- **Response**: Incident response plan and procedures
+- **Monitoring**: Security monitoring and alerting
 
 ### Operational Risks
-```yaml
-Risk: Service Dependencies
-Mitigation:
-  - Multi-region deployment
-  - Graceful degradation
-  - Fallback mechanisms
-  - Disaster recovery plan
 
-Risk: Complexity Management
-Mitigation:
-  - Clear documentation
-  - Training programs
-  - Automation tools
-  - Standard procedures
-```
+**Service Dependencies Risk**
+- **Mitigation**: Multi-region deployment, graceful degradation
+- **Fallback**: Fallback mechanisms and disaster recovery
+- **Monitoring**: Service dependency monitoring
+
+**Complexity Management Risk**
+- **Mitigation**: Clear documentation, training programs
+- **Automation**: Automation tools and standard procedures
+- **Support**: Comprehensive support and knowledge sharing
 
 ## Success Criteria
 

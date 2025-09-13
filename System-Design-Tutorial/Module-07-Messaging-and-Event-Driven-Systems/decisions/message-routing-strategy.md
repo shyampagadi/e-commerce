@@ -102,105 +102,58 @@ The hybrid approach provides optimal balance of functionality, performance, and 
 | Notification Events | High | Simple | SNS | SQS |
 
 ### EventBridge Rules Configuration
-```json
-{
-  "Rules": [
-    {
-      "Name": "HighValueOrderRouting",
-      "EventPattern": {
-        "source": ["ecommerce.orders"],
-        "detail-type": ["Order Placed"],
-        "detail": {
-          "totalAmount": [{"numeric": [">=", 1000]}]
-        }
-      },
-      "Targets": [
-        {
-          "Id": "1",
-          "Arn": "arn:aws:sqs:us-east-1:123456789012:high-value-orders",
-          "SqsParameters": {
-            "MessageGroupId": "high-value"
-          }
-        },
-        {
-          "Id": "2",
-          "Arn": "arn:aws:sns:us-east-1:123456789012:fraud-alerts"
-        }
-      ]
-    },
-    {
-      "Name": "CustomerSegmentRouting",
-      "EventPattern": {
-        "source": ["ecommerce.customers"],
-        "detail-type": ["Customer Updated"],
-        "detail": {
-          "customerSegment": ["premium", "enterprise"]
-        }
-      },
-      "Targets": [
-        {
-          "Id": "1",
-          "Arn": "arn:aws:sqs:us-east-1:123456789012:premium-customer-queue"
-        }
-      ]
-    }
-  ]
-}
-```
+
+**High-Value Order Routing**
+- **Event Pattern**: Orders with total amount >= $1000
+- **Targets**: High-value order queue and fraud alert system
+- **Purpose**: Prioritize high-value orders and fraud detection
+- **Configuration**: FIFO queue with message grouping
+
+**Customer Segment Routing**
+- **Event Pattern**: Premium and enterprise customer updates
+- **Targets**: Premium customer processing queue
+- **Purpose**: Special handling for high-value customers
+- **Configuration**: Dedicated queue for premium customers
 
 ### SNS Topic Strategy
-```yaml
-Topics:
-  order-notifications:
-    Purpose: Fan-out order status updates
-    Subscribers:
-      - customer-notifications-queue
-      - seller-notifications-queue
-      - analytics-queue
-    Filter Policy: By order status and customer segment
-  
-  system-alerts:
-    Purpose: System-wide notifications
-    Subscribers:
-      - ops-team-queue
-      - monitoring-system
-      - audit-log-queue
-    Filter Policy: By severity level
-  
-  integration-events:
-    Purpose: External system integration
-    Subscribers:
-      - erp-integration-queue
-      - crm-integration-queue
-      - warehouse-system-queue
-    Filter Policy: By event type and destination
-```
+
+**Order Notifications Topic**
+- **Purpose**: Fan-out order status updates to multiple subscribers
+- **Subscribers**: Customer notifications, seller notifications, analytics
+- **Filter Policy**: Filter by order status and customer segment
+- **Use Case**: Real-time order status updates
+
+**System Alerts Topic**
+- **Purpose**: System-wide notifications and alerts
+- **Subscribers**: Operations team, monitoring system, audit logs
+- **Filter Policy**: Filter by severity level
+- **Use Case**: Operational alerts and system notifications
+
+**Integration Events Topic**
+- **Purpose**: External system integration events
+- **Subscribers**: ERP, CRM, warehouse systems
+- **Filter Policy**: Filter by event type and destination
+- **Use Case**: External system integration and data synchronization
 
 ### Message Transformation Rules
-```python
-class MessageTransformer:
-    def __init__(self):
-        self.transformation_rules = {
-            'order_to_inventory': self._transform_order_to_inventory,
-            'customer_to_crm': self._transform_customer_to_crm,
-            'payment_to_accounting': self._transform_payment_to_accounting
-        }
-    
-    def transform_message(self, message, transformation_type):
-        """Apply transformation based on routing destination"""
-        if transformation_type in self.transformation_rules:
-            return self.transformation_rules[transformation_type](message)
-        return message
-    
-    def _transform_order_to_inventory(self, order_event):
-        """Transform order event for inventory service"""
-        return {
-            'action': 'reserve_inventory',
-            'items': order_event['detail']['items'],
-            'orderId': order_event['detail']['orderId'],
-            'reservationId': str(uuid.uuid4())
-        }
-```
+
+**Transformation Strategy**
+- **Order to Inventory**: Transform order events for inventory service
+- **Customer to CRM**: Transform customer events for CRM system
+- **Payment to Accounting**: Transform payment events for accounting system
+- **Dynamic Transformation**: Apply transformations based on routing destination
+
+**Transformation Patterns**
+- **Data Mapping**: Map source fields to target fields
+- **Format Conversion**: Convert between different data formats
+- **Field Addition**: Add required fields for target systems
+- **Field Removal**: Remove unnecessary fields for target systems
+
+**Transformation Examples**
+- **Inventory Reservation**: Transform order data to inventory reservation format
+- **CRM Update**: Transform customer data to CRM update format
+- **Accounting Entry**: Transform payment data to accounting entry format
+- **External Integration**: Transform internal events to external system format
 
 ### Technology Stack
 - **Primary Routing**: Amazon EventBridge with custom event bus

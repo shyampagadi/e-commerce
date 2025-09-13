@@ -1,763 +1,206 @@
-# Exercise 02: Event-Driven Microservices with EventBridge
+# Exercise 2: Event-Driven Microservices Architecture Strategy
 
 ## Overview
-Build a complete event-driven microservices architecture using Amazon EventBridge for service communication, implementing order processing, inventory management, and customer notifications.
+Strategic exercise developing event-driven architecture decision-making skills for microservices ecosystems. Focus on business process optimization and organizational alignment. **No messaging implementation required.**
 
-## Learning Objectives
-- Design event-driven microservice architectures
-- Implement EventBridge custom buses and rules
-- Create event schemas and routing patterns
-- Build resilient inter-service communication
-- Monitor and troubleshoot event flows
+## Business Scenario: Financial Services Platform Modernization
 
-## Prerequisites
-- Completion of Exercise 01
-- AWS CLI configured with appropriate permissions
-- Python 3.8+ with boto3 library
-- Basic understanding of microservices patterns
+### Platform Context
+TradeTech financial services platform transitioning from monolithic architecture to event-driven microservices: real-time trading, risk management, compliance reporting, and regulatory requirements across multiple jurisdictions.
 
-## Architecture Overview
+### Business Requirements Analysis
 
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Order Service │    │Inventory Service│    │ Payment Service │
-│                 │    │                 │    │                 │
-└─────────┬───────┘    └─────────┬───────┘    └─────────┬───────┘
-          │                      │                      │
-          │                      │                      │
-          └──────────────────────┼──────────────────────┘
-                                 │
-                    ┌─────────────▼──────────────┐
-                    │     EventBridge Bus        │
-                    │   (ecommerce-events)       │
-                    └─────────────┬──────────────┘
-                                 │
-          ┌──────────────────────┼──────────────────────┐
-          │                      │                      │
-          ▼                      ▼                      ▼
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│Notification Svc │    │ Analytics Svc   │    │  Audit Service  │
-│                 │    │                 │    │                 │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-```
+#### Event-Driven Architecture Challenges
+**Business Process Requirements**:
+- **Trade Execution**: Sub-millisecond order processing with audit trails and compliance
+- **Risk Management**: Real-time position monitoring with automated risk controls
+- **Compliance Reporting**: Regulatory reporting with complete transaction lineage
+- **Customer Notifications**: Real-time updates with multi-channel delivery preferences
 
-## Exercise Tasks
+**Organizational Requirements**:
+- **Team Autonomy**: Independent service development and deployment by domain teams
+- **Regulatory Compliance**: Audit trails and data lineage for financial regulations
+- **Business Continuity**: Zero-downtime operations during market hours
+- **Global Operations**: Multi-region deployment with data sovereignty compliance
 
-### Task 1: Set Up EventBridge Infrastructure
+### Strategic Analysis Framework
 
-#### 1.1 Create Custom Event Bus
-```python
-import boto3
-import json
-from datetime import datetime
+#### Event Architecture Strategy Options
 
-class EventBridgeSetup:
-    def __init__(self, region='us-east-1'):
-        self.eventbridge = boto3.client('events', region_name=region)
-        self.bus_name = 'ecommerce-events'
-    
-    def create_custom_bus(self):
-        """Create custom event bus for e-commerce events"""
-        try:
-            response = self.eventbridge.create_event_bus(
-                Name=self.bus_name,
-                Tags=[
-                    {'Key': 'Environment', 'Value': 'development'},
-                    {'Key': 'Project', 'Value': 'ecommerce-microservices'},
-                    {'Key': 'Owner', 'Value': 'platform-team'}
-                ]
-            )
-            print(f"Created event bus: {response['EventBusArn']}")
-            return response['EventBusArn']
-        except Exception as e:
-            print(f"Error creating event bus: {e}")
-            return None
-    
-    def create_event_rules(self):
-        """Create event routing rules"""
-        rules = {
-            'order-processing': {
-                'pattern': {
-                    'source': ['ecommerce.orders'],
-                    'detail-type': ['Order Placed', 'Order Cancelled']
-                },
-                'description': 'Route order events to processing services'
-            },
-            'inventory-updates': {
-                'pattern': {
-                    'source': ['ecommerce.inventory'],
-                    'detail-type': ['Stock Updated', 'Low Stock Alert']
-                },
-                'description': 'Route inventory events to relevant services'
-            },
-            'payment-events': {
-                'pattern': {
-                    'source': ['ecommerce.payments'],
-                    'detail-type': ['Payment Processed', 'Payment Failed']
-                },
-                'description': 'Route payment events for order fulfillment'
-            }
-        }
-        
-        created_rules = {}
-        for rule_name, rule_config in rules.items():
-            try:
-                self.eventbridge.put_rule(
-                    Name=rule_name,
-                    EventPattern=json.dumps(rule_config['pattern']),
-                    State='ENABLED',
-                    EventBusName=self.bus_name,
-                    Description=rule_config['description']
-                )
-                created_rules[rule_name] = rule_config
-                print(f"Created rule: {rule_name}")
-            except Exception as e:
-                print(f"Error creating rule {rule_name}: {e}")
-        
-        return created_rules
+**Strategy 1: Centralized Event Bus with Orchestration**
+- **Business Case**: Centralized control with comprehensive monitoring and audit capabilities
+- **Organizational Impact**: Clear event flow visibility with potential bottleneck concerns
+- **Compliance Benefits**: Centralized audit trails with complete transaction lineage
+- **Performance Considerations**: Single event bus scalability with latency implications
 
-# Run the setup
-setup = EventBridgeSetup()
-bus_arn = setup.create_custom_bus()
-rules = setup.create_event_rules()
-```
+**Strategy 2: Distributed Event Mesh with Choreography**
+- **Business Case**: Decentralized event processing with team autonomy and scalability
+- **Organizational Impact**: Service independence with coordination complexity
+- **Compliance Benefits**: Distributed audit trails requiring aggregation and correlation
+- **Performance Considerations**: Optimal performance with complex event flow management
 
-#### 1.2 Create SQS Queues for Services
-```python
-class SQSSetup:
-    def __init__(self, region='us-east-1'):
-        self.sqs = boto3.client('sqs', region_name=region)
-    
-    def create_service_queues(self):
-        """Create SQS queues for each microservice"""
-        queues = {
-            'order-processing-queue': {
-                'VisibilityTimeoutSeconds': '300',
-                'MessageRetentionPeriod': '1209600',  # 14 days
-                'ReceiveMessageWaitTimeSeconds': '20'
-            },
-            'inventory-updates-queue': {
-                'VisibilityTimeoutSeconds': '60',
-                'MessageRetentionPeriod': '345600',  # 4 days
-                'ReceiveMessageWaitTimeSeconds': '20'
-            },
-            'notification-queue': {
-                'VisibilityTimeoutSeconds': '30',
-                'MessageRetentionPeriod': '345600',
-                'ReceiveMessageWaitTimeSeconds': '20'
-            },
-            'analytics-queue': {
-                'VisibilityTimeoutSeconds': '120',
-                'MessageRetentionPeriod': '1209600',
-                'ReceiveMessageWaitTimeSeconds': '20'
-            }
-        }
-        
-        created_queues = {}
-        for queue_name, attributes in queues.items():
-            try:
-                response = self.sqs.create_queue(
-                    QueueName=queue_name,
-                    Attributes=attributes
-                )
-                created_queues[queue_name] = response['QueueUrl']
-                print(f"Created queue: {queue_name}")
-            except Exception as e:
-                print(f"Error creating queue {queue_name}: {e}")
-        
-        return created_queues
+**Strategy 3: Hybrid Event Architecture with Domain Boundaries**
+- **Business Case**: Optimize event patterns for different business domains
+- **Organizational Impact**: Domain-aligned event architecture with Conway's Law application
+- **Compliance Benefits**: Domain-specific compliance with federated audit capabilities
+- **Performance Considerations**: Domain-optimized performance with integration complexity
 
-# Create queues
-sqs_setup = SQSSetup()
-queues = sqs_setup.create_service_queues()
-```
+**Strategy 4: Event Sourcing with CQRS Implementation**
+- **Business Case**: Complete audit trails with optimized read/write performance
+- **Organizational Impact**: Event-first thinking with specialized read/write team structures
+- **Compliance Benefits**: Immutable audit trails with replay and analysis capabilities
+- **Performance Considerations**: Write optimization with read model complexity
 
-### Task 2: Implement Order Service
+#### Business Process Event Modeling
 
-#### 2.1 Order Service Implementation
-```python
-import uuid
-from decimal import Decimal
-from typing import Dict, List
+**Trade Execution Process Analysis**:
+- **Event Flow**: Order placement → Validation → Execution → Settlement → Reporting
+- **Business Rules**: Risk checks, compliance validation, and market data integration
+- **Performance Requirements**: Sub-millisecond latency with guaranteed delivery
+- **Audit Requirements**: Complete transaction lineage with regulatory reporting
 
-class OrderService:
-    def __init__(self, eventbridge_bus_name='ecommerce-events'):
-        self.eventbridge = boto3.client('events')
-        self.bus_name = eventbridge_bus_name
-        self.orders = {}  # In-memory storage for demo
-    
-    def place_order(self, customer_id: str, items: List[Dict], shipping_address: Dict) -> str:
-        """Place a new order and publish event"""
-        order_id = str(uuid.uuid4())
-        
-        # Calculate total
-        total_amount = sum(Decimal(str(item['price'])) * item['quantity'] for item in items)
-        
-        # Create order
-        order = {
-            'orderId': order_id,
-            'customerId': customer_id,
-            'items': items,
-            'totalAmount': float(total_amount),
-            'shippingAddress': shipping_address,
-            'status': 'PLACED',
-            'timestamp': datetime.now().isoformat()
-        }
-        
-        self.orders[order_id] = order
-        
-        # Publish order placed event
-        self._publish_event(
-            source='ecommerce.orders',
-            detail_type='Order Placed',
-            detail=order
-        )
-        
-        print(f"Order placed: {order_id}")
-        return order_id
-    
-    def cancel_order(self, order_id: str, reason: str) -> bool:
-        """Cancel an existing order"""
-        if order_id not in self.orders:
-            return False
-        
-        order = self.orders[order_id]
-        order['status'] = 'CANCELLED'
-        order['cancellationReason'] = reason
-        order['cancelledAt'] = datetime.now().isoformat()
-        
-        # Publish order cancelled event
-        self._publish_event(
-            source='ecommerce.orders',
-            detail_type='Order Cancelled',
-            detail=order
-        )
-        
-        print(f"Order cancelled: {order_id}")
-        return True
-    
-    def _publish_event(self, source: str, detail_type: str, detail: Dict):
-        """Publish event to EventBridge"""
-        try:
-            response = self.eventbridge.put_events(
-                Entries=[
-                    {
-                        'Source': source,
-                        'DetailType': detail_type,
-                        'Detail': json.dumps(detail, default=str),
-                        'EventBusName': self.bus_name,
-                        'Time': datetime.now()
-                    }
-                ]
-            )
-            
-            if response['FailedEntryCount'] > 0:
-                print(f"Failed to publish event: {response['Entries']}")
-            else:
-                print(f"Published event: {detail_type}")
-                
-        except Exception as e:
-            print(f"Error publishing event: {e}")
+**Risk Management Process Analysis**:
+- **Event Flow**: Position updates → Risk calculation → Threshold monitoring → Alert generation
+- **Business Rules**: Real-time risk limits with automated position management
+- **Performance Requirements**: Real-time processing with immediate risk response
+- **Audit Requirements**: Risk decision audit trails with model versioning
 
-# Test order service
-order_service = OrderService()
+**Compliance Reporting Process Analysis**:
+- **Event Flow**: Transaction events → Data aggregation → Report generation → Regulatory submission
+- **Business Rules**: Regulatory format compliance with data validation and quality checks
+- **Performance Requirements**: Batch processing with deadline compliance
+- **Audit Requirements**: Report lineage with data source traceability
 
-# Place a test order
-test_order_id = order_service.place_order(
-    customer_id='customer-123',
-    items=[
-        {'productId': 'prod-1', 'name': 'Laptop', 'price': 999.99, 'quantity': 1},
-        {'productId': 'prod-2', 'name': 'Mouse', 'price': 29.99, 'quantity': 2}
-    ],
-    shipping_address={
-        'street': '123 Main St',
-        'city': 'Seattle',
-        'state': 'WA',
-        'zipCode': '98101',
-        'country': 'US'
-    }
-)
-```
+### Event-Driven Design Framework
 
-### Task 3: Implement Inventory Service
+#### Event Design Strategy
+**Event Granularity Analysis**:
+- **Fine-Grained Events**: Detailed business events with high flexibility and complexity
+- **Coarse-Grained Events**: Business process events with simplified integration
+- **Domain Events**: Business domain boundaries with clear ownership and responsibility
+- **Integration Events**: Cross-domain communication with standardized contracts
 
-#### 3.1 Inventory Service with Event Handling
-```python
-class InventoryService:
-    def __init__(self, eventbridge_bus_name='ecommerce-events'):
-        self.eventbridge = boto3.client('events')
-        self.sqs = boto3.client('sqs')
-        self.bus_name = eventbridge_bus_name
-        self.inventory = {
-            'prod-1': {'name': 'Laptop', 'stock': 50, 'reserved': 0},
-            'prod-2': {'name': 'Mouse', 'stock': 100, 'reserved': 0},
-            'prod-3': {'name': 'Keyboard', 'stock': 5, 'reserved': 0}
-        }
-    
-    def reserve_inventory(self, order_data: Dict) -> bool:
-        """Reserve inventory for an order"""
-        order_id = order_data['orderId']
-        items = order_data['items']
-        
-        # Check availability
-        for item in items:
-            product_id = item['productId']
-            quantity = item['quantity']
-            
-            if product_id not in self.inventory:
-                self._publish_inventory_event('Reservation Failed', {
-                    'orderId': order_id,
-                    'productId': product_id,
-                    'reason': 'Product not found'
-                })
-                return False
-            
-            available = self.inventory[product_id]['stock'] - self.inventory[product_id]['reserved']
-            if available < quantity:
-                self._publish_inventory_event('Reservation Failed', {
-                    'orderId': order_id,
-                    'productId': product_id,
-                    'requested': quantity,
-                    'available': available,
-                    'reason': 'Insufficient stock'
-                })
-                return False
-        
-        # Reserve inventory
-        for item in items:
-            product_id = item['productId']
-            quantity = item['quantity']
-            self.inventory[product_id]['reserved'] += quantity
-            
-            # Check for low stock
-            remaining = (self.inventory[product_id]['stock'] - 
-                        self.inventory[product_id]['reserved'])
-            
-            if remaining <= 10:  # Low stock threshold
-                self._publish_inventory_event('Low Stock Alert', {
-                    'productId': product_id,
-                    'productName': self.inventory[product_id]['name'],
-                    'remainingStock': remaining,
-                    'threshold': 10
-                })
-        
-        # Publish successful reservation
-        self._publish_inventory_event('Inventory Reserved', {
-            'orderId': order_id,
-            'items': items,
-            'reservedAt': datetime.now().isoformat()
-        })
-        
-        print(f"Inventory reserved for order: {order_id}")
-        return True
-    
-    def release_inventory(self, order_data: Dict):
-        """Release reserved inventory (for cancelled orders)"""
-        order_id = order_data['orderId']
-        items = order_data['items']
-        
-        for item in items:
-            product_id = item['productId']
-            quantity = item['quantity']
-            
-            if product_id in self.inventory:
-                self.inventory[product_id]['reserved'] -= quantity
-                self.inventory[product_id]['reserved'] = max(0, self.inventory[product_id]['reserved'])
-        
-        self._publish_inventory_event('Inventory Released', {
-            'orderId': order_id,
-            'items': items,
-            'releasedAt': datetime.now().isoformat()
-        })
-        
-        print(f"Inventory released for order: {order_id}")
-    
-    def _publish_inventory_event(self, event_type: str, detail: Dict):
-        """Publish inventory event"""
-        try:
-            self.eventbridge.put_events(
-                Entries=[
-                    {
-                        'Source': 'ecommerce.inventory',
-                        'DetailType': event_type,
-                        'Detail': json.dumps(detail, default=str),
-                        'EventBusName': self.bus_name
-                    }
-                ]
-            )
-            print(f"Published inventory event: {event_type}")
-        except Exception as e:
-            print(f"Error publishing inventory event: {e}")
-    
-    def process_order_events(self, queue_url: str):
-        """Process order events from SQS queue"""
-        while True:
-            try:
-                messages = self.sqs.receive_message(
-                    QueueUrl=queue_url,
-                    MaxNumberOfMessages=10,
-                    WaitTimeSeconds=20
-                )
-                
-                for message in messages.get('Messages', []):
-                    try:
-                        # Parse EventBridge message
-                        event_data = json.loads(message['Body'])
-                        detail = json.loads(event_data['detail'])
-                        detail_type = event_data['detail-type']
-                        
-                        if detail_type == 'Order Placed':
-                            self.reserve_inventory(detail)
-                        elif detail_type == 'Order Cancelled':
-                            self.release_inventory(detail)
-                        
-                        # Delete processed message
-                        self.sqs.delete_message(
-                            QueueUrl=queue_url,
-                            ReceiptHandle=message['ReceiptHandle']
-                        )
-                        
-                    except Exception as e:
-                        print(f"Error processing message: {e}")
-                        
-            except KeyboardInterrupt:
-                print("Stopping inventory service...")
-                break
-            except Exception as e:
-                print(f"Error receiving messages: {e}")
+**Event Schema Evolution Strategy**:
+- **Backward Compatibility**: Schema versioning with consumer compatibility guarantees
+- **Forward Compatibility**: Schema evolution with producer flexibility
+- **Schema Registry**: Centralized schema management with validation and governance
+- **Contract Testing**: Consumer-driven contracts with automated compatibility testing
 
-# Test inventory service
-inventory_service = InventoryService()
-```
+#### Consistency and Transaction Management
+**Consistency Model Selection**:
+- **Strong Consistency**: ACID transactions for critical financial operations
+- **Eventual Consistency**: Asynchronous processing with compensation patterns
+- **Causal Consistency**: Ordered event processing with business logic dependencies
+- **Session Consistency**: User session consistency with global eventual consistency
 
-### Task 4: Connect EventBridge Rules to SQS Targets
+**Distributed Transaction Patterns**:
+- **Saga Pattern**: Long-running business processes with compensation logic
+- **Two-Phase Commit**: Strong consistency with performance and availability trade-offs
+- **Event Sourcing**: Transaction log as source of truth with replay capabilities
+- **Outbox Pattern**: Reliable event publishing with database transaction integration
 
-#### 4.1 Add SQS Targets to EventBridge Rules
-```python
-class EventBridgeTargetSetup:
-    def __init__(self, bus_name='ecommerce-events'):
-        self.eventbridge = boto3.client('events')
-        self.sqs = boto3.client('sqs')
-        self.bus_name = bus_name
-    
-    def add_sqs_targets_to_rules(self, queues: Dict[str, str]):
-        """Add SQS queues as targets for EventBridge rules"""
-        
-        # Get queue ARNs
-        queue_arns = {}
-        for queue_name, queue_url in queues.items():
-            attributes = self.sqs.get_queue_attributes(
-                QueueUrl=queue_url,
-                AttributeNames=['QueueArn']
-            )
-            queue_arns[queue_name] = attributes['Attributes']['QueueArn']
-        
-        # Rule to target mappings
-        rule_targets = {
-            'order-processing': [
-                {
-                    'Id': '1',
-                    'Arn': queue_arns['inventory-updates-queue'],
-                    'SqsParameters': {
-                        'MessageGroupId': 'inventory-updates'
-                    }
-                }
-            ],
-            'inventory-updates': [
-                {
-                    'Id': '1',
-                    'Arn': queue_arns['notification-queue']
-                },
-                {
-                    'Id': '2',
-                    'Arn': queue_arns['analytics-queue']
-                }
-            ],
-            'payment-events': [
-                {
-                    'Id': '1',
-                    'Arn': queue_arns['order-processing-queue']
-                },
-                {
-                    'Id': '2',
-                    'Arn': queue_arns['notification-queue']
-                }
-            ]
-        }
-        
-        # Add targets to rules
-        for rule_name, targets in rule_targets.items():
-            try:
-                self.eventbridge.put_targets(
-                    Rule=rule_name,
-                    EventBusName=self.bus_name,
-                    Targets=targets
-                )
-                print(f"Added targets to rule: {rule_name}")
-            except Exception as e:
-                print(f"Error adding targets to rule {rule_name}: {e}")
-    
-    def setup_queue_permissions(self, queues: Dict[str, str]):
-        """Set up SQS queue permissions for EventBridge"""
-        for queue_name, queue_url in queues.items():
-            try:
-                # Get queue ARN
-                attributes = self.sqs.get_queue_attributes(
-                    QueueUrl=queue_url,
-                    AttributeNames=['QueueArn']
-                )
-                queue_arn = attributes['Attributes']['QueueArn']
-                
-                # Create policy allowing EventBridge to send messages
-                policy = {
-                    "Version": "2012-10-17",
-                    "Statement": [
-                        {
-                            "Effect": "Allow",
-                            "Principal": {
-                                "Service": "events.amazonaws.com"
-                            },
-                            "Action": "sqs:SendMessage",
-                            "Resource": queue_arn,
-                            "Condition": {
-                                "StringEquals": {
-                                    "aws:SourceAccount": "123456789012"  # Replace with your account ID
-                                }
-                            }
-                        }
-                    ]
-                }
-                
-                self.sqs.set_queue_attributes(
-                    QueueUrl=queue_url,
-                    Attributes={
-                        'Policy': json.dumps(policy)
-                    }
-                )
-                print(f"Set permissions for queue: {queue_name}")
-                
-            except Exception as e:
-                print(f"Error setting permissions for queue {queue_name}: {e}")
+### Organizational Design Strategy
 
-# Set up targets and permissions
-target_setup = EventBridgeTargetSetup()
-target_setup.add_sqs_targets_to_rules(queues)
-target_setup.setup_queue_permissions(queues)
-```
+#### Team Topology for Event-Driven Architecture
+**Service Team Organization**:
+- **Domain Teams**: Business domain ownership with end-to-end responsibility
+- **Platform Teams**: Event infrastructure and tooling with shared service provision
+- **Enabling Teams**: Architecture guidance and best practices with temporary engagement
+- **Stream Teams**: Event flow ownership with cross-domain coordination
 
-### Task 5: Implement Event Monitoring
+**Conway's Law Application**:
+- **Event Boundaries**: Service boundaries aligned with team communication patterns
+- **Ownership Model**: Clear event ownership with producer/consumer responsibilities
+- **Coordination Mechanisms**: Cross-team event contracts with governance processes
+- **Evolution Strategy**: Team structure evolution with architecture maturity
 
-#### 5.1 Event Flow Monitoring
-```python
-class EventMonitoring:
-    def __init__(self):
-        self.cloudwatch = boto3.client('cloudwatch')
-        self.eventbridge = boto3.client('events')
-    
-    def put_custom_metric(self, metric_name: str, value: float, unit: str = 'Count', dimensions: Dict = None):
-        """Put custom metric to CloudWatch"""
-        metric_data = {
-            'MetricName': metric_name,
-            'Value': value,
-            'Unit': unit,
-            'Timestamp': datetime.now()
-        }
-        
-        if dimensions:
-            metric_data['Dimensions'] = [
-                {'Name': k, 'Value': v} for k, v in dimensions.items()
-            ]
-        
-        self.cloudwatch.put_metric_data(
-            Namespace='ECommerce/EventDriven',
-            MetricData=[metric_data]
-        )
-    
-    def track_event_processing(self, service_name: str, event_type: str, processing_time: float, success: bool):
-        """Track event processing metrics"""
-        
-        # Processing time
-        self.put_custom_metric(
-            'EventProcessingTime',
-            processing_time,
-            'Milliseconds',
-            {
-                'ServiceName': service_name,
-                'EventType': event_type
-            }
-        )
-        
-        # Success/failure
-        self.put_custom_metric(
-            'EventProcessingResult',
-            1 if success else 0,
-            'Count',
-            {
-                'ServiceName': service_name,
-                'EventType': event_type,
-                'Result': 'Success' if success else 'Failure'
-            }
-        )
-    
-    def create_dashboard(self):
-        """Create CloudWatch dashboard for event monitoring"""
-        dashboard_body = {
-            "widgets": [
-                {
-                    "type": "metric",
-                    "properties": {
-                        "metrics": [
-                            ["ECommerce/EventDriven", "EventProcessingTime", "ServiceName", "OrderService"],
-                            [".", ".", ".", "InventoryService"],
-                            [".", ".", ".", "NotificationService"]
-                        ],
-                        "period": 300,
-                        "stat": "Average",
-                        "region": "us-east-1",
-                        "title": "Event Processing Time"
-                    }
-                },
-                {
-                    "type": "metric",
-                    "properties": {
-                        "metrics": [
-                            ["AWS/Events", "SuccessfulInvocations", "EventBusName", "ecommerce-events"],
-                            [".", "FailedInvocations", ".", "."]
-                        ],
-                        "period": 300,
-                        "stat": "Sum",
-                        "region": "us-east-1",
-                        "title": "EventBridge Invocations"
-                    }
-                }
-            ]
-        }
-        
-        self.cloudwatch.put_dashboard(
-            DashboardName='ECommerce-EventDriven-Monitoring',
-            DashboardBody=json.dumps(dashboard_body)
-        )
-        
-        print("Created monitoring dashboard")
+#### Event Governance Framework
+**Event Ownership and Lifecycle**:
+- **Producer Responsibility**: Event schema definition and backward compatibility
+- **Consumer Responsibility**: Event processing reliability and error handling
+- **Schema Governance**: Event schema evolution with impact assessment
+- **Deprecation Strategy**: Event lifecycle management with migration planning
 
-# Set up monitoring
-monitoring = EventMonitoring()
-monitoring.create_dashboard()
-```
+**Event Quality and Monitoring**:
+- **Event Quality Metrics**: Schema compliance, delivery guarantees, and processing latency
+- **Business Process Monitoring**: End-to-end process visibility with business metric correlation
+- **Error Handling Strategy**: Dead letter queues, retry policies, and compensation procedures
+- **Performance Monitoring**: Event throughput, latency, and system health metrics
 
-## Testing and Validation
+### Business Impact Assessment
 
-### Test Scenario 1: Complete Order Flow
-```python
-def test_complete_order_flow():
-    """Test complete order processing flow"""
-    print("=== Testing Complete Order Flow ===")
-    
-    # 1. Place order
-    order_id = order_service.place_order(
-        customer_id='test-customer-001',
-        items=[
-            {'productId': 'prod-1', 'name': 'Laptop', 'price': 999.99, 'quantity': 1}
-        ],
-        shipping_address={
-            'street': '456 Test Ave',
-            'city': 'Portland',
-            'state': 'OR',
-            'zipCode': '97201',
-            'country': 'US'
-        }
-    )
-    
-    # 2. Wait for event processing
-    time.sleep(5)
-    
-    # 3. Check inventory reservation
-    print(f"Inventory after order: {inventory_service.inventory}")
-    
-    # 4. Cancel order
-    order_service.cancel_order(order_id, "Customer requested cancellation")
-    
-    # 5. Wait for cancellation processing
-    time.sleep(5)
-    
-    # 6. Check inventory release
-    print(f"Inventory after cancellation: {inventory_service.inventory}")
+#### Performance and Scalability Analysis
+**Business Performance Correlation**:
+- **Trading Performance**: Event processing speed directly affecting trading revenue and market competitiveness
+- **Risk Management**: Real-time risk processing preventing losses and regulatory violations
+- **Customer Experience**: Event-driven notifications improving user satisfaction and engagement
+- **Operational Efficiency**: Automated event processing reducing manual intervention and costs
 
-# Run test
-test_complete_order_flow()
-```
+**Scalability Requirements**:
+- **Peak Load Handling**: Market open/close and high-volatility period event volumes
+- **Geographic Scaling**: Multi-region event processing with data sovereignty compliance
+- **Business Growth**: Event architecture supporting customer and transaction volume growth
+- **Technology Evolution**: Event platform evolution with business capability expansion
 
-## Deliverables
+#### Risk and Compliance Assessment
+**Business Risk Analysis**:
+- **Event Loss**: Financial impact of lost or delayed events on trading and risk management
+- **Processing Delays**: Business impact of event processing latency on operations
+- **System Failures**: Event system failures affecting business continuity and customer trust
+- **Compliance Violations**: Regulatory penalties from audit trail gaps or reporting failures
 
-### 1. Architecture Documentation
-Create a document describing:
-- Event flow diagrams
-- Service responsibilities
-- Event schema definitions
-- Error handling strategies
+**Compliance Strategy**:
+- **Audit Trail Completeness**: Event logging and retention for regulatory compliance
+- **Data Lineage**: Event flow traceability for regulatory reporting and investigation
+- **Access Controls**: Event access security with role-based permissions and monitoring
+- **Regulatory Reporting**: Automated compliance reporting with event data aggregation
 
-### 2. Implementation Code
-Submit working code for:
-- EventBridge setup and configuration
-- Order service with event publishing
-- Inventory service with event processing
-- Monitoring and metrics collection
+### Exercise Deliverables
 
-### 3. Testing Results
-Provide evidence of:
-- Successful event routing
-- Service communication
-- Error handling
-- Performance metrics
+#### Strategic Architecture Documents
+1. **Event-Driven Architecture Strategy**: Event architecture design with business case and organizational alignment
+2. **Event Design Framework**: Event modeling approach with schema governance and evolution strategy
+3. **Business Process Optimization**: Event-driven process design with performance and compliance optimization
+4. **Organizational Design**: Team topology and governance framework for event-driven development
 
-### 4. Monitoring Dashboard
-Create CloudWatch dashboard showing:
-- Event processing rates
-- Service health metrics
-- Error rates and patterns
-- End-to-end latency
+#### Implementation Planning Materials
+1. **Migration Roadmap**: Transition strategy from monolithic to event-driven architecture
+2. **Technology Selection**: Event platform evaluation with vendor assessment and risk analysis
+3. **Governance Framework**: Event lifecycle management with quality assurance and monitoring
+4. **Success Metrics**: KPI framework with business value measurement and optimization
 
-## Success Criteria
+## Assessment Framework
 
-✅ **EventBridge Setup**: Custom bus and rules created successfully
-✅ **Service Communication**: Events flow between services correctly
-✅ **Error Handling**: Failed events are handled gracefully
-✅ **Monitoring**: Metrics and dashboards provide visibility
-✅ **Performance**: System handles expected load with acceptable latency
-✅ **Documentation**: Clear documentation of architecture and flows
+### Evaluation Criteria
 
-## Extension Challenges
+#### Event-Driven Architecture Thinking (35%)
+- Quality of event architecture design and business process optimization
+- Understanding of event-driven patterns and their organizational implications
+- Event modeling approach with business domain alignment and technical feasibility
+- Consistency and transaction management strategy with business requirement satisfaction
 
-### Challenge 1: Add Payment Service
-Implement a payment service that:
-- Processes payment events
-- Publishes payment success/failure events
-- Integrates with order fulfillment flow
+#### Organizational Design Excellence (30%)
+- Team topology design with Conway's Law application and event ownership clarity
+- Event governance framework with lifecycle management and quality assurance
+- Cross-team coordination strategy with event contracts and dependency management
+- Change management approach for organizational transformation to event-driven development
 
-### Challenge 2: Implement Saga Pattern
-Create a distributed transaction coordinator using:
-- AWS Step Functions
-- EventBridge for event coordination
-- Compensation logic for failures
+#### Business Impact Assessment (20%)
+- Performance and scalability analysis with business metric correlation
+- Risk assessment and compliance strategy with regulatory requirement satisfaction
+- Business case development with ROI analysis and competitive advantage quantification
+- Customer experience impact with event-driven capability enhancement
 
-### Challenge 3: Add Event Replay
-Implement event replay capability using:
-- EventBridge Archive
-- Replay functionality
-- Testing and recovery scenarios
+#### Implementation Strategy (15%)
+- Migration planning with realistic timeline and risk mitigation
+- Technology selection rationale with vendor evaluation and integration strategy
+- Success measurement framework with business value tracking and optimization
+- Continuous improvement approach with event architecture evolution planning
 
-## Troubleshooting Guide
+### Success Metrics
+- **Business Process Optimization**: Event-driven architecture enabling business efficiency and competitive advantage
+- **Organizational Excellence**: Team structure and governance supporting event-driven development and operations
+- **Technical Architecture**: Event architecture design supporting scalability, performance, and compliance requirements
+- **Implementation Feasibility**: Realistic transformation planning with achievable milestones and business value delivery
 
-### Common Issues
-1. **Events not routing**: Check EventBridge rule patterns and targets
-2. **Permission errors**: Verify IAM roles and SQS queue policies
-3. **Message processing failures**: Check SQS dead letter queues
-4. **Performance issues**: Monitor CloudWatch metrics and adjust scaling
-
-### Debugging Tips
-- Use EventBridge test events to verify rule patterns
-- Check CloudWatch Logs for service errors
-- Monitor SQS queue metrics for processing delays
-- Use AWS X-Ray for distributed tracing
-
-This exercise provides hands-on experience with building event-driven microservices using AWS EventBridge, demonstrating real-world patterns and best practices for scalable distributed systems.
+This exercise emphasizes strategic event-driven architecture thinking and organizational design without any messaging system implementation or coding requirements.

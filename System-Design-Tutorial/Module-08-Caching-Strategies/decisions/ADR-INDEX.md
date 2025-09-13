@@ -6,29 +6,19 @@ This document provides a comprehensive index of all Architecture Decision Record
 
 ## ADR Categories
 
-### 1. Cache Architecture ADRs
+### 1. Core Architecture Decisions
 - **ADR-001**: Cache Pattern Selection Strategy
-- **ADR-002**: Cache Hierarchy Design
-- **ADR-003**: Cache Placement Strategy
-- **ADR-004**: Cache Consistency Model Selection
+- **ADR-002**: Cache Strategy Selection
+- **ADR-003**: Cache Technology Selection
+- **ADR-004**: Cache Monitoring Strategy
+- **ADR-005**: Cache Cost Optimization
 
-### 2. Technology Selection ADRs
-- **ADR-005**: Cache Technology Selection (Redis vs. Memcached)
-- **ADR-006**: CDN Technology Selection
-- **ADR-007**: Database Caching Strategy
-- **ADR-008**: Application Caching Framework
-
-### 3. Performance and Scalability ADRs
-- **ADR-009**: Cache Sizing and Capacity Planning
-- **ADR-010**: Cache Eviction Policy Selection
-- **ADR-011**: Cache Partitioning Strategy
-- **ADR-012**: Cache Replication Strategy
-
-### 4. Operational ADRs
-- **ADR-013**: Cache Monitoring and Observability
-- **ADR-014**: Cache Backup and Recovery Strategy
-- **ADR-015**: Cache Security Implementation
-- **ADR-016**: Cache Maintenance Procedures
+### 2. Security and Operations Decisions
+- **ADR-006**: Cache Security Strategy
+- **ADR-007**: Cache Invalidation Strategy
+- **ADR-008**: Cache Warming Strategy
+- **ADR-009**: Cache Scalability Strategy
+- **ADR-010**: Cache Disaster Recovery Strategy
 
 ## ADR Status Legend
 
@@ -42,7 +32,7 @@ This document provides a comprehensive index of all Architecture Decision Record
 
 ## ADR Index
 
-### Cache Architecture ADRs
+### Core Architecture Decisions
 
 #### ADR-001: Cache Pattern Selection Strategy
 - **Status**: 🔄 Accepted
@@ -51,116 +41,70 @@ This document provides a comprehensive index of all Architecture Decision Record
 - **Rationale**: Provides full control over cache behavior and flexibility
 - **File**: [adr-001-cache-pattern-selection.md](adr-001-cache-pattern-selection.md)
 
-#### ADR-002: Cache Hierarchy Design
+#### ADR-002: Cache Strategy Selection
 - **Status**: 🔄 Accepted
 - **Date**: 2024-01-15
-- **Decision**: Implement 3-level cache hierarchy (L1: Application, L2: Distributed, L3: CDN)
+- **Decision**: Implement multi-layered caching strategy with 4 cache layers
 - **Rationale**: Balances performance, consistency, and complexity
-- **File**: [adr-002-cache-hierarchy-design.md](adr-002-cache-hierarchy-design.md)
+- **File**: [adr-002-cache-strategy-selection.md](adr-002-cache-strategy-selection.md)
 
-#### ADR-003: Cache Placement Strategy
+#### ADR-003: Cache Technology Selection
 - **Status**: 🔄 Accepted
 - **Date**: 2024-01-15
-- **Decision**: Place caches at application layer, database layer, and CDN edge
-- **Rationale**: Optimizes for performance and reduces latency
-- **File**: [adr-003-cache-placement-strategy.md](adr-003-cache-placement-strategy.md)
+- **Decision**: Use Caffeine (L1), Redis Cluster (L2), CloudFront+Fastly (L3), RDS (L4)
+- **Rationale**: Optimal technology for each cache layer based on requirements
+- **File**: [adr-003-cache-technology-selection.md](adr-003-cache-technology-selection.md)
 
-#### ADR-004: Cache Consistency Model Selection
+#### ADR-004: Cache Monitoring Strategy
 - **Status**: 🔄 Accepted
 - **Date**: 2024-01-15
-- **Decision**: Use eventual consistency for most data, strong consistency for critical data
-- **Rationale**: Balances performance and consistency requirements
-- **File**: [adr-004-cache-consistency-model.md](adr-004-cache-consistency-model.md)
-
-### Technology Selection ADRs
-
-#### ADR-005: Cache Technology Selection
-- **Status**: 🔄 Accepted
-- **Date**: 2024-01-15
-- **Decision**: Use Redis as primary cache technology
-- **Rationale**: Best balance of performance, features, and community support
-- **File**: [adr-005-cache-technology-selection.md](adr-005-cache-technology-selection.md)
-
-#### ADR-006: CDN Technology Selection
-- **Status**: 🔄 Accepted
-- **Date**: 2024-01-15
-- **Decision**: Use AWS CloudFront as CDN solution
-- **Rationale**: Seamless integration with AWS ecosystem and cost-effectiveness
-- **File**: [adr-006-cdn-technology-selection.md](adr-006-cdn-technology-selection.md)
-
-#### ADR-007: Database Caching Strategy
-- **Status**: 🔄 Accepted
-- **Date**: 2024-01-15
-- **Decision**: Implement query result caching and connection pooling
-- **Rationale**: Reduces database load and improves query performance
-- **File**: [adr-007-database-caching-strategy.md](adr-007-database-caching-strategy.md)
-
-#### ADR-008: Application Caching Framework
-- **Status**: 🔄 Accepted
-- **Date**: 2024-01-15
-- **Decision**: Use Spring Cache with Redis backend
-- **Rationale**: Provides abstraction and ease of use for developers
-- **File**: [adr-008-application-caching-framework.md](adr-008-application-caching-framework.md)
-
-### Performance and Scalability ADRs
-
-#### ADR-009: Cache Sizing and Capacity Planning
-- **Status**: 🔄 Accepted
-- **Date**: 2024-01-15
-- **Decision**: Implement dynamic cache sizing based on usage patterns
-- **Rationale**: Optimizes resource usage and performance
-- **File**: [adr-009-cache-sizing-capacity-planning.md](adr-009-cache-sizing-capacity-planning.md)
-
-#### ADR-010: Cache Eviction Policy Selection
-- **Status**: 🔄 Accepted
-- **Date**: 2024-01-15
-- **Decision**: Use LRU with TTL for most caches, LFU for specialized caches
-- **Rationale**: Balances memory usage and cache hit ratio
-- **File**: [adr-010-cache-eviction-policy-selection.md](adr-010-cache-eviction-policy-selection.md)
-
-#### ADR-011: Cache Partitioning Strategy
-- **Status**: 🔄 Accepted
-- **Date**: 2024-01-15
-- **Decision**: Use consistent hashing for cache partitioning
-- **Rationale**: Provides even distribution and easy scaling
-- **File**: [adr-011-cache-partitioning-strategy.md](adr-011-cache-partitioning-strategy.md)
-
-#### ADR-012: Cache Replication Strategy
-- **Status**: 🔄 Accepted
-- **Date**: 2024-01-15
-- **Decision**: Use master-slave replication with read replicas
-- **Rationale**: Provides high availability and read scalability
-- **File**: [adr-012-cache-replication-strategy.md](adr-012-cache-replication-strategy.md)
-
-### Operational ADRs
-
-#### ADR-013: Cache Monitoring and Observability
-- **Status**: 🔄 Accepted
-- **Date**: 2024-01-15
-- **Decision**: Implement comprehensive monitoring with metrics, logs, and traces
+- **Decision**: Implement comprehensive monitoring with Prometheus, Grafana, ELK Stack
 - **Rationale**: Enables proactive issue detection and performance optimization
-- **File**: [adr-013-cache-monitoring-observability.md](adr-013-cache-monitoring-observability.md)
+- **File**: [adr-004-cache-monitoring-strategy.md](adr-004-cache-monitoring-strategy.md)
 
-#### ADR-014: Cache Backup and Recovery Strategy
+#### ADR-005: Cache Cost Optimization
 - **Status**: 🔄 Accepted
 - **Date**: 2024-01-15
-- **Decision**: Implement automated backup with point-in-time recovery
-- **Rationale**: Ensures data durability and business continuity
-- **File**: [adr-014-cache-backup-recovery-strategy.md](adr-014-cache-backup-recovery-strategy.md)
+- **Decision**: Implement comprehensive cost optimization with real-time tracking
+- **Rationale**: Maintain cost efficiency while scaling to 10x traffic growth
+- **File**: [adr-005-cache-cost-optimization.md](adr-005-cache-cost-optimization.md)
 
-#### ADR-015: Cache Security Implementation
+### Security and Operations Decisions
+
+#### ADR-006: Cache Security Strategy
 - **Status**: 🔄 Accepted
 - **Date**: 2024-01-15
-- **Decision**: Implement encryption at rest and in transit, with access controls
-- **Rationale**: Protects sensitive data and ensures compliance
-- **File**: [adr-015-cache-security-implementation.md](adr-015-cache-security-implementation.md)
+- **Decision**: Implement comprehensive security with encryption, access control, and monitoring
+- **Rationale**: Protect sensitive data and ensure compliance with regulations
+- **File**: [adr-006-cache-security-strategy.md](adr-006-cache-security-strategy.md)
 
-#### ADR-016: Cache Maintenance Procedures
+#### ADR-007: Cache Invalidation Strategy
 - **Status**: 🔄 Accepted
 - **Date**: 2024-01-15
-- **Decision**: Implement automated maintenance with manual override capabilities
-- **Rationale**: Ensures system reliability and reduces operational overhead
-- **File**: [adr-016-cache-maintenance-procedures.md](adr-016-cache-maintenance-procedures.md)
+- **Decision**: Implement multi-pattern invalidation with write-through, time-based, and event-driven
+- **Rationale**: Ensure data consistency while maintaining high performance
+- **File**: [adr-007-cache-invalidation-strategy.md](adr-007-cache-invalidation-strategy.md)
+
+#### ADR-008: Cache Warming Strategy
+- **Status**: 🔄 Accepted
+- **Date**: 2024-01-15
+- **Decision**: Implement intelligent cache warming with ML-based prediction and analytics
+- **Rationale**: Improve cache hit ratios and reduce cold start latency
+- **File**: [adr-008-cache-warming-strategy.md](adr-008-cache-warming-strategy.md)
+
+#### ADR-009: Cache Scalability Strategy
+- **Status**: 🔄 Accepted
+- **Date**: 2024-01-15
+- **Decision**: Implement comprehensive scalability with horizontal/vertical scaling and data partitioning
+- **Rationale**: Support 10x traffic growth while maintaining performance and cost efficiency
+- **File**: [adr-009-cache-scalability-strategy.md](adr-009-cache-scalability-strategy.md)
+
+#### ADR-010: Cache Disaster Recovery Strategy
+- **Status**: 🔄 Accepted
+- **Date**: 2024-01-15
+- **Decision**: Implement comprehensive disaster recovery with RTO < 4 hours, RPO < 1 hour
+- **Rationale**: Ensure business continuity and data protection during disasters
+- **File**: [adr-010-cache-disaster-recovery-strategy.md](adr-010-cache-disaster-recovery-strategy.md)
 
 ## ADR Template
 
@@ -272,13 +216,13 @@ This document provides a comprehensive index of all Architecture Decision Record
 ## Contact Information
 
 ### ADR Management
-- **Primary Contact**: [Name and email]
-- **Technical Lead**: [Name and email]
-- **Architecture Team**: [Team email]
+- **Primary Contact**: System Architecture Team
+- **Technical Lead**: Senior System Architect
+- **Architecture Team**: architecture@company.com
 
 ### ADR Repository
-- **Location**: [Repository URL]
-- **Access**: [Access requirements]
-- **Updates**: [Update process]
+- **Location**: System-Design-Tutorial/Module-08-Caching-Strategies/decisions/
+- **Access**: Internal team access
+- **Updates**: Version controlled with Git
 
 This ADR index provides a comprehensive overview of all architectural decisions related to caching strategies in the system.

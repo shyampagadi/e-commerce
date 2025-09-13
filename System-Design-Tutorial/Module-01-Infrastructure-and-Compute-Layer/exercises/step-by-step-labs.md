@@ -1,276 +1,336 @@
-# Step-by-Step AWS Implementation Labs
+# Step-by-Step Strategic Analysis Labs
 
-## Lab 1: Auto Scaling Web Application
-**Duration**: 2 hours | **Difficulty**: Intermediate
+## Overview
+These step-by-step labs guide you through strategic architectural analysis and decision-making processes. Each lab follows a structured approach to evaluate infrastructure scenarios and make business-aligned architectural decisions.
 
-### Prerequisites
-- AWS CLI configured
-- Basic understanding of EC2 and Load Balancers
+## Lab 1: Auto Scaling Architecture Decision Process
+**Duration**: 2 hours
+**Focus**: Systematic approach to auto-scaling architecture decisions
 
-### Step 1: Create Launch Template
-```bash
-# Create launch template
-aws ec2 create-launch-template \
-    --launch-template-name web-app-template \
-    --launch-template-data '{
-        "ImageId": "ami-0abcdef1234567890",
-        "InstanceType": "t3.micro",
-        "SecurityGroupIds": ["sg-12345678"],
-        "UserData": "IyEvYmluL2Jhc2gKZWNobyAiSGVsbG8gV29ybGQiID4gL3Zhci93d3cvaHRtbC9pbmRleC5odG1s"
-    }'
-```
+### Business Context
+WebScale operates a content management platform serving 500,000 daily active users with highly variable traffic patterns. They need to design an auto-scaling architecture that balances cost, performance, and operational complexity.
 
-### Step 2: Create Application Load Balancer
-```bash
-# Create ALB
-aws elbv2 create-load-balancer \
-    --name web-app-alb \
-    --subnets subnet-12345678 subnet-87654321 \
-    --security-groups sg-12345678
+### Step 1: Requirements Analysis and Constraint Identification
+**Duration**: 30 minutes
 
-# Create target group
-aws elbv2 create-target-group \
-    --name web-app-targets \
-    --protocol HTTP \
-    --port 80 \
-    --vpc-id vpc-12345678 \
-    --health-check-path /health
-```
+**Analysis Framework**:
+1. **Functional Requirements Assessment**:
+   - What are the core system capabilities that must be maintained during scaling?
+   - How do different user workflows impact scaling requirements?
+   - What are the integration points that affect scaling decisions?
 
-### Step 3: Configure Auto Scaling Group
-```bash
-# Create Auto Scaling Group
-aws autoscaling create-auto-scaling-group \
-    --auto-scaling-group-name web-app-asg \
-    --launch-template LaunchTemplateName=web-app-template,Version=1 \
-    --min-size 2 \
-    --max-size 10 \
-    --desired-capacity 2 \
-    --target-group-arns arn:aws:elasticloadbalancing:region:account:targetgroup/web-app-targets/1234567890123456 \
-    --vpc-zone-identifier "subnet-12345678,subnet-87654321"
-```
+2. **Non-Functional Requirements Evaluation**:
+   - **Performance**: What are the response time and throughput requirements?
+   - **Availability**: What is the acceptable downtime during scaling events?
+   - **Scalability**: What are the expected growth patterns and peak loads?
 
-### Step 4: Create Scaling Policies
-```bash
-# Scale out policy
-aws autoscaling put-scaling-policy \
-    --auto-scaling-group-name web-app-asg \
-    --policy-name scale-out \
-    --policy-type TargetTrackingScaling \
-    --target-tracking-configuration '{
-        "TargetValue": 70.0,
-        "PredefinedMetricSpecification": {
-            "PredefinedMetricType": "ASGAverageCPUUtilization"
-        }
-    }'
-```
+3. **Business Constraints Analysis**:
+   - **Budget**: What are the cost constraints and optimization targets?
+   - **Timeline**: What are the implementation and delivery constraints?
+   - **Skills**: What are the team capabilities and expertise limitations?
 
-### Step 5: Test Scaling Behavior
-```bash
-# Generate load to test scaling
-for i in {1..1000}; do
-    curl http://your-alb-dns-name.region.elb.amazonaws.com/
-done
+**Deliverables**:
+- Requirements specification with priorities
+- Constraint analysis with impact assessment
+- Success criteria definition
 
-# Monitor scaling activity
-aws autoscaling describe-scaling-activities --auto-scaling-group-name web-app-asg
-```
+### Step 2: Scaling Strategy Evaluation
+**Duration**: 45 minutes
 
-### Expected Outcomes
-- Auto Scaling Group scales out when CPU > 70%
-- Load balancer distributes traffic evenly
-- Health checks remove unhealthy instances
+**Strategic Analysis Process**:
+1. **Scaling Pattern Assessment**:
+   - **Vertical Scaling**: When is scaling up/down appropriate?
+   - **Horizontal Scaling**: What are the benefits and challenges of scaling out/in?
+   - **Hybrid Approach**: How do you combine vertical and horizontal scaling?
 
-## Lab 2: Serverless API with Lambda
-**Duration**: 90 minutes | **Difficulty**: Beginner
+2. **Scaling Trigger Analysis**:
+   - **Reactive Scaling**: How do you respond to current load conditions?
+   - **Predictive Scaling**: How do you anticipate future scaling needs?
+   - **Scheduled Scaling**: When are time-based scaling policies appropriate?
 
-### Step 1: Create Lambda Function
-```bash
-# Create deployment package
-echo 'exports.handler = async (event) => {
-    return {
-        statusCode: 200,
-        body: JSON.stringify({
-            message: "Hello from Lambda!",
-            timestamp: new Date().toISOString()
-        })
-    };
-};' > index.js
+3. **Technology Selection Framework**:
+   - **Auto Scaling Groups**: What are the configuration and management considerations?
+   - **Load Balancers**: How do different load balancing strategies affect scaling?
+   - **Container Orchestration**: When are containerized scaling solutions appropriate?
 
-zip function.zip index.js
+**Analysis Questions**:
+- How do different scaling approaches align with business objectives?
+- What are the cost implications of each scaling strategy?
+- How do operational complexity considerations influence decisions?
 
-# Create Lambda function
-aws lambda create-function \
-    --function-name hello-api \
-    --runtime nodejs18.x \
-    --role arn:aws:iam::account:role/lambda-execution-role \
-    --handler index.handler \
-    --zip-file fileb://function.zip
-```
+**Deliverables**:
+- Scaling strategy comparison matrix
+- Technology selection rationale
+- Cost-benefit analysis
 
-### Step 2: Create API Gateway
-```bash
-# Create REST API
-aws apigateway create-rest-api --name hello-api
+### Step 3: Architecture Design and Validation
+**Duration**: 30 minutes
 
-# Get root resource ID
-aws apigateway get-resources --rest-api-id your-api-id
+**Design Process**:
+1. **Architecture Pattern Selection**:
+   - How do you choose between different architectural patterns?
+   - What are the trade-offs between simplicity and flexibility?
+   - How do you ensure scalability and maintainability?
 
-# Create method
-aws apigateway put-method \
-    --rest-api-id your-api-id \
-    --resource-id your-resource-id \
-    --http-method GET \
-    --authorization-type NONE
-```
+2. **Component Integration Design**:
+   - How do scaling decisions affect system integration points?
+   - What are the data consistency implications of scaling?
+   - How do you handle stateful vs stateless component scaling?
 
-### Step 3: Configure Integration
-```bash
-# Set up Lambda integration
-aws apigateway put-integration \
-    --rest-api-id your-api-id \
-    --resource-id your-resource-id \
-    --http-method GET \
-    --type AWS_PROXY \
-    --integration-http-method POST \
-    --uri arn:aws:apigateway:region:lambda:path/2015-03-31/functions/arn:aws:lambda:region:account:function:hello-api/invocations
-```
+3. **Validation and Testing Strategy**:
+   - How do you validate scaling behavior before production deployment?
+   - What are the monitoring and alerting requirements?
+   - How do you plan for failure scenarios and recovery?
 
-### Step 4: Deploy API
-```bash
-# Deploy API
-aws apigateway create-deployment \
-    --rest-api-id your-api-id \
-    --stage-name prod
+**Deliverables**:
+- High-level architecture diagram with scaling components
+- Integration design with data flow analysis
+- Validation and testing strategy
 
-# Test the API
-curl https://your-api-id.execute-api.region.amazonaws.com/prod
-```
+### Step 4: Implementation Planning and Risk Assessment
+**Duration**: 15 minutes
 
-### Expected Outcomes
-- Serverless API responds to HTTP requests
-- Lambda function executes on demand
-- No infrastructure management required
+**Planning Framework**:
+1. **Implementation Phases**:
+   - How do you sequence implementation activities?
+   - What are the dependencies and critical path items?
+   - How do you minimize risk during implementation?
 
-## Lab 3: Container Deployment with ECS
-**Duration**: 2.5 hours | **Difficulty**: Advanced
+2. **Risk Management**:
+   - What are the technical risks and mitigation strategies?
+   - How do you handle business continuity during implementation?
+   - What are the rollback and recovery procedures?
 
-### Step 1: Create Container Image
-```dockerfile
-# Dockerfile
-FROM nginx:alpine
-COPY index.html /usr/share/nginx/html/
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
-```
+**Deliverables**:
+- Implementation roadmap with milestones
+- Risk assessment with mitigation plans
+- Success metrics and monitoring strategy
 
-```bash
-# Build and push to ECR
-aws ecr create-repository --repository-name web-app
-docker build -t web-app .
-docker tag web-app:latest account.dkr.ecr.region.amazonaws.com/web-app:latest
-docker push account.dkr.ecr.region.amazonaws.com/web-app:latest
-```
+## Lab 2: Compute Model Selection Decision Process
+**Duration**: 2.5 hours
+**Focus**: Systematic evaluation of compute models for different use cases
 
-### Step 2: Create ECS Cluster
-```bash
-# Create ECS cluster
-aws ecs create-cluster --cluster-name web-app-cluster
+### Business Context
+CloudFirst is migrating their legacy applications to cloud and needs to select optimal compute models for different application types while optimizing for cost, performance, and operational efficiency.
 
-# Create task definition
-aws ecs register-task-definition --cli-input-json file://task-definition.json
-```
+### Step 1: Application Portfolio Analysis
+**Duration**: 45 minutes
 
-### Step 3: Create ECS Service
-```bash
-# Create ECS service
-aws ecs create-service \
-    --cluster web-app-cluster \
-    --service-name web-app-service \
-    --task-definition web-app:1 \
-    --desired-count 2 \
-    --launch-type FARGATE \
-    --network-configuration '{
-        "awsvpcConfiguration": {
-            "subnets": ["subnet-12345678", "subnet-87654321"],
-            "securityGroups": ["sg-12345678"],
-            "assignPublicIp": "ENABLED"
-        }
-    }'
-```
+**Analysis Framework**:
+1. **Application Categorization**:
+   - **Web Applications**: User-facing applications with variable traffic
+   - **Background Services**: Long-running processes with steady resource usage
+   - **Batch Processing**: Scheduled jobs with intensive compute requirements
+   - **Event-Driven Functions**: Sporadic, short-duration processing tasks
 
-### Step 4: Configure Load Balancer Integration
-```bash
-# Update service with load balancer
-aws ecs update-service \
-    --cluster web-app-cluster \
-    --service web-app-service \
-    --load-balancers targetGroupArn=arn:aws:elasticloadbalancing:region:account:targetgroup/web-app-targets/1234567890123456,containerName=web-app,containerPort=80
-```
+2. **Requirements Assessment**:
+   - **Performance Requirements**: Latency, throughput, and consistency needs
+   - **Scalability Patterns**: Growth expectations and scaling characteristics
+   - **Availability Requirements**: Uptime expectations and failure tolerance
+   - **Integration Needs**: Dependencies and communication patterns
 
-### Expected Outcomes
-- Containerized application running on ECS
-- Service automatically maintains desired count
-- Load balancer distributes traffic to containers
+3. **Constraint Analysis**:
+   - **Budget Limitations**: Cost optimization targets and spending constraints
+   - **Compliance Requirements**: Security and regulatory considerations
+   - **Team Capabilities**: Skills and expertise limitations
+   - **Timeline Pressures**: Migration deadlines and business priorities
 
-## Troubleshooting Guide
+**Deliverables**:
+- Application portfolio matrix with characteristics
+- Requirements specification for each application type
+- Constraint analysis with impact assessment
 
-### Common Issues and Solutions
+### Step 2: Compute Model Evaluation Framework
+**Duration**: 60 minutes
 
-#### Issue: Auto Scaling Not Working
-**Symptoms**: Instances not scaling despite high CPU
-**Solution**:
-```bash
-# Check CloudWatch metrics
-aws cloudwatch get-metric-statistics \
-    --namespace AWS/EC2 \
-    --metric-name CPUUtilization \
-    --dimensions Name=AutoScalingGroupName,Value=web-app-asg \
-    --start-time 2023-01-01T00:00:00Z \
-    --end-time 2023-01-01T01:00:00Z \
-    --period 300 \
-    --statistics Average
-```
+**Evaluation Process**:
+1. **Technology Options Assessment**:
+   - **Virtual Machines (EC2)**: Traditional compute with full control
+   - **Containers (ECS/EKS)**: Containerized applications with orchestration
+   - **Serverless (Lambda)**: Event-driven, fully managed compute
+   - **Hybrid Approaches**: Combining multiple compute models
 
-#### Issue: Lambda Function Timeout
-**Symptoms**: Function times out after 3 seconds
-**Solution**:
-```bash
-# Increase timeout
-aws lambda update-function-configuration \
-    --function-name hello-api \
-    --timeout 30
-```
+2. **Decision Criteria Development**:
+   - **Cost Efficiency**: Total cost of ownership analysis
+   - **Performance Characteristics**: Latency, throughput, and scalability
+   - **Operational Complexity**: Management and maintenance requirements
+   - **Flexibility and Control**: Customization and configuration capabilities
 
-#### Issue: ECS Service Not Starting
-**Symptoms**: Tasks keep stopping
-**Solution**:
-```bash
-# Check service events
-aws ecs describe-services \
-    --cluster web-app-cluster \
-    --services web-app-service \
-    --query 'services[0].events'
-```
+3. **Trade-off Analysis**:
+   - How do different compute models align with application requirements?
+   - What are the long-term implications of each choice?
+   - How do operational considerations influence decisions?
 
-## Performance Benchmarking
+**Analysis Questions**:
+- Which compute model best fits each application category?
+- What are the migration complexity and risk considerations?
+- How do you optimize for both current needs and future growth?
 
-### Load Testing Scripts
-```bash
-# Install Apache Bench
-sudo apt-get install apache2-utils
+**Deliverables**:
+- Compute model evaluation matrix
+- Decision criteria with weighting factors
+- Trade-off analysis for each application type
 
-# Test Auto Scaling setup
-ab -n 10000 -c 100 http://your-alb-dns-name/
+### Step 3: Architecture Design and Integration Planning
+**Duration**: 30 minutes
 
-# Test Lambda API
-ab -n 1000 -c 50 https://your-api-gateway-url/
+**Design Process**:
+1. **Architecture Pattern Selection**:
+   - How do compute model choices affect overall architecture?
+   - What are the integration patterns between different compute models?
+   - How do you ensure consistency and maintainability?
 
-# Test ECS service
-ab -n 5000 -c 75 http://your-ecs-alb-dns-name/
-```
+2. **Data and State Management**:
+   - How do different compute models handle stateful vs stateless processing?
+   - What are the data persistence and sharing strategies?
+   - How do you manage configuration and secrets across compute models?
 
-### Expected Performance Metrics
-- **Auto Scaling**: < 2 minutes scale-out time
-- **Lambda**: < 100ms response time (warm)
-- **ECS**: < 50ms response time, 99.9% availability
+3. **Networking and Security Design**:
+   - How do compute model choices affect network architecture?
+   - What are the security implications and access control requirements?
+   - How do you implement consistent monitoring and logging?
+
+**Deliverables**:
+- Integrated architecture design with compute model mapping
+- Data flow and state management strategy
+- Security and networking considerations
+
+### Step 4: Migration Strategy and Implementation Planning
+**Duration**: 35 minutes
+
+**Planning Framework**:
+1. **Migration Sequencing**:
+   - How do you prioritize applications for migration?
+   - What are the dependencies and sequencing considerations?
+   - How do you minimize business disruption during migration?
+
+2. **Risk Management and Validation**:
+   - What are the migration risks and mitigation strategies?
+   - How do you validate performance and functionality after migration?
+   - What are the rollback procedures and contingency plans?
+
+3. **Success Metrics and Monitoring**:
+   - How do you measure migration success and business value?
+   - What are the ongoing monitoring and optimization strategies?
+   - How do you ensure continuous improvement and evolution?
+
+**Deliverables**:
+- Migration roadmap with phases and timelines
+- Risk management plan with mitigation strategies
+- Success metrics framework with monitoring approach
+
+## Lab 3: Infrastructure Evolution Strategic Planning
+**Duration**: 3 hours
+**Focus**: Comprehensive infrastructure transformation strategy
+
+### Business Context
+TechTransform needs to evolve their infrastructure to support digital transformation while maintaining business continuity and optimizing costs across a complex, multi-application environment.
+
+### Step 1: Current State Assessment and Gap Analysis
+**Duration**: 60 minutes
+
+**Assessment Framework**:
+1. **Infrastructure Inventory**:
+   - What are the current infrastructure components and their characteristics?
+   - How do existing systems support business operations?
+   - What are the performance, cost, and operational metrics?
+
+2. **Business Alignment Analysis**:
+   - How well does current infrastructure support business objectives?
+   - What are the gaps between current capabilities and future needs?
+   - What are the competitive and market pressures driving change?
+
+3. **Technical Debt Assessment**:
+   - What are the maintenance and operational challenges?
+   - How do legacy systems constrain business agility?
+   - What are the security and compliance risks?
+
+**Deliverables**:
+- Current state documentation with metrics
+- Gap analysis with business impact assessment
+- Technical debt inventory with risk evaluation
+
+### Step 2: Future State Vision and Strategy Development
+**Duration**: 75 minutes
+
+**Strategy Development Process**:
+1. **Vision Definition**:
+   - What is the target infrastructure vision aligned with business strategy?
+   - How does the future state enable business capabilities?
+   - What are the key principles and architectural guidelines?
+
+2. **Technology Strategy**:
+   - What are the target technologies and platforms?
+   - How do you balance innovation with stability?
+   - What are the vendor and technology selection criteria?
+
+3. **Transformation Approach**:
+   - How do you sequence transformation activities?
+   - What are the migration patterns and strategies?
+   - How do you manage risk and ensure business continuity?
+
+**Deliverables**:
+- Future state architecture vision with principles
+- Technology strategy with selection criteria
+- Transformation approach with migration patterns
+
+### Step 3: Implementation Roadmap and Change Management
+**Duration**: 45 minutes
+
+**Planning Process**:
+1. **Roadmap Development**:
+   - How do you prioritize transformation initiatives?
+   - What are the dependencies and critical path activities?
+   - How do you balance quick wins with long-term objectives?
+
+2. **Change Management Strategy**:
+   - How do you manage organizational change and adoption?
+   - What are the training and skill development requirements?
+   - How do you handle resistance and ensure stakeholder buy-in?
+
+3. **Governance and Control**:
+   - How do you establish governance for transformation activities?
+   - What are the decision-making processes and approval workflows?
+   - How do you ensure compliance and risk management?
+
+**Deliverables**:
+- Implementation roadmap with milestones and dependencies
+- Change management plan with stakeholder engagement
+- Governance framework with decision processes
+
+## Assessment Criteria
+
+### Strategic Analysis (40%)
+- Quality of requirements analysis and constraint identification
+- Depth of trade-off evaluation and decision rationale
+- Business alignment and stakeholder consideration
+- Risk assessment and mitigation planning
+
+### Systematic Approach (30%)
+- Adherence to structured analysis methodology
+- Completeness of evaluation frameworks
+- Quality of documentation and deliverables
+- Logical flow and decision progression
+
+### Communication and Leadership (30%)
+- Clarity of presentation and documentation
+- Stakeholder engagement and conflict resolution
+- Technical leadership demonstration
+- Change management and adoption planning
+
+## Success Metrics
+
+### Process Mastery
+- Ability to apply systematic analysis frameworks
+- Competency in trade-off evaluation and decision-making
+- Proficiency in stakeholder management and communication
+- Understanding of change management and transformation planning
+
+### Practical Application
+- Quality of strategic analysis and recommendations
+- Effectiveness of decision frameworks and criteria
+- Business-technical alignment and integration
+- Risk management and implementation planning capabilities
+
+## Next Steps
+Upon completion, proceed to Module-02: Networking and Connectivity, where you'll apply these systematic analysis approaches to network architecture and connectivity design challenges.
